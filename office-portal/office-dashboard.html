@@ -93,6 +93,26 @@
     .switch-toggle.active .switch-toggle-knob {
       transform: translateX(-22px);
     }
+
+    /* حقول الفلترة الأنيقة وعالية التباين */
+    .filter-input-styled {
+      height: 42px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      background-color: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 0 12px;
+      transition: all 0.2s ease;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .filter-input-styled:focus {
+      border-color: #2563eb;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
   </style>
 </head>
 <body>
@@ -191,27 +211,34 @@
         </div>
       </div>
 
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: center;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; align-items: center;">
         <input type="text" id="flt_search" placeholder="بحث بالاسم، اللقب، CCP، المؤسسة..." 
-               style="height: 40px; font-size: 13px;" oninput="applyOfficeFilters()">
+               class="filter-input-styled" oninput="applyOfficeFilters()">
 
         <!-- فلتر الطور (يظهر إذا كان المستخدم مصلحة الرواتب) -->
-        <select id="flt_level" onchange="applyOfficeFilters()" style="height: 40px; font-size: 13px; font-weight: bold; display: none;">
+        <select id="flt_level" onchange="applyOfficeFilters()" class="filter-input-styled" style="font-weight: bold; display: none;">
           <option value="">-- كل الأطوار التعليمية --</option>
           <option value="ابتدائي">الطور الابتدائي</option>
           <option value="متوسط">الطور المتوسط</option>
           <option value="ثانوي">الطور الثانوي</option>
         </select>
 
-        <select id="flt_daaira" onchange="onFilterDaairaChange(); applyOfficeFilters();" style="height: 40px; font-size: 13px;">
+        <!-- فلتر الصفة (مستخلف / متعاقد) -->
+        <select id="flt_type" onchange="applyOfficeFilters()" class="filter-input-styled">
+          <option value="">-- كل الصفات (مستخلف / متعاقد) --</option>
+          <option value="مستخلف">مستخلف</option>
+          <option value="متعاقد">متعاقد</option>
+        </select>
+
+        <select id="flt_daaira" onchange="onFilterDaairaChange(); applyOfficeFilters();" class="filter-input-styled">
           <option value="">-- كل الدوائر --</option>
         </select>
 
-        <select id="flt_baladiya" onchange="applyOfficeFilters()" style="height: 40px; font-size: 13px;">
+        <select id="flt_baladiya" onchange="applyOfficeFilters()" class="filter-input-styled">
           <option value="">-- كل البلديات --</option>
         </select>
 
-        <select id="flt_status" onchange="applyOfficeFilters()" style="height: 40px; font-size: 13px;">
+        <select id="flt_status" onchange="applyOfficeFilters()" class="filter-input-styled">
           <option value="">-- كل الوضعيات والمواقع --</option>
           <option value="pending_director">قيد الدراسة بالمؤسسة (جديد)</option>
           <option value="submitted_to_office">مستلم بمكتب الطور (قيد الدراسة)</option>
@@ -223,10 +250,10 @@
         </select>
 
         <div style="display: flex; gap: 8px;">
-          <button class="btn btn-success" style="height: 40px; flex: 1;" onclick="exportToExcel()" title="تصدير القائمة إلى ملف Excel">
+          <button class="btn btn-success" style="height: 42px; flex: 1; font-weight: 700;" onclick="exportToExcel()" title="تصدير القائمة إلى ملف Excel">
             <i class="fas fa-file-excel"></i> Excel
           </button>
-          <button class="btn btn-secondary" style="height: 40px;" onclick="loadOfficeEmployees()" title="تحديث السجلات من قاعدة البيانات">
+          <button class="btn btn-secondary" style="height: 42px;" onclick="loadOfficeEmployees()" title="تحديث السجلات من قاعدة البيانات">
             <i class="fas fa-sync-alt"></i>
           </button>
         </div>
@@ -267,103 +294,79 @@
 
   </div>
 
-  <!-- ==================== مودال مركز المسح الذكي والاستلام ==================== -->
-  <div id="smartScannerModalOverlay" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); z-index: 9999; justify-content: center; align-items: center; padding: 15px; backdrop-filter: blur(4px);">
-    <div style="background: white; border-radius: 20px; max-width: 650px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.3); overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;">
+  <!-- ==================== مودال مركز المسح الذكي بالهاتف عن بُعد ==================== -->
+  <div id="smartScannerModalOverlay" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); z-index: 9000; justify-content: center; align-items: center; padding: 15px; backdrop-filter: blur(4px);">
+    <div style="background: white; border-radius: 20px; max-width: 620px; width: 100%; box-shadow: 0 25px 50px rgba(0,0,0,0.3); overflow: hidden; display: flex; flex-direction: column; max-height: 92vh;">
       
       <!-- رأس المودال -->
-      <div style="background: linear-gradient(135deg, #1e3a8a, #2563eb); color: white; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;">
+      <div style="background: linear-gradient(135deg, #1e3a8a, #2563eb); color: white; padding: 16px 22px; display: flex; justify-content: space-between; align-items: center;">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <i class="fas fa-qrcode fa-lg"></i>
-          <h3 style="margin: 0; font-size: 17px; font-weight: 800;">مركز استلام الملفات والمسح الذكي (QR & Barcode)</h3>
+          <i class="fas fa-mobile-screen-button fa-lg"></i>
+          <h3 style="margin: 0; font-size: 16.5px; font-weight: 800;">إدارة نظام استلام الملفات بالمسح الذكي عبر الهاتف</h3>
         </div>
         <button onclick="closeSmartScannerHubModal()" style="background: transparent; border: none; color: white; font-size: 20px; cursor: pointer;">
           <i class="fas fa-times"></i>
         </button>
       </div>
 
-      <!-- تبويبات المسح: مباشر أو بالهاتف -->
-      <div style="display: flex; background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-        <button class="scanner-tab-btn active" id="tabBtnDirect" onclick="switchScannerTab('direct')">
-          <i class="fas fa-barcode"></i> المسح المباشر (بالقارئ أو الكاميرا)
-        </button>
-        <button class="scanner-tab-btn" id="tabBtnMobile" onclick="switchScannerTab('mobile')">
-          <i class="fas fa-mobile-screen-button"></i> المسح عن بُعد بكاميرا الهاتف
-        </button>
-      </div>
-
-      <!-- محتوى التبويبات -->
-      <div style="padding: 22px; overflow-y: auto; flex: 1;">
+      <!-- محتوى المسح بالهاتف المدمج -->
+      <div style="padding: 22px; overflow-y: auto; flex: 1; text-align: center;">
         
-        <!-- التبويب 1: المسح المباشر -->
-        <div id="scannerSectionDirect">
-          <p style="font-size: 13.5px; color: #475569; margin-bottom: 12px; font-weight: 600;">
-            وجه جهاز قارئ الباركود (Barcode Gun) نحو رمز الاستمارة المستخرجة، أو أدخل رقم الحساب CCP مباشرة:
-          </p>
+        <p style="font-size: 13.5px; color: #334155; margin-bottom: 15px; font-weight: 600; line-height: 1.6;">
+          امسح رمز الاستجابة السريع (QR) بكاميرا هاتفك لفتح واجهة المسح الضوئي.<br>
+          <span style="color: #2563eb; font-size: 12.5px;">* يتم استلام الملف الورقي وتجميد التعديل والحذف بالمؤسسة فورياً بمجرد مسح باركود الاستمارة.</span>
+        </p>
 
-          <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-            <input type="text" id="directScanInput" placeholder="امسح الباركود أو أدخل رقم الحساب CCP..." 
-                   style="flex: 1; height: 46px; font-size: 16px; font-weight: bold; text-align: center; letter-spacing: 1px; border: 2px solid #2563eb; border-radius: 10px;"
-                   onkeypress="if(event.key === 'Enter') handleDirectScanSubmit()">
-            <button class="btn btn-main" onclick="handleDirectScanSubmit()" style="height: 46px; padding: 0 20px;">
-              <i class="fas fa-check-circle"></i> تأكيد الاستلام
-            </button>
+        <!-- رمز QR عالي الدقة -->
+        <div style="display: inline-block; padding: 12px; background: white; border: 2px solid #e2e8f0; border-radius: 18px; margin-bottom: 15px; box-shadow: 0 6px 16px rgba(0,0,0,0.06);">
+          <canvas id="mobileScannerQrCanvas"></canvas>
+        </div>
+
+        <!-- حقل نسخ الرابط -->
+        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <input type="text" id="mobileScannerUrlInput" readonly 
+                 style="flex: 1; height: 40px; font-size: 12px; direction: ltr; font-family: monospace; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 0 12px; font-weight: 600;">
+          <button class="btn btn-secondary btn-sm" onclick="copyMobileScannerUrl()" title="نسخ الرابط للمشاركة">
+            <i class="fas fa-copy"></i> نسخ الرابط
+          </button>
+        </div>
+
+        <!-- بطاقة الإحصائيات الحية للجلسة -->
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px;">
+          <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 8px;">
+            <div style="font-size: 11px; color: #1e40af; font-weight: 700;">الأجهزة المتصلة</div>
+            <div style="font-size: 17px; font-weight: 900; color: #1d4ed8;" id="liveConnectedCount">0</div>
           </div>
-
-          <div style="text-align: center; margin-bottom: 12px;">
-            <button class="btn btn-secondary btn-sm" id="btnToggleCamDirect" onclick="toggleDirectCamera()">
-              <i class="fas fa-camera"></i> <span id="btnCamText">فتح كاميرا الحاسوب للمسح</span>
-            </button>
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 10px 8px;">
+            <div style="font-size: 11px; color: #166534; font-weight: 700;">المسحات المنجزة</div>
+            <div style="font-size: 17px; font-weight: 900; color: #15803d;" id="liveScanCount">0</div>
           </div>
-
-          <div id="directCameraWrapper" style="display: none; border-radius: 12px; overflow: hidden; border: 2px dashed #3b82f6; max-height: 250px; margin-bottom: 15px;"></div>
-
-          <!-- صندوق نتيجة المسح السريع -->
-          <div id="scanResultDirectBox" style="display: none; background: #f0fdf4; border: 2px solid #86efac; border-radius: 12px; padding: 15px; margin-top: 15px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <span style="color: #166534; font-weight: 800; font-size: 14.5px;">
-                <i class="fas fa-circle-check"></i> تم استلام الملف بنجاح وتجميد التعديل بالمؤسسة!
-              </span>
-              <span class="badge badge-approved" id="resStatusBadge">مستلم</span>
-            </div>
-            <div id="resEmployeeSummary" style="font-size: 13px; color: #334155; line-height: 1.8;"></div>
-            
-            <div style="margin-top: 12px; display: flex; gap: 10px;">
-              <button class="btn btn-main btn-sm" id="btnReviewScannedDirect" style="flex: 1;">
-                <i class="fas fa-clipboard-check"></i> دراسة ومطابقة الملف الآن
-              </button>
-              <button class="btn btn-secondary btn-sm" onclick="resetDirectScanBox()">
-                <i class="fas fa-repeat"></i> مسح ملف آخر
-              </button>
-            </div>
+          <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 10px; padding: 10px 8px;">
+            <div style="font-size: 11px; color: #854d0e; font-weight: 700;">المسحات المتبقية</div>
+            <div style="font-size: 17px; font-weight: 900; color: #a16207;" id="liveRemainingCount">...</div>
           </div>
         </div>
 
-        <!-- التبويب 2: المسح بالهاتف عن بعد -->
-        <div id="scannerSectionMobile" style="display: none; text-align: center;">
-          <p style="font-size: 13px; color: #475569; margin-bottom: 15px;">
-            امسح رمز الاستجابة السريع أدناه بكاميرا هاتفك لفتح واجهة المسح الضوئي في هاتفك دون الحاجة لكاميرا حاسوب:
-          </p>
-
-          <!-- رمز QR للرابط -->
-          <div style="display: inline-block; padding: 10px; background: white; border: 2px solid #e2e8f0; border-radius: 16px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-            <canvas id="mobileScannerQrCanvas"></canvas>
+        <!-- إعدادات الأمان والصلاحيات والكوتا -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px 16px; text-align: right;">
+          
+          <div style="font-size: 13px; font-weight: 800; color: #0f172a; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-sliders" style="color: #2563eb;"></i> إعدادات وصلاحيات الجلسة:
           </div>
 
-          <!-- حقل نسخ الرابط -->
-          <div style="display: flex; gap: 8px; margin-bottom: 15px;">
-            <input type="text" id="mobileScannerUrlInput" readonly 
-                   style="flex: 1; height: 38px; font-size: 12px; direction: ltr; font-family: monospace; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 10px;">
-            <button class="btn btn-secondary btn-sm" onclick="copyMobileScannerUrl()" title="نسخ الرابط">
-              <i class="fas fa-copy"></i> نسخ الرابط
-            </button>
-          </div>
-
-          <!-- لوحة التحكم بالجلسة: العدد المسموح، التوليد، القفل -->
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; text-align: right; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div style="display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 12px;">
             
+            <!-- تحديد عدد الأجهزة المسموح بها -->
             <div style="display: flex; align-items: center; gap: 8px;">
-              <label style="margin: 0; font-size: 12.5px; font-weight: 700;">عدد المسحات المسموح بها:</label>
+              <label style="margin: 0; font-size: 12px; font-weight: 700; color: #475569;">الأجهزة المسموح بها:</label>
+              <input type="number" id="inputMaxDevices" min="1" max="10" value="1" 
+                     style="width: 60px; height: 34px; text-align: center; font-weight: bold; border-radius: 6px; border: 1px solid #cbd5e1;"
+                     onchange="updateRemoteSessionDevices(this.value)" title="عدد الهواتف المسموح باتصالها في نفس الوقت">
+            </div>
+
+            <!-- تحديد كوتا المسحات -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <label style="margin: 0; font-size: 12px; font-weight: 700; color: #475569;">عدد المسحات المسموح:</label>
               <input type="number" id="inputScanQuota" min="1" max="1000" value="100" 
                      style="width: 70px; height: 34px; text-align: center; font-weight: bold; border-radius: 6px; border: 1px solid #cbd5e1;"
                      onchange="updateRemoteSessionQuota(this.value)">
@@ -371,21 +374,25 @@
 
             <!-- مفتاح فتح / غلق المسح بالهاتف -->
             <div class="switch-toggle-box" onclick="toggleRemoteSessionStatus()">
-              <span style="font-size: 12.5px; font-weight: 700;" id="remoteSwitchLabel">نظام المسح بالهاتف: مفعل</span>
+              <span style="font-size: 12px; font-weight: 700;" id="remoteSwitchLabel">المسح: مفتوح</span>
               <div class="switch-toggle active" id="remoteSwitchElem">
                 <div class="switch-toggle-knob"></div>
               </div>
             </div>
 
-            <!-- زر إعادة توليد الرابط -->
-            <button class="btn btn-danger btn-sm" onclick="regenerateRemoteSession()" title="إبطال الرابط القديم وإنشاء رابط مشفر جديد">
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #cbd5e1; padding-top: 10px;">
+            <span style="font-size: 11.5px; color: #64748b;">* عند إبطال الرابط يتوقف الهاتف فوراً ويطلب إعادة المسح</span>
+            <button class="btn btn-danger btn-sm" onclick="regenerateRemoteSession()" title="إبطال الرابط القديم وتوليد رمز مشفر جديد">
               <i class="fas fa-arrows-rotate"></i> إعادة توليد الرابط
             </button>
           </div>
 
-          <div style="margin-top: 12px; font-size: 12px; color: #059669; font-weight: 600;">
-            <i class="fas fa-satellite-dish fa-fade"></i> النظام متصل ومستعد لاستقبال نتائج المسح من الهاتف فورياً...
-          </div>
+        </div>
+
+        <div style="margin-top: 14px; font-size: 12px; color: #059669; font-weight: 700;">
+          <i class="fas fa-satellite-dish fa-fade"></i> النظام متصل ومستعد لاستقبال نتائج المسح من الهاتف فورياً...
         </div>
 
       </div>
@@ -502,18 +509,20 @@
     function applyOfficeFilters() {
       const searchTxt = document.getElementById("flt_search").value.trim().toLowerCase();
       const levelVal = document.getElementById("flt_level").value;
+      const typeVal = document.getElementById("flt_type") ? document.getElementById("flt_type").value : "";
       const daairaVal = document.getElementById("flt_daaira").value;
       const baladiyaVal = document.getElementById("flt_baladiya").value;
       const statusVal = document.getElementById("flt_status").value;
 
       filteredRecords = allOfficeRecords.filter(e => {
         if (levelVal && e.level !== levelVal) return false;
+        if (typeVal && !String(e.status_type || "").includes(typeVal)) return false;
         if (daairaVal && e.daaira !== daairaVal) return false;
         if (baladiyaVal && e.baladiya !== baladiyaVal) return false;
         if (statusVal && e.workflow_status !== statusVal) return false;
 
         if (searchTxt) {
-          const combo = `${e.fmn_ar || ''} ${e.frn_ar || ''} ${e.ccp || ''} ${e.school_name || ''} ${e.phone || ''} ${e.nin || ''}`.toLowerCase();
+          const combo = `${e.fmn_ar || ''} ${e.frn_ar || ''} ${e.ccp || ''} ${e.school_name || ''} ${e.phone || ''} ${e.nin || ''} ${e.rank || ''} ${e.status_type || ''}`.toLowerCase();
           if (!combo.includes(searchTxt)) return false;
         }
         return true;
@@ -763,123 +772,21 @@
     }
 
     // ============================================================
-    // مركز المسح الذكي (Smart Scanner Hub Logic)
+    // مركز المسح الذكي بالهاتف عن بُعد (Remote Mobile Session Hub)
     // ============================================================
 
     function openSmartScannerHubModal() {
       document.getElementById("smartScannerModalOverlay").style.display = "flex";
-      switchScannerTab('direct');
-      setTimeout(() => {
-        const inp = document.getElementById("directScanInput");
-        if (inp) inp.focus();
-      }, 200);
+      renderMobileQrCode();
     }
 
     function closeSmartScannerHubModal() {
       document.getElementById("smartScannerModalOverlay").style.display = "none";
-      if (html5QrDirect) {
-        try { html5QrDirect.stop(); } catch(e) {}
-      }
     }
-
-    function switchScannerTab(tab) {
-      const tabDirect = document.getElementById("tabBtnDirect");
-      const tabMobile = document.getElementById("tabBtnMobile");
-      const secDirect = document.getElementById("scannerSectionDirect");
-      const secMobile = document.getElementById("scannerSectionMobile");
-
-      if (tab === 'direct') {
-        tabDirect.classList.add("active");
-        tabMobile.classList.remove("active");
-        secDirect.style.display = "block";
-        secMobile.style.display = "none";
-        document.getElementById("directScanInput").focus();
-      } else {
-        tabDirect.classList.remove("active");
-        tabMobile.classList.add("active");
-        secDirect.style.display = "none";
-        secMobile.style.display = "block";
-        renderMobileQrCode();
-      }
-    }
-
-    // مسح مباشر عبر قارئ الباركود أو الإدخال
-    async function handleDirectScanSubmit() {
-      const val = document.getElementById("directScanInput").value.trim();
-      if (!val) return;
-
-      Swal.fire({ title: 'جاري استلام الملف...', didOpen: () => Swal.showLoading() });
-      try {
-        const res = await receiveFileByScan(val, currentOffice.username, currentOffice.roleTitle, currentOffice.officeType);
-        Swal.close();
-
-        if (res.success) {
-          try { chimeSound.play().catch(()=>{}); } catch(e) {}
-          
-          document.getElementById("directScanInput").value = "";
-          displayDirectScanResult(res.docId, res.data);
-          await loadOfficeEmployees();
-        } else {
-          Swal.fire("تنبيه الاستلام", res.message, "warning");
-        }
-      } catch(err) {
-        Swal.fire("خطأ", err.message, "error");
-      }
-    }
-
-    function displayDirectScanResult(docId, emp) {
-      const box = document.getElementById("scanResultDirectBox");
-      box.style.display = "block";
-      document.getElementById("resStatusBadge").textContent = getStatusInfo(emp.workflow_status).label;
-      document.getElementById("resEmployeeSummary").innerHTML = `
-        <b>الموظف:</b> ${emp.fmn_ar || ''} ${emp.frn_ar || ''} (CCP: <b>${emp.ccp}</b>)<br>
-        <b>المؤسسة:</b> ${emp.school_name} (${emp.level || ''}) | <b>الرتبة:</b> ${emp.rank || ''}<br>
-        <span style="color:#059669; font-weight:700;"><i class="fas fa-lock"></i> تم تجميد زر التعديل والحذف لدى مدير المؤسسة بنجاح.</span>
-      `;
-
-      document.getElementById("btnReviewScannedDirect").onclick = () => {
-        closeSmartScannerHubModal();
-        openReviewModal(docId);
-      };
-    }
-
-    function resetDirectScanBox() {
-      document.getElementById("scanResultDirectBox").style.display = "none";
-      document.getElementById("directScanInput").focus();
-    }
-
-    function toggleDirectCamera() {
-      const wrapper = document.getElementById("directCameraWrapper");
-      const btnText = document.getElementById("btnCamText");
-
-      if (wrapper.style.display === "none") {
-        wrapper.style.display = "block";
-        btnText.textContent = "إيقاف كاميرا الحاسوب";
-        html5QrDirect = new Html5Qrcode("directCameraWrapper");
-        html5QrDirect.start(
-          { facingMode: "user" },
-          { fps: 15, qrbox: { width: 250, height: 180 } },
-          (decoded) => {
-            document.getElementById("directScanInput").value = decoded;
-            handleDirectScanSubmit();
-          },
-          (err) => {}
-        ).catch(e => console.warn(e));
-      } else {
-        wrapper.style.display = "none";
-        btnText.textContent = "فتح كاميرا الحاسوب للمسح";
-        if (html5QrDirect) {
-          try { html5QrDirect.stop(); } catch(e) {}
-        }
-      }
-    }
-
-    // ============================================================
-    // جلسة المسح بالهاتف عن بُعد (Remote Mobile Session Hub)
-    // ============================================================
 
     async function initRemoteScannerSession() {
-      activeRemoteSessionId = `session_${currentOffice.officeType}_${currentOffice.username.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      if (!currentOffice) return;
+      activeRemoteSessionId = `session_${currentOffice.officeType}_${(currentOffice.username || 'office').replace(/[^a-zA-Z0-9]/g, '_')}`;
 
       if (!window.db) return;
 
@@ -888,26 +795,47 @@
 
       if (!snap.exists) {
         await docRef.set({
-          office_type: currentOffice.officeType,
-          username: currentOffice.username,
-          role_title: currentOffice.roleTitle,
+          office_type: currentOffice.officeType || "office",
+          username: currentOffice.username || "مسؤول المكتب",
+          role_title: currentOffice.roleTitle || "رئيس المكتب",
           is_enabled: true,
           quota: 100,
+          max_devices: 1,
           scan_count: 0,
+          connected_devices: {},
           created_at: new Date().toISOString()
         });
       }
 
-      // الاستماع الحي لما يتم مسحه بالهاتف
+      // الاستماع الحي لما يتم مسحه بالهاتف وتحديث الإحصائيات
       if (remoteSessionUnsubscribe) remoteSessionUnsubscribe();
 
       remoteSessionUnsubscribe = docRef.onSnapshot((doc) => {
         if (!doc.exists) return;
         const d = doc.data();
 
-        // تحديث واجهة القفل
+        // تحديث واجهة القفل والكوتا
         updateSwitchUi(d.is_enabled !== false);
-        document.getElementById("inputScanQuota").value = d.quota || 100;
+        const quotaInp = document.getElementById("inputScanQuota");
+        if (quotaInp && document.activeElement !== quotaInp) quotaInp.value = d.quota || 100;
+
+        const maxDevInp = document.getElementById("inputMaxDevices");
+        if (maxDevInp && document.activeElement !== maxDevInp) maxDevInp.value = d.max_devices || 1;
+
+        // تحديث البطاقات الحية
+        const devCount = d.connected_devices ? Object.keys(d.connected_devices).length : 0;
+        const scansDone = d.scan_count || 0;
+        const scansLimit = d.quota || 100;
+        const scansRemaining = Math.max(0, scansLimit - scansDone);
+
+        const elDev = document.getElementById("liveConnectedCount");
+        if (elDev) elDev.textContent = `${devCount} / ${d.max_devices || 1}`;
+
+        const elDone = document.getElementById("liveScanCount");
+        if (elDone) elDone.textContent = scansDone;
+
+        const elRem = document.getElementById("liveRemainingCount");
+        if (elRem) elRem.textContent = scansRemaining;
 
         // إذا كان هناك مسح جديد من الهاتف
         if (d.last_scanned_doc && d.last_scanned_at) {
@@ -917,22 +845,16 @@
             try { chimeSound.play().catch(()=>{}); } catch(e) {}
             loadOfficeEmployees();
             
-            Swal.fire({
-              toast: true,
-              position: 'top-end',
-              icon: 'success',
-              title: `مسح جديد بالهاتف: ${d.last_scanned_data?.fmn_ar || ''} (CCP: ${d.last_scanned_data?.ccp || ''})`,
-              timer: 4000,
-              showConfirmButton: true,
-              confirmButtonText: 'دراسة الملف'
-            }).then((res) => {
-              if (res.isConfirmed) {
-                openReviewModal(d.last_scanned_doc);
-              }
-            });
+            // فتح نافذة دراسة الملف مباشرة فوق المودال
+            openReviewModal(d.last_scanned_doc);
           }
         }
       });
+    }
+
+    async function updateRemoteSessionDevices(val) {
+      const dev = Math.max(1, parseInt(val, 10) || 1);
+      await window.db.collection("remote_scanner_sessions").doc(activeRemoteSessionId).update({ max_devices: dev });
     }
 
     function renderMobileQrCode() {
@@ -998,13 +920,18 @@
       if (!confirmRes.isConfirmed) return;
 
       activeRemoteSessionId = `session_${currentOffice.officeType}_${Date.now()}`;
+      const quotaVal = parseInt(document.getElementById("inputScanQuota")?.value, 10) || 100;
+      const maxDevVal = parseInt(document.getElementById("inputMaxDevices")?.value, 10) || 1;
+
       await window.db.collection("remote_scanner_sessions").doc(activeRemoteSessionId).set({
-        office_type: currentOffice.officeType,
-        username: currentOffice.username,
-        role_title: currentOffice.roleTitle,
+        office_type: currentOffice.officeType || "office",
+        username: currentOffice.username || "مسؤول المكتب",
+        role_title: currentOffice.roleTitle || "رئيس المكتب",
         is_enabled: true,
-        quota: 100,
+        quota: quotaVal,
+        max_devices: maxDevVal,
         scan_count: 0,
+        connected_devices: {},
         created_at: new Date().toISOString()
       });
 

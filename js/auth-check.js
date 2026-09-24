@@ -90,7 +90,7 @@ const AuthGuard = {
 
   requireOffice(redirectUrl = "../office-portal/login.html") {
     const admin = this.getAdminSession();
-    if (admin) return { roleTitle: "المشرف العام", filterLevel: "all", is_admin: true };
+    if (admin) return { username: "المشرف العام", roleTitle: "المشرف العام", officeType: "payroll", filterLevel: "all", is_admin: true };
 
     const session = this.getOfficeSession();
     if (!session || !session.officeType) {
@@ -106,6 +106,8 @@ const AuthGuard = {
       });
       return false;
     }
+    session.username = session.username || session.roleTitle || "مسؤول المكتب";
+    session.roleTitle = session.roleTitle || "رئيس المكتب";
     return session;
   },
 

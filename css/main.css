@@ -560,33 +560,40 @@ textarea:focus {
   pointer-events: auto; /* للسماح بظهور التولتيب */
 }
 
+/* ضمان ظهور نوافذ SweetAlert2 فوق أي نافذة أو ماسح ضوئي */
+.swal2-container {
+  z-index: 100000 !important;
+}
+
 /* ==================== المخطط المرئي لتتبع الملف (Workflow Stepper) ==================== */
 .stepper-container {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   position: relative;
-  margin: 30px 0;
-  padding: 0 20px;
+  margin: 25px 0;
+  padding: 0 45px;
 }
 
 .stepper-line {
   position: absolute;
   top: 24px;
-  left: 40px;
-  right: 40px;
+  right: 55px;
+  left: 55px;
   height: 4px;
   background: #e2e8f0;
   z-index: 1;
+  border-radius: 4px;
 }
 
 .stepper-progress {
   position: absolute;
-  top: 24px;
-  right: 40px;
-  height: 4px;
-  background: var(--primary-gradient);
+  top: 0;
+  right: 0;
+  height: 100%;
+  background: linear-gradient(270deg, #2563eb, #10b981);
   z-index: 2;
+  border-radius: 4px;
   transition: width 0.4s ease;
 }
 

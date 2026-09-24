@@ -384,10 +384,13 @@
 
           // توجيه بحسب الرتبة الإدارية
           if (adminCheck.role === "office_primary" || adminCheck.role === "office_middle" || adminCheck.role === "office_secondary") {
+            const rawType = adminCheck.role.replace("office_", "");
+            const levelMap = { primary: "ابتدائي", middle: "متوسط", secondary: "ثانوي" };
             AuthGuard.setOfficeSession({
-              officeType: adminCheck.role.replace("office_", ""),
-              roleTitle: adminCheck.title,
-              username: adminCheck.username
+              officeType: rawType,
+              roleTitle: adminCheck.title || `رئيس مكتب التعليم ${levelMap[rawType] || ''}`,
+              filterLevel: levelMap[rawType] || "all",
+              username: adminCheck.username || "رئيس المكتب"
             });
             Swal.fire({
               icon: 'success',
@@ -399,11 +402,28 @@
               window.location.href = "office-portal/office-dashboard.html";
             });
             return;
-          } else if (adminCheck.role === "office_payroll" || adminCheck.isSuperAdmin) {
+          } else if (adminCheck.role === "office_payroll") {
+            AuthGuard.setOfficeSession({
+              officeType: "payroll",
+              roleTitle: "رئيس مصلحة تسيير نفقات المستخدمين (الرواتب)",
+              filterLevel: "all",
+              username: adminCheck.username || "رئيس مصلحة الرواتب"
+            });
             Swal.fire({
               icon: 'success',
               title: 'مرحباً بك',
-              text: 'لوحة التحكم المركزية - مصلحة الرواتب',
+              text: 'لوحة مصلحة الرواتب - متابعة واعتماد الملفات',
+              timer: 1400,
+              showConfirmButton: false
+            }).then(() => {
+              window.location.href = "office-portal/office-dashboard.html";
+            });
+            return;
+          } else if (adminCheck.isSuperAdmin || adminCheck.role === "admin") {
+            Swal.fire({
+              icon: 'success',
+              title: 'مرحباً بك',
+              text: 'لوحة التحكم المركزية - المشرف العام',
               timer: 1400,
               showConfirmButton: false
             }).then(() => {
@@ -423,7 +443,7 @@
               timer: 1400,
               showConfirmButton: false
             }).then(() => {
-              window.location.href = "portals.html";
+              window.location.href = "contract-portal/director-dashboard.html";
             });
             return;
           }
@@ -446,7 +466,11 @@
             timer: 1500,
             showConfirmButton: false
           }).then(() => {
-            window.location.href = "portals.html";
+            if (user.role === "director") {
+              window.location.href = "contract-portal/director-dashboard.html";
+            } else {
+              window.location.href = "portals.html";
+            }
           });
           return;
         }

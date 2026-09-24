@@ -148,21 +148,25 @@ function renderWorkflowStepper(currentStatusKey, rejectionReason = "") {
     `;
   }
 
-  // حساب نسبة تقدم خط المسار
+  // 3 خطوات واضحة المعالم:
+  // خطوة 1 (المؤسسة التربوية): 0%
+  // خطوة 2 (مكتب الطور): 50%
+  // خطوة 3 (مصلحة الرواتب): 100%
   let progressWidth = "0%";
-  if (isSubmittedToOffice) progressWidth = "33%";
-  if (isOfficeApproved) progressWidth = "66%";
+  if (isSubmittedToOffice) progressWidth = "50%";
+  if (isOfficeApproved || isSubmittedToPayroll) progressWidth = "75%";
   if (isApprovedFinal) progressWidth = "100%";
 
   return `
-    <div style="margin: 20px 0;">
-      <div class="stepper-container">
-        <div class="stepper-line"></div>
-        <div class="stepper-progress" style="width: ${progressWidth};"></div>
+    <div style="margin: 20px 0; direction: rtl;">
+      <div class="stepper-container" style="position: relative; display: flex; justify-content: space-between; align-items: flex-start; padding: 0 45px; margin: 25px 0;">
+        <div class="stepper-line" style="position: absolute; top: 24px; right: 55px; left: 55px; height: 4px; background: #e2e8f0; z-index: 1; border-radius: 4px;">
+          <div class="stepper-progress" style="position: absolute; top: 0; right: 0; height: 100%; width: ${progressWidth}; background: linear-gradient(270deg, #2563eb, #10b981); border-radius: 4px; transition: width 0.4s ease;"></div>
+        </div>
 
         <!-- الخطوة 1: المؤسسة التربوية -->
-        <div class="step-node ${isSubmittedToOffice || isOfficeApproved || isApprovedFinal ? 'completed' : (isOfficeRejected ? 'rejected' : 'current')}">
-          <div class="step-icon-circle">
+        <div class="step-node ${isSubmittedToOffice || isOfficeApproved || isApprovedFinal ? 'completed' : (isOfficeRejected ? 'rejected' : 'current')}" style="position: relative; z-index: 3; text-align: center; width: 120px;">
+          <div class="step-icon-circle" style="margin: 0 auto 10px auto;">
             <i class="fas ${isSubmittedToOffice ? 'fa-check' : (isOfficeRejected ? 'fa-triangle-exclamation' : 'fa-school')}"></i>
           </div>
           <div class="step-label">مدير المؤسسة</div>
@@ -170,8 +174,8 @@ function renderWorkflowStepper(currentStatusKey, rejectionReason = "") {
         </div>
 
         <!-- الخطوة 2: مكتب الطور بالمديرية -->
-        <div class="step-node ${isOfficeApproved || isApprovedFinal ? 'completed' : (isOfficeRejected ? 'rejected' : (isSubmittedToOffice ? 'current' : ''))}">
-          <div class="step-icon-circle">
+        <div class="step-node ${isOfficeApproved || isApprovedFinal ? 'completed' : (isOfficeRejected ? 'rejected' : (isSubmittedToOffice ? 'current' : ''))}" style="position: relative; z-index: 3; text-align: center; width: 120px;">
+          <div class="step-icon-circle" style="margin: 0 auto 10px auto;">
             <i class="fas ${isOfficeApproved || isApprovedFinal ? 'fa-check' : (isOfficeRejected ? 'fa-xmark' : 'fa-building-columns')}"></i>
           </div>
           <div class="step-label">مكتب الطور بالمديرية</div>
@@ -179,8 +183,8 @@ function renderWorkflowStepper(currentStatusKey, rejectionReason = "") {
         </div>
 
         <!-- الخطوة 3: مصلحة الرواتب -->
-        <div class="step-node ${isApprovedFinal ? 'completed' : (isPayrollRejected ? 'rejected' : (isOfficeApproved || isSubmittedToPayroll ? 'current' : ''))}">
-          <div class="step-icon-circle">
+        <div class="step-node ${isApprovedFinal ? 'completed' : (isPayrollRejected ? 'rejected' : (isOfficeApproved || isSubmittedToPayroll ? 'current' : ''))}" style="position: relative; z-index: 3; text-align: center; width: 120px;">
+          <div class="step-icon-circle" style="margin: 0 auto 10px auto;">
             <i class="fas ${isApprovedFinal ? 'fa-check-double' : (isPayrollRejected ? 'fa-xmark' : 'fa-coins')}"></i>
           </div>
           <div class="step-label">مصلحة الرواتب</div>
@@ -200,22 +204,35 @@ function renderWorkflowStepper(currentStatusKey, rejectionReason = "") {
 async function updateFileStatus(registrationId, newStatusKey, actorName, actorRole, note = "", extraFields = {}) {
   if (!window.db) throw new Error("قاعدة البيانات غير متصلة");
 
+  const safeActorName = String(actorName || "المسؤول").trim();
+  const safeActorRole = String(actorRole || "الإدارة").trim();
+  const safeNote = String(note || "").trim();
   const timestamp = new Date().toISOString();
+
   const event = {
     timestamp,
-    actorName,
-    actorRole,
-    status: newStatusKey,
-    note
+    actorName: safeActorName,
+    actorRole: safeActorRole,
+    status: String(newStatusKey || "pending_director"),
+    note: safeNote
   };
 
   const docRef = window.db.collection("contract_registrations").doc(registrationId);
+  const cleanExtra = {};
+  if (extraFields && typeof extraFields === 'object') {
+    for (const k in extraFields) {
+      if (extraFields[k] !== undefined) {
+        cleanExtra[k] = extraFields[k];
+      }
+    }
+  }
+
   const updateData = {
     workflow_status: newStatusKey,
-    rejection_reason: (newStatusKey.includes("reject") || newStatusKey.includes("returned")) ? note : "",
+    rejection_reason: (newStatusKey.includes("reject") || newStatusKey.includes("returned")) ? safeNote : "",
     last_updated: timestamp,
     workflow_history: firebase.firestore.FieldValue.arrayUnion(event),
-    ...extraFields
+    ...cleanExtra
   };
 
   await docRef.update(updateData);
@@ -227,6 +244,11 @@ async function receiveFileByScan(identifier, scannerUser, scannerRole, officeTyp
   if (!window.db) throw new Error("قاعدة البيانات غير متصلة");
   const cleanId = String(identifier || "").trim();
   if (!cleanId) throw new Error("رمز الاستمارة أو رقم الحساب غير صحيح");
+
+  const safeScannerUser = String(scannerUser || "مسؤول الاستلام").trim();
+  const isPayroll = officeType === "payroll";
+  const defaultRole = isPayroll ? "مصلحة الرواتب" : "مكتب التعليم";
+  const safeScannerRole = String(scannerRole || defaultRole).trim();
 
   // استخراج CCP / معرف الوثيقة إذا كان من الباركود أو الـ QR
   let searchCcp = cleanId.replace(/\D/g, "");
@@ -264,30 +286,30 @@ async function receiveFileByScan(identifier, scannerUser, scannerRole, officeTyp
 
   const data = recordDoc.data();
   const docId = recordDoc.id;
-  const isPayroll = officeType === "payroll";
   const targetStatus = isPayroll ? "submitted_to_payroll" : "submitted_to_office";
   const officeName = isPayroll ? "مصلحة الرواتب" : "مكتب التعليم";
+  const timestamp = new Date().toISOString();
 
   const event = {
-    timestamp: new Date().toISOString(),
-    actorName: scannerUser,
-    actorRole: scannerRole,
+    timestamp,
+    actorName: safeScannerUser,
+    actorRole: safeScannerRole,
     status: targetStatus,
     note: `تم استلام الملف الورقي بنجاح عبر مسح الرمز وتجميد التعديل والحذف للمؤسسة.`
   };
 
   const updates = {
     workflow_status: targetStatus,
-    last_updated: event.timestamp,
+    last_updated: timestamp,
     workflow_history: firebase.firestore.FieldValue.arrayUnion(event),
     allow_director_edit: false, // تجميد زر التعديل والحذف في صفحة المدير
     allow_director_delete: false
   };
 
   if (isPayroll) {
-    updates.received_by_payroll = { user: scannerUser, time: event.timestamp };
+    updates.received_by_payroll = { user: safeScannerUser, time: timestamp };
   } else {
-    updates.received_by_office = { user: scannerUser, time: event.timestamp };
+    updates.received_by_office = { user: safeScannerUser, time: timestamp };
   }
 
   await window.db.collection("contract_registrations").doc(docId).update(updates);
@@ -304,17 +326,21 @@ async function receiveFileByScan(identifier, scannerUser, scannerRole, officeTyp
 async function setDirectorEditPermission(docId, allow, actorName, actorRole) {
   if (!window.db) throw new Error("قاعدة البيانات غير متصلة");
   const timestamp = new Date().toISOString();
+  const safeActorName = String(actorName || "المسؤول").trim();
+  const safeActorRole = String(actorRole || "الإدارة").trim();
+  const allowBool = Boolean(allow);
+
   await window.db.collection("contract_registrations").doc(docId).update({
-    allow_director_edit: Boolean(allow),
-    allow_director_delete: Boolean(allow),
+    allow_director_edit: allowBool,
+    allow_director_delete: allowBool,
     last_updated: timestamp,
     workflow_history: firebase.firestore.FieldValue.arrayUnion({
       timestamp,
-      actorName,
-      actorRole,
-      status: `director_edit_${allow ? 'unlocked' : 'locked'}`,
-      note: allow ? `قام ${actorName} (${actorRole}) بفتح إمكانية التعديل والحذف لمدير المؤسسة.` 
-                  : `قام ${actorName} (${actorRole}) بقفل وتجميد التعديل والحذف على مدير المؤسسة.`
+      actorName: safeActorName,
+      actorRole: safeActorRole,
+      status: `director_edit_${allowBool ? 'unlocked' : 'locked'}`,
+      note: allowBool ? `قام ${safeActorName} (${safeActorRole}) بفتح إمكانية التعديل والحذف لمدير المؤسسة.` 
+                      : `قام ${safeActorName} (${safeActorRole}) بقفل وتجميد التعديل والحذف على مدير المؤسسة.`
     })
   });
   return true;
@@ -324,16 +350,20 @@ async function setDirectorEditPermission(docId, allow, actorName, actorRole) {
 async function setOfficeEditPermission(docId, allow, actorName, actorRole) {
   if (!window.db) throw new Error("قاعدة البيانات غير متصلة");
   const timestamp = new Date().toISOString();
+  const safeActorName = String(actorName || "مصلحة الرواتب").trim();
+  const safeActorRole = String(actorRole || "رئيس مصلحة الرواتب").trim();
+  const allowBool = Boolean(allow);
+
   await window.db.collection("contract_registrations").doc(docId).update({
-    allow_office_edit: Boolean(allow),
+    allow_office_edit: allowBool,
     last_updated: timestamp,
     workflow_history: firebase.firestore.FieldValue.arrayUnion({
       timestamp,
-      actorName,
-      actorRole,
-      status: `office_edit_${allow ? 'unlocked' : 'locked'}`,
-      note: allow ? `قامت مصلحة الرواتب (${actorName}) بالسماح لرئيس مكتب الطور بإعادة دراسة وتعديل الملف.` 
-                  : `قامت مصلحة الرواتب (${actorName}) بقفل التعديل عن مكتب الطور.`
+      actorName: safeActorName,
+      actorRole: safeActorRole,
+      status: `office_edit_${allowBool ? 'unlocked' : 'locked'}`,
+      note: allowBool ? `قامت مصلحة الرواتب (${safeActorName}) بالسماح لرئيس مكتب الطور بإعادة دراسة وتعديل الملف.` 
+                      : `قامت مصلحة الرواتب (${safeActorName}) بقفل التعديل عن مكتب الطور.`
     })
   });
   return true;

@@ -117,11 +117,13 @@
           <button class="btn btn-outline-primary" onclick="copyEmployeeInquiryLink()" title="نسخ رابط استعلام الموظفين لمشاركته مع الأساتذة">
             <i class="fas fa-share-nodes"></i> مشاركة رابط الاستعلام للموظفين
           </button>
-          <a href="employee-status.html" target="_blank" class="btn btn-secondary" title="فتح بوابة استعلام الموظفين">
-            <i class="fas fa-user-check"></i> فضاء استعلام الموظفين
-          </a>
+          <select id="directorTypeFilter" onchange="filterDirectorTable()" style="height: 42px; font-size: 13px; font-weight: 700; border-radius: 8px; border: 1.5px solid #cbd5e1; padding: 0 10px; background: white; color: #1e293b;">
+            <option value="">-- كل الصفات (مستخلف / متعاقد) --</option>
+            <option value="مستخلف">مستخلف</option>
+            <option value="متعاقد">متعاقد</option>
+          </select>
           <input type="text" id="directorSearchInput" placeholder="بحث بالاسم أو رقم CCP..." 
-                 style="width: 200px; height: 42px; font-size: 13px;" oninput="filterDirectorTable()">
+                 style="width: 200px; height: 42px; font-size: 13px; font-weight: 600; border-radius: 8px; border: 1.5px solid #cbd5e1; padding: 0 10px; background: white;" oninput="filterDirectorTable()">
           
           <button class="btn btn-main" onclick="openNewCandidateCheck()">
             <i class="fas fa-user-plus"></i> إضافة مستخلف جديد
@@ -336,16 +338,18 @@
       });
     }
 
-    // تصفية الجدول بالبحث
+    // تصفية الجدول بالبحث والصفة
     function filterDirectorTable() {
       const q = document.getElementById("directorSearchInput").value.trim().toLowerCase();
-      if (!q) {
-        renderEmployeesTable(institutionEmployees);
-        return;
-      }
+      const typeFilter = document.getElementById("directorTypeFilter")?.value || "";
+
       const filtered = institutionEmployees.filter(e => {
-        const full = `${e.fmn_ar || ''} ${e.frn_ar || ''} ${e.ccp || ''} ${e.nin || ''}`.toLowerCase();
-        return full.includes(q);
+        if (typeFilter && !String(e.status_type || "").includes(typeFilter)) return false;
+        if (q) {
+          const full = `${e.fmn_ar || ''} ${e.frn_ar || ''} ${e.ccp || ''} ${e.nin || ''} ${e.rank || ''}`.toLowerCase();
+          if (!full.includes(q)) return false;
+        }
+        return true;
       });
       renderEmployeesTable(filtered);
     }
@@ -387,27 +391,104 @@
       });
     }
 
-    // نافذة عرض تفاصيل ومسار الملف والستبر
+    // نافذة عرض تفاصيل ومسار الملف والستبر بتصميم منظم وأنيق
     function showWorkflowModal(empId) {
       const emp = institutionEmployees.find(e => e.id === empId);
       if (!emp) return;
 
       const stepperHtml = renderWorkflowStepper(emp.workflow_status, emp.rejection_reason);
+      const isEditAllowed = typeof canDirectorEdit === "function" ? canDirectorEdit(emp) : true;
 
       Swal.fire({
         title: `وضعية ملف: ${emp.fmn_ar || ''} ${emp.frn_ar || ''}`,
         html: `
-          <div style="direction: rtl; text-align: right;">
+          <div style="direction: rtl; text-align: right; font-size: 13px;">
             ${stepperHtml}
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:15px; font-size:13px; line-height:1.8;">
-              <strong>رقم الحساب:</strong> ${emp.ccp} | <strong>الضمان الاجتماعي:</strong> ${emp.nss || '---'}<br>
-              <strong>الرتبة:</strong> ${emp.rank || '---'} | <strong>الطور:</strong> ${emp.level || '---'}<br>
-              <strong>الفترة:</strong> من ${emp.start_date || '---'} إلى ${emp.end_date || '---'} (${emp.duration_text || ''})<br>
-              <strong>رقم الهاتف:</strong> <span dir="ltr">${emp.phone || '---'}</span>
+
+            <!-- بطاقة ملخصة أنيقة لبيانات الموظف -->
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.04); margin-top: 15px;">
+              
+              <!-- رأس بطاقة الملخص -->
+              <div style="background: #f8fafc; padding: 10px 16px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <i class="fas fa-id-card" style="color: #2563eb; font-size: 15px;"></i>
+                  <strong style="color: #0f172a; font-size: 13.5px;">بيانات المستخلف الرسمية بالمؤسسة</strong>
+                </div>
+                <div>
+                  <span class="badge" style="background: #eff6ff; color: #1d4ed8; font-weight: 800; border: 1px solid #bfdbfe;">
+                    <i class="fas fa-user-tag"></i> ${emp.status_type || 'مستخلف'}
+                  </span>
+                </div>
+              </div>
+
+              <!-- شبكة التفاصيل -->
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; padding: 14px;">
+                
+                <!-- الحساب الجاري -->
+                <div style="background: #f1f5f9; padding: 8px 12px; border-radius: 8px;">
+                  <div style="color: #64748b; font-size: 11px; font-weight: 700; margin-bottom: 2px;">
+                    <i class="fas fa-money-check" style="color: #2563eb;"></i> رقم الحساب الجاري (CCP):
+                  </div>
+                  <div style="color: #1e3a8a; font-weight: 900; font-size: 15px;">${emp.ccp}</div>
+                </div>
+
+                <!-- الضمان الاجتماعي -->
+                <div style="background: #f1f5f9; padding: 8px 12px; border-radius: 8px;">
+                  <div style="color: #64748b; font-size: 11px; font-weight: 700; margin-bottom: 2px;">
+                    <i class="fas fa-shield-halved" style="color: #0d9488;"></i> رقم الضمان الاجتماعي (NSS):
+                  </div>
+                  <div style="color: #0f172a; font-weight: 800; font-size: 13px;">${emp.nss || '---'}</div>
+                </div>
+
+                <!-- الرتبة والمؤهل -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: 8px;">
+                  <div style="color: #64748b; font-size: 11px; font-weight: 700; margin-bottom: 2px;">
+                    <i class="fas fa-award" style="color: #d97706;"></i> الرتبة والشهادة:
+                  </div>
+                  <div style="color: #0f172a; font-weight: 800; font-size: 12.5px;">${emp.rank || '---'}</div>
+                  <small style="color: #64748b; font-size: 11px;">${emp.diploma || ''}</small>
+                </div>
+
+                <!-- المؤسسة والطور -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: 8px;">
+                  <div style="color: #64748b; font-size: 11px; font-weight: 700; margin-bottom: 2px;">
+                    <i class="fas fa-school" style="color: #7c3aed;"></i> المؤسسة والطور:
+                  </div>
+                  <div style="color: #0f172a; font-weight: 800; font-size: 12.5px;">${emp.school_name || currentDirector?.schoolName || '---'}</div>
+                  <small style="color: #64748b; font-size: 11px;">طور: ${emp.level || currentDirector?.level || '---'}</small>
+                </div>
+
+                <!-- مدة العمل وتواريخها -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: 8px;">
+                  <div style="color: #64748b; font-size: 11px; font-weight: 700; margin-bottom: 2px;">
+                    <i class="fas fa-calendar-days" style="color: #0284c7;"></i> فترة الاستخلاف:
+                  </div>
+                  <div style="color: #0f172a; font-weight: 800; font-size: 12px;">من ${emp.start_date || '---'} إلى ${emp.end_date || '---'}</div>
+                  <div style="color: #059669; font-weight: 800; font-size: 11.5px; margin-top: 2px;">
+                    <i class="fas fa-clock"></i> المدة: ${emp.duration_days || 0} يوم (${emp.duration_text || ''})
+                  </div>
+                </div>
+
+                <!-- الهاتف وحالة التعديل -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px 12px; border-radius: 8px;">
+                  <div style="color: #64748b; font-size: 11px; font-weight: 700; margin-bottom: 2px;">
+                    <i class="fas fa-phone" style="color: #10b981;"></i> الهاتف وحالة الإجراء:
+                  </div>
+                  <div dir="ltr" style="text-align: right; font-weight: 800; color: #0f172a; font-size: 12.5px;">${emp.phone || '---'}</div>
+                  <div style="margin-top: 4px;">
+                    ${isEditAllowed ? `
+                      <span style="color: #16a34a; font-weight: 700; font-size: 11px;"><i class="fas fa-lock-open"></i> مسموح بتعديل وحذف الملف</span>
+                    ` : `
+                      <span style="color: #dc2626; font-weight: 700; font-size: 11px;"><i class="fas fa-lock"></i> مجمد لدى مصالح المديرية</span>
+                    `}
+                  </div>
+                </div>
+
+              </div>
             </div>
           </div>
         `,
-        width: '650px',
+        width: '680px',
         showCloseButton: true,
         confirmButtonText: 'إغلاق',
         confirmButtonColor: '#2575fc'

@@ -186,13 +186,127 @@
   }
 }
 
-/* للمعاينة في المتصفح قبل الطباعة */
+/* ============================================================
+   تنسيقات المعاينة في المتصفح قبل الطباعة (Screen Preview)
+   ============================================================ */
 .print-preview-container {
   max-width: 210mm;
   min-height: 297mm;
   background: white;
   margin: 20px auto;
-  padding: 15mm;
+  padding: 12mm 15mm;
   box-shadow: 0 10px 30px rgba(0,0,0,0.15);
   border-radius: 4px;
+  box-sizing: border-box;
+}
+
+/* الرأس الرسمي للجمهورية والمديرية على الشاشة */
+.official-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding-bottom: 8px !important;
+  border-bottom: 2px solid #000 !important;
+  margin-bottom: 12px !important;
+}
+
+.official-logo-img {
+  width: 70px !important;
+  height: 70px !important;
+  max-width: 70px !important;
+  max-height: 70px !important;
+  object-fit: contain !important;
+  flex-shrink: 0 !important;
+}
+
+.official-titles {
+  text-align: center !important;
+  flex-grow: 1 !important;
+}
+
+.official-titles h3 {
+  margin: 2px 0 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: #000 !important;
+}
+
+.document-title-box {
+  border: 2px solid #000 !important;
+  background-color: #f2f2f2 !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  text-align: center !important;
+  margin-bottom: 15px !important;
+  position: relative !important;
+}
+
+.document-title-box h2 {
+  font-size: 17px !important;
+  font-weight: 900 !important;
+  margin: 0 !important;
+  text-decoration: underline !important;
+  text-underline-offset: 3px !important;
+}
+
+.document-meta-info {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  margin-top: 3px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+}
+
+.barcode-section {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 15px !important;
+  padding: 6px 10px !important;
+  border: 1px dashed #666 !important;
+  border-radius: 6px !important;
+}
+
+.barcode-svg {
+  height: 48px !important;
+  max-width: 170px !important;
+}
+
+.qr-code-img {
+  width: 55px !important;
+  height: 55px !important;
+}
+
+.signatures-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 8px !important;
+  margin-top: 20px !important;
+}
+
+.signature-card {
+  border: 1.5px solid #000 !important;
+  border-radius: 6px !important;
+  padding: 6px !important;
+  text-align: center !important;
+  height: 110px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+}
+
+.sig-title {
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  border-bottom: 1px dashed #666 !important;
+  padding-bottom: 3px !important;
+}
+
+.sig-sub {
+  font-size: 10px !important;
+  color: #444 !important;
+}
+
+.sig-space {
+  flex-grow: 1 !important;
 }

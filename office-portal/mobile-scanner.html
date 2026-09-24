@@ -130,8 +130,9 @@
     const officeType = urlParams.get("office") || "office";
     const scannerUser = decodeURIComponent(urlParams.get("user") || "مسؤول المكتب");
 
-    let html5QrCode = null;
-    let isScanningActive = true;
+    const myDeviceId = localStorage.getItem("mobile_scanner_dev_id") || ("dev_" + Math.random().toString(36).substring(2, 10));
+    localStorage.setItem("mobile_scanner_dev_id", myDeviceId);
+
     let sessionData = null;
     let audioChime = new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg");
 
@@ -153,7 +154,27 @@
             return;
           }
 
-          // التحقق من عدد المرات المسموح بها
+          // التحقق من عدد الأجهزة المتصلة المسموح بها
+          const maxAllowedDevices = sessionData.max_devices || 1;
+          const connected = sessionData.connected_devices || {};
+          const isKnownDevice = Boolean(connected[myDeviceId]);
+
+          if (!isKnownDevice && Object.keys(connected).length >= maxAllowedDevices) {
+            blockScanner(`عذراً، تم الوصول إلى الحد الأقصى لعدد الأجهزة المتصلة المسموح بها (${maxAllowedDevices} جهاز فقط). يرجى مراجعة المسؤول للسماح بجهاز إضافي.`);
+            return;
+          }
+
+          // تسجيل الجهاز في الجلسة إذا لم يكن مسجلاً
+          if (!isKnownDevice) {
+            window.db.collection("remote_scanner_sessions").doc(sessionId).update({
+              [`connected_devices.${myDeviceId}`]: {
+                joined_at: new Date().toISOString(),
+                ua: navigator.userAgent || "الهاتف الذكي"
+              }
+            }).catch(console.warn);
+          }
+
+          // التحقق من كوتا المسحات المتبقية
           const limit = sessionData.quota || 100;
           const current = sessionData.scan_count || 0;
           const remaining = Math.max(0, limit - current);
@@ -226,6 +247,27 @@
     }
 
     async function processScannedRecord(code) {
+      // التحقق اللحظي المسبق من قاعدة البيانات قبل تنفيذ المسح
+      if (window.db) {
+        try {
+          const freshSnap = await window.db.collection("remote_scanner_sessions").doc(sessionId).get();
+          if (!freshSnap.exists) {
+            return Swal.fire("خطأ", "تم إبطال هذه الجلسة من قبل المسؤول.", "error");
+          }
+          const freshData = freshSnap.data();
+          if (freshData.is_enabled === false) {
+            return Swal.fire("ممنوع", "تم قفل نظام المسح بالهاتف من لوحة التحكم.", "warning");
+          }
+          const freshLimit = freshData.quota || 100;
+          const freshCurrent = freshData.scan_count || 0;
+          if (freshCurrent >= freshLimit) {
+            return Swal.fire("استنفاد المسحات", "تم استنفاد كامل عدد المسحات المسموح بها لهذه الجلسة.", "warning");
+          }
+        } catch(e) {
+          console.warn(e);
+        }
+      }
+
       Swal.fire({
         title: 'جاري استلام الملف...',
         text: 'يتم فحص وتحديث حالة الملف في قاعدة البيانات',
