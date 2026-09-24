@@ -49,17 +49,17 @@
     <form onsubmit="event.preventDefault(); handleOfficeLogin();">
       <div class="form-group">
         <label style="text-align: right;">المكتب / المصلحة:</label>
-        <select id="office_select" required style="font-size: 14px;">
-          <option value="primary">رئيس مكتب التعليم الابتدائي</option>
-          <option value="middle">رئيس مكتب التعليم المتوسط</option>
-          <option value="secondary">رئيس مكتب التعليم الثانوي</option>
-          <option value="payroll">رئيس مصلحة نفقات المستخدمين (الرواتب)</option>
+        <select id="office_select" onchange="syncOfficeToUsername()" style="font-size: 14px; font-weight: 700;">
+          <option value="primary">رئيس مكتب التعليم الابتدائي (acc_pr)</option>
+          <option value="middle">رئيس مكتب التعليم المتوسط (acc_cm)</option>
+          <option value="secondary">رئيس مكتب التعليم الثانوي (acc_ly)</option>
+          <option value="payroll">رئيس مصلحة نفقات المستخدمين (admin)</option>
         </select>
       </div>
 
       <div class="form-group">
         <label style="text-align: right;">اسم المستخدم:</label>
-        <input type="text" id="office_username" placeholder="اسم المستخدم" required style="text-align: center;">
+        <input type="text" id="office_username" placeholder="acc_pr" oninput="syncUsernameToOffice()" required style="text-align: center; font-weight: bold;">
       </div>
 
       <div class="form-group">
@@ -79,8 +79,42 @@
   </div>
 
   <script>
-    async function handleOfficeLogin() {
+    // مزامنة اختيار المكتب مع حقل اسم المستخدم
+    function syncOfficeToUsername() {
       const officeType = document.getElementById("office_select").value;
+      const uInput = document.getElementById("office_username");
+      if (officeType === "primary") {
+        uInput.value = "acc_pr";
+      } else if (officeType === "middle") {
+        uInput.value = "acc_cm";
+      } else if (officeType === "secondary") {
+        uInput.value = "acc_ly";
+      } else if (officeType === "payroll") {
+        uInput.value = "admin";
+      }
+    }
+
+    // مزامنة كتابة اسم المستخدم مع القائمة المنسدلة للمكاتب
+    function syncUsernameToOffice() {
+      const u = document.getElementById("office_username").value.trim().toLowerCase();
+      const sel = document.getElementById("office_select");
+      if (u === "acc_pr" || u.includes("primaire") || u.includes("ابتدائي")) {
+        sel.value = "primary";
+      } else if (u === "acc_cm" || u.includes("cem") || u.includes("متوسط")) {
+        sel.value = "middle";
+      } else if (u === "acc_ly" || u.includes("lycee") || u.includes("ثانوي")) {
+        sel.value = "secondary";
+      } else if (u === "admin" || u.includes("pay") || u.includes("رواتب")) {
+        sel.value = "payroll";
+      }
+    }
+
+    // التهيئة التلقائية
+    document.addEventListener("DOMContentLoaded", () => {
+      syncOfficeToUsername();
+    });
+
+    async function handleOfficeLogin() {
       const username = document.getElementById("office_username").value.trim();
       const password = document.getElementById("office_password").value.trim();
 
@@ -89,63 +123,52 @@
         return;
       }
 
-      Swal.fire({ title: 'جاري التحقق من الصلاحيات...', didOpen: () => Swal.showLoading() });
+      Swal.fire({
+        title: 'جاري التحقق من الصلاحيات...',
+        text: 'يتم فحص بيانات الاعتماد في config/pass',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
 
       try {
-        let authorized = false;
-        let roleTitle = "";
-        let filterLevel = "";
-
-        if (officeType === "primary") {
-          roleTitle = "رئيس مكتب التعليم الابتدائي";
-          filterLevel = "ابتدائي";
-        } else if (officeType === "middle") {
-          roleTitle = "رئيس مكتب التعليم المتوسط";
-          filterLevel = "متوسط";
-        } else if (officeType === "secondary") {
-          roleTitle = "رئيس مكتب التعليم الثانوي";
-          filterLevel = "ثانوي";
-        } else if (officeType === "payroll") {
-          roleTitle = "رئيس مصلحة تسيير نفقات المستخدمين (الرواتب)";
-          filterLevel = "all";
-        }
-
-        // فحص قاعدة البيانات لحسابات المكاتب من config/pass حصراً
-        if (window.db) {
-          try {
-            const snap = await window.db.collection("config").doc("pass").get();
-            if (snap.exists) {
-              const passData = snap.data();
-              for (const [key, val] of Object.entries(passData)) {
-                if (String(key).trim().toLowerCase() === username.toLowerCase()) {
-                  if (String(val).trim() === password) {
-                    authorized = true;
-                    break;
-                  }
-                }
-              }
-              // فحص كاسم المكتب نفسه (مثال: service_pay, primary, middle...)
-              if (!authorized && passData[officeType] && String(passData[officeType]).trim() === password) {
-                authorized = true;
-              }
-            }
-          } catch(e) {
-            console.error("خطأ قراءة config/pass:", e);
-          }
-        }
+        const check = await AppCore.ConfigAuth.verifyAdminLogin(username, password);
 
         Swal.close();
 
-        if (authorized) {
-          const sessionData = {
-            officeType,
-            roleTitle,
-            filterLevel,
-            username,
-            loginTime: new Date().toISOString()
-          };
+        if (check.success) {
+          let officeType = check.officeType || "primary";
+          let roleTitle = check.title || "رئيس المكتب";
+          let filterLevel = check.filterLevel || "all";
 
-          AuthGuard.setOfficeSession(sessionData);
+          if (check.role === "office_primary") {
+            officeType = "primary";
+            filterLevel = "ابتدائي";
+            roleTitle = "رئيس مكتب التعليم الابتدائي";
+          } else if (check.role === "office_middle") {
+            officeType = "middle";
+            filterLevel = "متوسط";
+            roleTitle = "رئيس مكتب التعليم المتوسط";
+          } else if (check.role === "office_secondary") {
+            officeType = "secondary";
+            filterLevel = "ثانوي";
+            roleTitle = "رئيس مكتب التعليم الثانوي";
+          } else if (check.role === "office_payroll" || check.role === "admin" || check.isSuperAdmin) {
+            officeType = "payroll";
+            filterLevel = "all";
+            roleTitle = "رئيس مصلحة تسيير نفقات المستخدمين (الرواتب)";
+          }
+
+          // تنظيف أي جلسة إدارة سابقة
+          AuthGuard.setAdminSession(false);
+
+          // حفظ جلسة المكتب المعني بدقة
+          AuthGuard.setOfficeSession({
+            officeType: officeType,
+            roleTitle: roleTitle,
+            filterLevel: filterLevel,
+            username: check.username,
+            loginTime: new Date().toISOString()
+          });
 
           Swal.fire({
             icon: 'success',
@@ -156,18 +179,20 @@
           }).then(() => {
             window.location.href = "office-dashboard.html";
           });
+
         } else {
           Swal.fire({
             icon: 'error',
             title: 'خطأ في الدخول',
-            text: 'اسم المستخدم أو كلمة المرور غير صحيحة لهذا المكتب.',
+            text: check.message || 'اسم المستخدم أو كلمة المرور غير صحيحة.',
             confirmButtonColor: '#dc3545'
           });
         }
 
       } catch (err) {
         Swal.close();
-        Swal.fire("خطأ", "تعذر التحقق من الحساب", "error");
+        console.error("خطأ فحص حساب المكتب:", err);
+        Swal.fire("خطأ", "تعذر التحقق من الحساب، يرجى مراجعة الاتصال بقاعدة البيانات.", "error");
       }
     }
   </script>

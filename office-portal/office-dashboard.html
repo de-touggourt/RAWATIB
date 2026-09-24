@@ -125,7 +125,7 @@
         <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" class="brand-logo">
         <div class="brand-info">
           <h1 id="navRoleTitle">لوحة رئيس المكتب</h1>
-          <p>مديرية التربية لولاية توقرت - مصلحة تسيير نفقات المستخدمين</p>
+          <p id="navSubTitle">مديرية التربية لولاية توقرت - مصلحة تسيير نفقات المستخدمين</p>
         </div>
       </div>
 
@@ -177,7 +177,7 @@
 
       <div class="stat-item stat-primary" style="border-right: 4px solid #0284c7;">
         <div class="stat-info-text">
-          <p>محال لمصلحة الرواتب</p>
+          <p id="stat_to_payroll_label">محال لمصلحة الرواتب</p>
           <h3 id="stat_to_payroll">0</h3>
         </div>
         <div class="stat-icon"><i class="fas fa-file-export"></i></div>
@@ -203,7 +203,7 @@
     <!-- بطاقة البحث والفلترة الشاملة -->
     <div class="portal-card" style="padding: 16px; margin-bottom: 18px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
-        <div style="font-weight: 800; font-size: 14.5px; color: var(--dark-color);">
+        <div style="font-weight: 800; font-size: 14.5px; color: var(--dark-color);" id="officeFilterTitle">
           <i class="fas fa-filter" style="color: var(--primary-color);"></i> تصفية وبحث شامل في سجلات المستخلفين والمتعاقدين
         </div>
         <div style="font-size: 12.5px; color: #64748b;">
@@ -424,11 +424,32 @@
 
       document.getElementById("navRoleTitle").textContent = currentOffice.roleTitle;
       const isPayroll = currentOffice.officeType === "payroll";
-      document.getElementById("navOfficeType").textContent = isPayroll ? "مصلحة تسيير نفقات المستخدمين" : `طور: ${currentOffice.filterLevel}`;
+      document.getElementById("navOfficeType").textContent = isPayroll ? "مصلحة نفقات المستخدمين (الرواتب)" : `طور: ${currentOffice.filterLevel}`;
 
-      // إظهار فلتر الطور لمصلحة الرواتب
-      if (isPayroll) {
-        document.getElementById("flt_level").style.display = "block";
+      const subTitleElem = document.getElementById("navSubTitle");
+      if (subTitleElem) {
+        subTitleElem.textContent = isPayroll 
+          ? "مديرية التربية لولاية توقرت - مصلحة تسيير نفقات المستخدمين (كافة الأطوار)" 
+          : `مديرية التربية لولاية توقرت - ${currentOffice.roleTitle}`;
+      }
+      document.title = `${currentOffice.roleTitle} - مديرية التربية لولاية توقرت`;
+
+      const toPayLabel = document.getElementById("stat_to_payroll_label");
+      if (toPayLabel) {
+        toPayLabel.textContent = isPayroll ? "وارد من المكاتب للاعتماد" : "محال لمصلحة الرواتب";
+      }
+
+      const fltTitle = document.getElementById("officeFilterTitle");
+      if (fltTitle) {
+        fltTitle.innerHTML = isPayroll
+          ? '<i class="fas fa-filter" style="color: var(--primary-color);"></i> تصفية وبحث شامل في سجلات المستخلفين والمتعاقدين (كافة الأطوار)'
+          : `<i class="fas fa-filter" style="color: var(--primary-color);"></i> تصفية وبحث خاص بسجلات: <span style="color:#2563eb; font-weight:900;">الطور ${currentOffice.filterLevel}</span>`;
+      }
+
+      // إظهار فلتر الطور لمصلحة الرواتب فقط وإخفاؤه تماماً عن مكاتب الأطوار
+      const fltLevel = document.getElementById("flt_level");
+      if (fltLevel) {
+        fltLevel.style.display = isPayroll ? "block" : "none";
       }
 
       // 2. إعداد فلاتر الدوائر
@@ -513,9 +534,16 @@
       const daairaVal = document.getElementById("flt_daaira").value;
       const baladiyaVal = document.getElementById("flt_baladiya").value;
       const statusVal = document.getElementById("flt_status").value;
+      const isPayroll = currentOffice && currentOffice.officeType === "payroll";
 
       filteredRecords = allOfficeRecords.filter(e => {
-        if (levelVal && e.level !== levelVal) return false;
+        // حماية العزل التام: رئيس المكتب لا يرى سوى طوره الخاص
+        if (!isPayroll && currentOffice && currentOffice.filterLevel && currentOffice.filterLevel !== "all") {
+          if (e.level !== currentOffice.filterLevel) return false;
+        } else if (levelVal && e.level !== levelVal) {
+          return false;
+        }
+
         if (typeVal && !String(e.status_type || "").includes(typeVal)) return false;
         if (daairaVal && e.daaira !== daairaVal) return false;
         if (baladiyaVal && e.baladiya !== baladiyaVal) return false;

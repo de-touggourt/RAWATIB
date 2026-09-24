@@ -380,17 +380,15 @@
 
         if (adminCheck.success) {
           Swal.close();
-          AuthGuard.setAdminSession(true, adminCheck);
 
           // توجيه بحسب الرتبة الإدارية
           if (adminCheck.role === "office_primary" || adminCheck.role === "office_middle" || adminCheck.role === "office_secondary") {
-            const rawType = adminCheck.role.replace("office_", "");
-            const levelMap = { primary: "ابتدائي", middle: "متوسط", secondary: "ثانوي" };
+            AuthGuard.setAdminSession(false);
             AuthGuard.setOfficeSession({
-              officeType: rawType,
-              roleTitle: adminCheck.title || `رئيس مكتب التعليم ${levelMap[rawType] || ''}`,
-              filterLevel: levelMap[rawType] || "all",
-              username: adminCheck.username || "رئيس المكتب"
+              officeType: adminCheck.officeType || adminCheck.role.replace("office_", ""),
+              roleTitle: adminCheck.title,
+              filterLevel: adminCheck.filterLevel,
+              username: adminCheck.username
             });
             Swal.fire({
               icon: 'success',
@@ -403,6 +401,7 @@
             });
             return;
           } else if (adminCheck.role === "office_payroll") {
+            AuthGuard.setAdminSession(false);
             AuthGuard.setOfficeSession({
               officeType: "payroll",
               roleTitle: "رئيس مصلحة تسيير نفقات المستخدمين (الرواتب)",
@@ -419,19 +418,8 @@
               window.location.href = "office-portal/office-dashboard.html";
             });
             return;
-          } else if (adminCheck.isSuperAdmin || adminCheck.role === "admin") {
-            Swal.fire({
-              icon: 'success',
-              title: 'مرحباً بك',
-              text: 'لوحة التحكم المركزية - المشرف العام',
-              timer: 1400,
-              showConfirmButton: false
-            }).then(() => {
-              window.location.href = "admin/dashboard.html";
-            });
-            return;
-          } else {
-            // مدير المؤسسة عبر كود الإدارة
+          } else if (adminCheck.role === "director") {
+            AuthGuard.setAdminSession(false);
             AuthGuard.setDirectorSession({
               directorName: adminCheck.username,
               ccp: adminCheck.username
@@ -444,6 +432,18 @@
               showConfirmButton: false
             }).then(() => {
               window.location.href = "contract-portal/director-dashboard.html";
+            });
+            return;
+          } else if (adminCheck.isSuperAdmin || adminCheck.role === "admin") {
+            AuthGuard.setAdminSession(true, adminCheck);
+            Swal.fire({
+              icon: 'success',
+              title: 'مرحباً بك',
+              text: 'لوحة التحكم المركزية - المشرف العام',
+              timer: 1400,
+              showConfirmButton: false
+            }).then(() => {
+              window.location.href = "admin/dashboard.html";
             });
             return;
           }

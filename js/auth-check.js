@@ -50,6 +50,9 @@ const AuthGuard = {
 
   setDirectorSession(directorData) {
     sessionStorage.setItem("director_account", JSON.stringify(directorData));
+    sessionStorage.removeItem("admin_logged_in");
+    sessionStorage.removeItem("admin_details");
+    sessionStorage.removeItem("office_account");
   },
 
   requireDirector(redirectUrl = "../contract-portal/login-director.html") {
@@ -86,29 +89,40 @@ const AuthGuard = {
 
   setOfficeSession(officeData) {
     sessionStorage.setItem("office_account", JSON.stringify(officeData));
+    // إزالة جلسة المشرف العام لتجنب إعطاء صلاحيات مصلحة الرواتب لمكاتب الأطوار
+    if (officeData.officeType !== "payroll" && !officeData.is_admin) {
+      sessionStorage.removeItem("admin_logged_in");
+      sessionStorage.removeItem("admin_details");
+    }
   },
 
   requireOffice(redirectUrl = "../office-portal/login.html") {
-    const admin = this.getAdminSession();
-    if (admin) return { username: "المشرف العام", roleTitle: "المشرف العام", officeType: "payroll", filterLevel: "all", is_admin: true };
-
+    // 1. الأولوية الأولى لجلسة المكتب المسجلة (ابتدائي، متوسط، ثانوي، رواتب)
     const session = this.getOfficeSession();
-    if (!session || !session.officeType) {
-      Swal.fire({
-        icon: "warning",
-        title: "غير مصرح",
-        text: "يرجى تسجيل الدخول بحساب رئيس المكتب أو مصلحة الرواتب.",
-        confirmButtonText: "تسجيل الدخول",
-        confirmButtonColor: "#2575fc",
-        allowOutsideClick: false
-      }).then(() => {
-        window.location.replace(redirectUrl);
-      });
-      return false;
+    if (session && session.officeType) {
+      session.username = session.username || session.roleTitle || "مسؤول المكتب";
+      session.roleTitle = session.roleTitle || "رئيس المكتب";
+      return session;
     }
-    session.username = session.username || session.roleTitle || "مسؤول المكتب";
-    session.roleTitle = session.roleTitle || "رئيس المكتب";
-    return session;
+
+    // 2. إذا لم توجد جلسة مكتب وكان مسجلاً كمشرف عام فقط
+    const admin = this.getAdminSession();
+    if (admin) {
+      return { username: "المشرف العام", roleTitle: "المشرف العام", officeType: "payroll", filterLevel: "all", is_admin: true };
+    }
+
+    // 3. غير مصرح
+    Swal.fire({
+      icon: "warning",
+      title: "غير مصرح",
+      text: "يرجى تسجيل الدخول بحساب رئيس المكتب أو مصلحة الرواتب.",
+      confirmButtonText: "تسجيل الدخول",
+      confirmButtonColor: "#2575fc",
+      allowOutsideClick: false
+    }).then(() => {
+      window.location.replace(redirectUrl);
+    });
+    return false;
   },
 
   // 4. جلسة لوحة التحكم المركزية (Admin / Super Admin)

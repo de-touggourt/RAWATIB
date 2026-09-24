@@ -289,27 +289,41 @@ const AppCore = {
         const passData = snap.data();
         // فحص المفاتيح بحساسية مرنة
         for (const [key, val] of Object.entries(passData)) {
-          if (String(key).trim().toLowerCase() === cleanUser.toLowerCase()) {
+          const keyLower = String(key).trim().toLowerCase();
+          if (keyLower === cleanUser.toLowerCase()) {
             if (String(val).trim() === cleanPass) {
               // تحديد نوع الحساب والصلاحية
               let role = "admin";
               let title = "مسؤول إداري";
+              let officeType = "";
+              let filterLevel = "all";
 
-              if (cleanUser.includes("dir") || cleanUser.includes("مدير")) {
-                role = "director";
-                title = "مدير";
-              } else if (cleanUser.includes("ibtidai") || cleanUser.includes("primary") || cleanUser.includes("ابتدائي")) {
+              if (keyLower === "acc_pr" || keyLower.includes("primary") || keyLower.includes("ibtidai") || keyLower.includes("ابتدائي") || keyLower.includes("primaire")) {
                 role = "office_primary";
+                officeType = "primary";
+                filterLevel = "ابتدائي";
                 title = "رئيس مكتب التعليم الابتدائي";
-              } else if (cleanUser.includes("motawasit") || cleanUser.includes("middle") || cleanUser.includes("متوسط")) {
+              } else if (keyLower === "acc_cm" || keyLower.includes("middle") || keyLower.includes("motawasit") || keyLower.includes("متوسط") || keyLower.includes("cem") || keyLower.includes("moyen")) {
                 role = "office_middle";
+                officeType = "middle";
+                filterLevel = "متوسط";
                 title = "رئيس مكتب التعليم المتوسط";
-              } else if (cleanUser.includes("thanawi") || cleanUser.includes("secondary") || cleanUser.includes("ثانوي")) {
+              } else if (keyLower === "acc_ly" || keyLower.includes("secondary") || keyLower.includes("thanawi") || keyLower.includes("ثانوي") || keyLower.includes("lycee")) {
                 role = "office_secondary";
+                officeType = "secondary";
+                filterLevel = "ثانوي";
                 title = "رئيس مكتب التعليم الثانوي";
-              } else if (cleanUser.includes("pay") || cleanUser.includes("rawatib") || cleanUser.includes("رواتب")) {
+              } else if (keyLower === "dir" || keyLower.includes("dir") || keyLower.includes("مدير")) {
+                role = "director";
+                title = "مدير المؤسسة التعليمية";
+              } else if (keyLower.includes("pay") || keyLower.includes("rawatib") || keyLower.includes("رواتب")) {
                 role = "office_payroll";
+                officeType = "payroll";
+                filterLevel = "all";
                 title = "رئيس مصلحة نفقات المستخدمين (الرواتب)";
+              } else if (keyLower === "admin" || keyLower.includes("admin")) {
+                role = "admin";
+                title = "المشرف العام";
               }
 
               return {
@@ -317,8 +331,10 @@ const AppCore = {
                 type: "config_admin",
                 username: cleanUser,
                 role: role,
+                officeType: officeType,
+                filterLevel: filterLevel,
                 title: title,
-                isSuperAdmin: cleanUser.includes("admin") || cleanUser.includes("pay")
+                isSuperAdmin: role === "admin"
               };
             }
           }

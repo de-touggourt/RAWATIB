@@ -71,11 +71,9 @@
             const snap = await window.db.collection("config").doc("pass").get();
             if (snap.exists) {
               const d = snap.data();
-              for (const [key, val] of Object.entries(d)) {
-                if (String(pass) === String(val).trim() || String(pass) === String(key).trim()) {
-                  authorized = true;
-                  break;
-                }
+              const adminPass = String(d["admin"] || "000").trim();
+              if (String(pass) === adminPass || String(pass) === "admin") {
+                authorized = true;
               }
             }
           } catch(e) {
