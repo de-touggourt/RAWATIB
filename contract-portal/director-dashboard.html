@@ -7,7 +7,7 @@
 
   <!-- الخطوط والأيقونات -->
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
 
   <!-- المكتبات الأساسية -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -22,6 +22,13 @@
   <script src="../js/workflow.js"></script>
   <script src="../js/auth-check.js"></script>
   <script src="../js/director-logic.js"></script>
+
+  <style>
+    .fa, .fas, .far, .fab, .fa-solid, .fa-regular {
+      font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", FontAwesome !important;
+      font-style: normal !important;
+    }
+  </style>
 </head>
 <body>
 
@@ -250,9 +257,20 @@
         const dates = `${emp.start_date || '---'} ⬅️ ${emp.end_date || '---'}`;
         const duration = emp.duration_text || (emp.duration_days ? `${emp.duration_days} يوم` : '---');
 
-        // تحديد إمكانية التعديل والإحالة
-        const isDraft = emp.workflow_status === "pending_director" || emp.workflow_status === "returned_to_director";
+        // فحص صلاحيات التعديل والحذف عبر النواة المركزية
+        const allowEdit = typeof canDirectorEdit === "function" ? canDirectorEdit(emp) : true;
+        const allowDelete = typeof canDirectorDelete === "function" ? canDirectorDelete(emp) : true;
         const isApprovedFinal = emp.workflow_status === "payroll_approved";
+
+        // تحديد سبب التجميد للتوضيح للمدير
+        let freezeReason = "الملف مستلم رسمياً لدى مصالح المديرية وتم تجميد التعديل والحذف.";
+        if (emp.workflow_status === "submitted_to_office") {
+          freezeReason = "تم استلام الملف بمكتب التعليم (الطور) - تم قفل التعديل والحذف.";
+        } else if (emp.workflow_status === "office_approved" || emp.workflow_status === "submitted_to_payroll") {
+          freezeReason = "الملف محال أو مستلم بمصلحة الرواتب - التعديل والحذف مجمدان.";
+        } else if (emp.workflow_status === "payroll_approved") {
+          freezeReason = "تم اعتماد الملف نهائياً للصرف والرواتب - مغلق تماماً.";
+        }
 
         tr.innerHTML = `
           <td>${idx + 1}</td>
@@ -267,37 +285,49 @@
           <td>${duration}</td>
           <td style="font-size:11px; direction:ltr; text-align:right;">${dates}</td>
           <td>
-            <div style="cursor:pointer;" onclick="showWorkflowModal('${emp.id}')" title="اضغط لعرض مسار الملف">${statusBadge}</div>
+            <div style="cursor:pointer;" onclick="showWorkflowModal('${emp.id}')" title="اضغط لعرض تفاصيل ومسار دراسة الملف">${statusBadge}</div>
           </td>
           <td style="text-align: center;">
-            <div class="action-btns" style="justify-content:center;">
+            <div class="action-btns" style="justify-content:center; gap: 4px; flex-wrap: wrap;">
               
-              <!-- معاينة مسار وتفاصيل الملف -->
-              <button class="btn-icon" style="background:var(--info-color);" onclick="showWorkflowModal('${emp.id}')" title="مسار وتفاصيل الملف">
-                <i class="fas fa-eye"></i>
-              </button>
-
-              <!-- إحالة الملف إلى مكتب الطور بالمديرية -->
-              ${isDraft ? `
-                <button class="btn-icon" style="background:#f59f00;" onclick="submitToOfficeModal('${emp.id}', '${nameAr}')" title="إحالة إلى مكتب الطور">
-                  <i class="fas fa-paper-plane"></i>
+              <!-- زر التعديل: مفعل قبل الاستلام أو عند إرجاعه، ومجمد بعد الاستلام -->
+              ${allowEdit ? `
+                <button class="btn-table-action" style="background:#2563eb; color:white;" onclick="editRegistration('${emp.id}')" title="تعديل بيانات الملف">
+                  <i class="fas fa-pen-to-square"></i> تعديل
                 </button>
-                <button class="btn-icon" style="background:var(--primary-color);" onclick="editRegistration('${emp.id}')" title="تعديل البيانات">
-                  <i class="fas fa-pen-to-square"></i>
+              ` : `
+                <button class="btn-table-action btn-locked" title="${freezeReason}">
+                  <i class="fas fa-lock"></i> مجمد
                 </button>
-              ` : ''}
+              `}
 
-              <!-- طباعة الاستمارة الرسمية A4 -->
-              <a href="print-sheet.html?id=${emp.id}&type=sheet" target="_blank" class="btn-icon" style="background:#6a11cb;" title="طباعة الاستمارة الرسمية A4">
-                <i class="fas fa-print"></i>
+              <!-- زر الحذف: مفعل بالمؤسسة فقط، ومجمد بعد الاستلام -->
+              ${allowDelete ? `
+                <button class="btn-table-action" style="background:#dc2626; color:white;" onclick="deleteRegistration('${emp.id}', '${nameAr}')" title="حذف الملف">
+                  <i class="fas fa-trash-can"></i> حذف
+                </button>
+              ` : `
+                <button class="btn-table-action btn-locked" title="${freezeReason}">
+                  <i class="fas fa-lock"></i> حذف
+                </button>
+              `}
+
+              <!-- طباعة الاستمارة الرسمية A4 مع الباركود وQR -->
+              <a href="print-sheet.html?id=${emp.id}&type=sheet" target="_blank" class="btn-table-action" style="background:#7c3aed; color:white;" title="طباعة الاستمارة الرسمية A4 (تحتوي على الباركود وQR)">
+                <i class="fas fa-print"></i> استمارة A4
               </a>
 
-              <!-- طباعة مقرر الاستخلاف في حال الاعتماد -->
+              <!-- طباعة مقرر الاستخلاف في حال الاعتماد النهائي -->
               ${isApprovedFinal ? `
-                <a href="print-sheet.html?id=${emp.id}&type=decision" target="_blank" class="btn-icon" style="background:var(--success-color);" title="طباعة مقرر الاستخلاف المعتمد">
-                  <i class="fas fa-certificate"></i>
+                <a href="print-sheet.html?id=${emp.id}&type=decision" target="_blank" class="btn-table-action" style="background:#16a34a; color:white;" title="طباعة مقرر الاستخلاف المعتمد">
+                  <i class="fas fa-certificate"></i> مقرر
                 </a>
               ` : ''}
+
+              <!-- معاينة مسار وتفاصيل الملف -->
+              <button class="btn-table-action" style="background:#0891b2; color:white;" onclick="showWorkflowModal('${emp.id}')" title="معاينة تفاصيل ومسار الملف">
+                <i class="fas fa-eye"></i> المسار
+              </button>
 
             </div>
           </td>
@@ -424,6 +454,38 @@
     // الانتقال لتعديل الاستمارة
     function editRegistration(empId) {
       window.location.href = `contract-form.html?id=${empId}&mode=edit`;
+    }
+
+    // حذف ملف الموظف (إذا كان مسموحاً بالمؤسسة)
+    async function deleteRegistration(empId, empName) {
+      const confirmRes = await Swal.fire({
+        title: 'تأكيد حذف الملف',
+        html: `
+          <div style="font-size:14px; color:#334155; line-height:1.7;">
+            هل أنت متأكد من رغبتك في حذف ملف الموظف <b>(${empName})</b> نهائياً؟<br>
+            <span style="color:#dc2626; font-size:12px; font-weight:700;">* لن يمكنك استرجاع بيانات هذا الملف بعد الحذف.</span>
+          </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، حذف الملف',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b'
+      });
+
+      if (!confirmRes.isConfirmed) return;
+
+      Swal.fire({ title: 'جاري حذف الملف...', didOpen: () => Swal.showLoading() });
+
+      try {
+        await window.db.collection("contract_registrations").doc(empId).delete();
+        Swal.fire('تم الحذف', 'تم حذف ملف الموظف بنجاح.', 'success');
+        await loadInstitutionEmployees();
+      } catch (err) {
+        console.error("خطأ حذف الملف:", err);
+        Swal.fire('خطأ', 'تعذر حذف الملف: ' + err.message, 'error');
+      }
     }
 
     // نسخ ومشاركة رابط استعلام الموظفين

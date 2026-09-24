@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>الماسح الضوئي الذكي بالهاتف - مديرية التربية لولاية توقرت</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <!-- الخطوط والأيقونات -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
+
+  <!-- المكتبات الأساسية وقارئ الكاميرا -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <!-- ملفات المنظومة -->
+  <link rel="stylesheet" href="../css/main.css">
+  <script src="../js/firebase-init.js"></script>
+  <script src="../js/workflow.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: 'Cairo', sans-serif;
+      min-height: 100vh;
+      margin: 0;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .mobile-card {
+      width: 100%;
+      max-width: 480px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+    .reader-box {
+      width: 100%;
+      border-radius: 14px;
+      overflow: hidden;
+      margin: 15px 0;
+      border: 2px dashed #3b82f6;
+      background: #000;
+      min-height: 250px;
+    }
+    .scan-count-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      background: #0ea5e9;
+      color: white;
+      border-radius: 50px;
+      font-weight: 800;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+    .result-box {
+      background: #0f172a;
+      border: 1px solid #3b82f6;
+      border-radius: 12px;
+      padding: 14px;
+      margin-top: 15px;
+      text-align: right;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="mobile-card">
+    <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 12px;">
+      <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" style="width: 42px; height: 42px; border-radius: 50%;">
+      <div style="text-align: right;">
+        <h2 style="font-size: 16px; margin: 0; font-weight: 800; color: #60a5fa;">الماسح الضوئي الذكي</h2>
+        <span style="font-size: 11px; color: #94a3b8;" id="scannerSubtitle">مديرية التربية لولاية توقرت</span>
+      </div>
+    </div>
+
+    <!-- مؤشرات الجلسة -->
+    <div id="sessionStatusContainer">
+      <div class="scan-count-badge" id="quotaDisplay">
+        <i class="fas fa-barcode"></i> المتبقي: <span id="remainingScans">...</span> مسحة
+      </div>
+    </div>
+
+    <!-- نافذة الكاميرا -->
+    <div id="cameraPreview" class="reader-box"></div>
+
+    <div style="display: flex; gap: 8px; justify-content: center; margin-top: 10px;">
+      <button class="btn btn-main btn-sm" id="btnRestartCamera" onclick="startScanner()">
+        <i class="fas fa-camera"></i> إعادة تشغيل الكاميرا
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="toggleTorch()">
+        <i class="fas fa-lightbulb"></i> الفلاش
+      </button>
+    </div>
+
+    <!-- إدخال يدوي احتياطي بالهاتف -->
+    <div style="margin-top: 15px;">
+      <input type="text" id="manualCcpInput" placeholder="أو أدخل رقم الحساب CCP يدوياً..." 
+             style="width: 100%; height: 42px; text-align: center; font-size: 16px; font-weight: bold; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white;"
+             maxlength="12" oninput="this.value = this.value.replace(/\D/g, '')">
+      <button class="btn btn-success btn-sm" style="width: 100%; margin-top: 6px;" onclick="submitManualScan()">
+        <i class="fas fa-check"></i> تأكيد الاستلام يدوياً
+      </button>
+    </div>
+
+    <!-- صندوق النتيجة السريعة -->
+    <div class="result-box" id="resultCard">
+      <div style="color: #4ade80; font-weight: 800; font-size: 14px; margin-bottom: 6px;">
+        <i class="fas fa-circle-check"></i> تم استلام الملف بنجاح!
+      </div>
+      <div style="font-size: 13px; color: #e2e8f0; line-height: 1.7;" id="resultDetails"></div>
+    </div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get("session") || "default_session";
+    const officeType = urlParams.get("office") || "office";
+    const scannerUser = decodeURIComponent(urlParams.get("user") || "مسؤول المكتب");
+
+    let html5QrCode = null;
+    let isScanningActive = true;
+    let sessionData = null;
+    let audioChime = new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg");
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      document.getElementById("scannerSubtitle").textContent = `جلسة: ${scannerUser} (${officeType})`;
+
+      // 1. مراقبة حالة الجلسة وصلاحيتها
+      if (window.db) {
+        window.db.collection("remote_scanner_sessions").doc(sessionId).onSnapshot((doc) => {
+          if (!doc.exists) {
+            blockScanner("هذه الجلسة غير موجودة أو تم إبطالها من لوحة التحكم.");
+            return;
+          }
+          sessionData = doc.data();
+
+          // التحقق من فتح/غلق المسح
+          if (sessionData.is_enabled === false) {
+            blockScanner("تم إيقاف نظام المسح بالهاتف مؤقتاً من لوحة التحكم.");
+            return;
+          }
+
+          // التحقق من عدد المرات المسموح بها
+          const limit = sessionData.quota || 100;
+          const current = sessionData.scan_count || 0;
+          const remaining = Math.max(0, limit - current);
+          document.getElementById("remainingScans").textContent = remaining;
+
+          if (remaining <= 0) {
+            blockScanner("تم استنفاد عدد المسحات المسموح بها لهذه الجلسة.");
+            return;
+          }
+
+          unblockScanner();
+        });
+      }
+
+      startScanner();
+    });
+
+    function blockScanner(msg) {
+      isScanningActive = false;
+      if (html5QrCode) {
+        try { html5QrCode.stop(); } catch(e) {}
+      }
+      document.getElementById("cameraPreview").innerHTML = `
+        <div style="padding: 40px 15px; color: #f87171; font-weight: 700;">
+          <i class="fas fa-lock fa-3x" style="margin-bottom: 12px; display:block;"></i>
+          ${msg}
+        </div>
+      `;
+    }
+
+    function unblockScanner() {
+      if (!isScanningActive) {
+        isScanningActive = true;
+        startScanner();
+      }
+    }
+
+    function startScanner() {
+      if (!isScanningActive) return;
+      document.getElementById("cameraPreview").innerHTML = "";
+
+      html5QrCode = new Html5Qrcode("cameraPreview");
+      const config = { fps: 15, qrbox: { width: 250, height: 200 } };
+
+      html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText) => onScanSuccess(decodedText),
+        (error) => {}
+      ).catch((err) => {
+        console.warn("خطأ تشغيل الكاميرا:", err);
+      });
+    }
+
+    async function onScanSuccess(decodedText) {
+      if (!isScanningActive) return;
+      isScanningActive = false; // إيقاف مؤقت حتى معالجة السجل
+
+      try {
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        audioChime.play().catch(() => {});
+      } catch(e) {}
+
+      await processScannedRecord(decodedText);
+
+      // إعادة تفعيل الكاميرا بعد ثانية ونصف
+      setTimeout(() => {
+        isScanningActive = true;
+      }, 1800);
+    }
+
+    async function processScannedRecord(code) {
+      Swal.fire({
+        title: 'جاري استلام الملف...',
+        text: 'يتم فحص وتحديث حالة الملف في قاعدة البيانات',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
+        const res = await receiveFileByScan(code, scannerUser, `ماسح الهاتف (${officeType})`, officeType);
+        Swal.close();
+
+        if (res.success) {
+          // تحديث عداد الجلسة في Firestore لتزامن شاشة الحاسوب
+          if (window.db) {
+            await window.db.collection("remote_scanner_sessions").doc(sessionId).update({
+              scan_count: firebase.firestore.FieldValue.increment(1),
+              last_scanned_doc: res.docId,
+              last_scanned_data: res.data,
+              last_scanned_at: new Date().toISOString()
+            });
+          }
+
+          const emp = res.data;
+          const box = document.getElementById("resultCard");
+          box.style.display = "block";
+          document.getElementById("resultDetails").innerHTML = `
+            <b>الاسم:</b> ${emp.fmn_ar || ''} ${emp.frn_ar || ''}<br>
+            <b>رقم CCP:</b> ${emp.ccp}<br>
+            <b>المؤسسة:</b> ${emp.school_name}<br>
+            <b>الحالة الجديدة:</b> <span style="color:#38bdf8;">${getStatusInfo(emp.workflow_status).label}</span>
+          `;
+
+          Swal.fire({
+            icon: 'success',
+            title: 'تم استلام الملف بنجاح!',
+            html: `الموظف: <b>${emp.fmn_ar || ''} ${emp.frn_ar || ''}</b><br>تم تجميد التعديل والحذف بالمؤسسة ونقل الملف إلى الحاسوب.`,
+            timer: 2000,
+            showConfirmButton: false
+          });
+
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'تنبيه الاستلام',
+            text: res.message
+          });
+        }
+      } catch(err) {
+        Swal.fire({
+          icon: 'error',
+          title: 'خطأ',
+          text: err.message
+        });
+      }
+    }
+
+    async function submitManualScan() {
+      const ccp = document.getElementById("manualCcpInput").value.trim();
+      if (!ccp) return Swal.fire("تنبيه", "يرجى كتابة رقم الحساب CCP أولاً", "warning");
+      await processScannedRecord(ccp);
+      document.getElementById("manualCcpInput").value = "";
+    }
+
+    function toggleTorch() {
+      if (html5QrCode) {
+        try {
+          // محاولة تبديل الفلاش إن وجد
+          const track = html5QrCode.getRunningTrackCapabilities();
+          if (track && track.torch) {
+            html5QrCode.applyVideoConstraints({ advanced: [{ torch: true }] });
+          }
+        } catch(e) {}
+      }
+    }
+  </script>
+</body>
+</html>

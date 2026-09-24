@@ -7,7 +7,7 @@
 
   <!-- الخطوط والأيقونات -->
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
 
   <!-- المكتبات الأساسية -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -24,6 +24,10 @@
   <script src="../js/google-sheets-sync.js"></script>
 
   <style>
+    .fa, .fas, .far, .fab, .fa-solid, .fa-regular {
+      font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", FontAwesome !important;
+      font-style: normal !important;
+    }
     .admin-nav-tabs {
       display: flex;
       gap: 6px;
@@ -122,6 +126,9 @@
         <div class="user-badge" style="background:#e0e7ff; color:#3730a3;">
           <i class="fas fa-crown"></i> المشرف العام
         </div>
+        <a href="../office-portal/office-dashboard.html" class="btn btn-success btn-sm" style="text-decoration:none;" title="لوحة دراسة ومطابقة ملفات المستخلفين واستلام الملفات بالمسح الذكي">
+          <i class="fas fa-qrcode"></i> فحص ومطابقة المستخلفين
+        </a>
         <a href="../portals.html" class="btn btn-outline-primary btn-sm" style="text-decoration:none;">
           <i class="fas fa-table-cells"></i> فضاء البوابات
         </a>

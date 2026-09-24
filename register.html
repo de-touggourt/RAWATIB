@@ -7,7 +7,7 @@
 
   <!-- الخطوط والأيقونات -->
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
 
   <!-- المكتبات الأساسية -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -23,6 +23,10 @@
   <script src="js/auth-check.js"></script>
 
   <style>
+    .fa, .fas, .far, .fab, .fa-solid, .fa-regular {
+      font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", FontAwesome !important;
+      font-style: normal !important;
+    }
     body {
       background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #1e40af 100%);
       min-height: 100vh;
@@ -599,6 +603,10 @@
           <td id="p_username" style="font-weight: 900; color: #1e40af; font-size: 15px;"></td>
         </tr>
         <tr>
+          <th>كلمة المرور المسجلة:</th>
+          <td id="p_password" style="font-weight: 900; color: #dc2626; font-size: 15px; font-family: monospace; letter-spacing: 1.5px;"></td>
+        </tr>
+        <tr>
           <th>البريد الإلكتروني المعتمد:</th>
           <td id="p_email" dir="ltr" style="text-align: right;"></td>
         </tr>
@@ -1015,6 +1023,7 @@
       document.getElementById("p_school").textContent = `${acc.school_name} (${acc.level})`;
       document.getElementById("p_geo").textContent = `دائرة ${acc.daaira} - بلدية ${acc.baladiya}`;
       document.getElementById("p_username").textContent = acc.username;
+      document.getElementById("p_password").textContent = acc.password || "(محفوظة)";
       document.getElementById("p_email").textContent = acc.email;
       document.getElementById("p_phone").textContent = AppCore.Phone.formatDisplay(acc.phone);
       

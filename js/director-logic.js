@@ -202,3 +202,5 @@ const DirectorLogic = {
     }
   }
 };
+
+window.DirectorLogic = DirectorLogic;

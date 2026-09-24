@@ -33,7 +33,30 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family: 'Cairo', sans-serif !important;
+}
+
+body, button, input, select, textarea, p, h1, h2, h3, h4, h5, h6, a, span, label, table, td, th {
+  font-family: 'Cairo', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* حماية وعزل خط وأيقونات Font Awesome لمنع ظهورها كمربعات فارغة */
+.fa, .fas, .far, .fal, .fab, .fad, .fa-solid, .fa-regular, .fa-brands, [class^="fa-"], [class*=" fa-"] {
+  font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", "FontAwesome" !important;
+  font-style: normal !important;
+  font-variant: normal !important;
+  text-rendering: auto !important;
+  line-height: 1 !important;
+  -webkit-font-smoothing: antialiased;
+}
+.fa-solid, .fas {
+  font-weight: 900 !important;
+}
+.fa-regular, .far {
+  font-weight: 400 !important;
+}
+.fa-brands, .fab {
+  font-family: "Font Awesome 6 Brands", "FontAwesome" !important;
+  font-weight: 400 !important;
 }
 
 body {
@@ -58,9 +81,13 @@ body.bg-gradient-flow {
 /* ==================== الحاويات والبطاقات ==================== */
 .app-container {
   width: 100%;
-  max-width: 1280px;
+  max-width: 98%;
   margin: 0 auto;
-  padding: 20px;
+  padding: 15px 20px;
+}
+
+.app-container.contained {
+  max-width: 1280px;
 }
 
 .portal-card {
@@ -490,6 +517,47 @@ textarea:focus {
 
 .btn-icon:hover {
   transform: translateY(-2px);
+}
+
+.btn-icon.btn-locked {
+  opacity: 0.4;
+  cursor: not-allowed !important;
+  background: #94a3b8 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* أزرار الإجراءات المتطورة في الجدول مع العناوين والنصوص */
+.btn-table-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+  font-weight: 700;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.btn-table-action:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-table-action.btn-locked, 
+.btn-table-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed !important;
+  background: #e2e8f0 !important;
+  color: #64748b !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  pointer-events: auto; /* للسماح بظهور التولتيب */
 }
 
 /* ==================== المخطط المرئي لتتبع الملف (Workflow Stepper) ==================== */
