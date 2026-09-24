@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>دخول لوحة التحكم المركزية - مديرية التربية لولاية توقرت</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- الخطوط والأيقونات -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- المكتبات الأساسية -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <!-- ملفات المنظومة -->
+  <link rel="stylesheet" href="../css/main.css">
+  <script src="../js/firebase-init.js"></script>
+  <script src="../js/app-core.js"></script>
+  <script src="../js/auth-check.js"></script>
+</head>
+<body class="bg-gradient-flow">
+
+  <div class="welcome-card" style="max-width: 450px;">
+    
+    <div class="logo-spinning-wrapper">
+      <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" class="spinning-logo-img">
+    </div>
+
+    <div style="font-size: 13px; font-weight: 700; color: #555; margin-bottom: 5px;">
+      مديرية التربية لولاية توقرت
+    </div>
+
+    <h2 class="gradient-title-text" style="font-size: 22px; margin-bottom: 5px;">
+      لوحة التحكم الإدارية المركزية
+    </h2>
+    <p style="font-size: 13px; color: #666; margin-bottom: 25px; font-weight: 600;">
+      Super Admin Dashboard
+    </p>
+
+    <form onsubmit="event.preventDefault(); handleAdminLogin();">
+      <div class="form-group">
+        <label style="text-align: right;">كلمة مرور المشرف العام:</label>
+        <input type="password" id="admin_pass_input" placeholder="••••••••" required style="text-align: center; font-size: 18px; letter-spacing: 3px;">
+      </div>
+
+      <button type="submit" class="btn btn-main btn-lg" style="width: 100%; margin-top: 15px;">
+        <i class="fas fa-key"></i> دخول لوحة التحكم
+      </button>
+
+      <a href="../index.html" class="btn btn-secondary" style="width: 100%; margin-top: 10px;">
+        <i class="fas fa-arrow-right"></i> العودة للمدخل الرئيسي
+      </a>
+    </form>
+
+  </div>
+
+  <script>
+    async function handleAdminLogin() {
+      const pass = document.getElementById("admin_pass_input").value.trim();
+      if (!pass) return;
+
+      Swal.fire({ title: 'جاري التحقق من الصلاحيات...', didOpen: () => Swal.showLoading() });
+
+      try {
+        let authorized = false;
+
+        if (window.db) {
+          try {
+            const snap = await window.db.collection("config").doc("pass").get();
+            if (snap.exists) {
+              const d = snap.data();
+              for (const [key, val] of Object.entries(d)) {
+                if (String(pass) === String(val).trim() || String(pass) === String(key).trim()) {
+                  authorized = true;
+                  break;
+                }
+              }
+            }
+          } catch(e) {
+            console.error("خطأ قراءة config/pass:", e);
+          }
+        }
+
+        if (authorized) {
+          AuthGuard.setAdminSession(true);
+          Swal.fire({
+            icon: 'success',
+            title: 'تم التحقق بنجاح',
+            text: 'مرحباً بك في لوحة الإشراف العام',
+            timer: 1200,
+            showConfirmButton: false
+          }).then(() => {
+            window.location.href = "dashboard.html";
+          });
+        } else {
+          Swal.fire("خطأ", "كلمة المرور غير صحيحة", "error");
+        }
+      } catch (err) {
+        Swal.fire("خطأ", "حدث خطأ في الاتصال", "error");
+      }
+    }
+  </script>
+</body>
+</html>

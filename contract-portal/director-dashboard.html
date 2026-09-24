@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>لوحة تسيير مستخلفي المؤسسة - مديرية التربية لولاية توقرت</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- الخطوط والأيقونات -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- المكتبات الأساسية -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <!-- ملفات المنظومة -->
+  <link rel="stylesheet" href="../css/main.css">
+  <script src="../js/firebase-init.js"></script>
+  <script src="../js/geo-data.js"></script>
+  <script src="../js/ranks-manager.js"></script>
+  <script src="../js/workflow.js"></script>
+  <script src="../js/auth-check.js"></script>
+  <script src="../js/director-logic.js"></script>
+</head>
+<body>
+
+  <!-- شريط التنقل العلوي -->
+  <div class="app-container">
+    <div class="top-navbar">
+      <div class="brand-section">
+        <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" class="brand-logo">
+        <div class="brand-info">
+          <h1>بوابة تسيير مستخلفي ومتعاقدي المؤسسة</h1>
+          <p id="directorSchoolLabel">مديرية التربية لولاية توقرت</p>
+        </div>
+      </div>
+
+      <div class="navbar-user-box">
+        <div class="user-badge">
+          <i class="fas fa-user-tie"></i>
+          <span id="directorNameBadge">المدير: جاري التحميل...</span>
+        </div>
+        <div class="user-badge" style="background:#e6fffa; color:#0d9488; border-color:#99f6e4;">
+          <i class="fas fa-calendar-check"></i>
+          <span id="activeYearBadge">السنة: 2026-2027</span>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="AuthGuard.logout('login-director.html')">
+          <i class="fas fa-sign-out-alt"></i> خروج
+        </button>
+      </div>
+    </div>
+
+    <!-- شبكة الإحصائيات السريعة للمؤسسة -->
+    <div class="stats-grid">
+      <div class="stat-item stat-primary">
+        <div class="stat-info-text">
+          <p>إجمالي المستخلفين</p>
+          <h3 id="statTotal">0</h3>
+        </div>
+        <div class="stat-icon"><i class="fas fa-users"></i></div>
+      </div>
+
+      <div class="stat-item stat-warning">
+        <div class="stat-info-text">
+          <p>قيد التحضير بالمؤسسة</p>
+          <h3 id="statDraft">0</h3>
+        </div>
+        <div class="stat-icon"><i class="fas fa-file-pen"></i></div>
+      </div>
+
+      <div class="stat-item stat-info">
+        <div class="stat-info-text">
+          <p>محال لمكتب الطور</p>
+          <h3 id="statOffice">0</h3>
+        </div>
+        <div class="stat-icon"><i class="fas fa-building-columns"></i></div>
+      </div>
+
+      <div class="stat-item stat-success">
+        <div class="stat-info-text">
+          <p>معتمد نهائياً بالرواتب</p>
+          <h3 id="statApproved">0</h3>
+        </div>
+        <div class="stat-icon"><i class="fas fa-money-check-dollar"></i></div>
+      </div>
+
+      <div class="stat-item stat-danger">
+        <div class="stat-info-text">
+          <p>معاد للتعديل / غير مطابق</p>
+          <h3 id="statReturned">0</h3>
+        </div>
+        <div class="stat-icon"><i class="fas fa-triangle-exclamation"></i></div>
+      </div>
+    </div>
+
+    <!-- بطاقة التحكم والجدول -->
+    <div class="portal-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+        <div>
+          <h2 style="font-size: 19px; font-weight: 800; color: var(--dark-color); margin-bottom: 4px;">
+            <i class="fas fa-list-check" style="color: var(--primary-color);"></i> قائمة المستخلفين والمتعاقدين بالمؤسسة
+          </h2>
+          <p style="font-size: 13px; color: var(--text-muted);">
+            مفلترة تلقائياً لمؤسسة: <b id="currentSchoolTitle" style="color: var(--primary-color);">...</b>
+          </p>
+        </div>
+
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <button class="btn btn-outline-primary" onclick="copyEmployeeInquiryLink()" title="نسخ رابط استعلام الموظفين لمشاركته مع الأساتذة">
+            <i class="fas fa-share-nodes"></i> مشاركة رابط الاستعلام للموظفين
+          </button>
+          <a href="employee-status.html" target="_blank" class="btn btn-secondary" title="فتح بوابة استعلام الموظفين">
+            <i class="fas fa-user-check"></i> فضاء استعلام الموظفين
+          </a>
+          <input type="text" id="directorSearchInput" placeholder="بحث بالاسم أو رقم CCP..." 
+                 style="width: 200px; height: 42px; font-size: 13px;" oninput="filterDirectorTable()">
+          
+          <button class="btn btn-main" onclick="openNewCandidateCheck()">
+            <i class="fas fa-user-plus"></i> إضافة مستخلف جديد
+          </button>
+        </div>
+      </div>
+
+      <!-- جدول الموظفين الديناميكي -->
+      <div class="table-wrapper">
+        <div class="table-responsive">
+          <table class="custom-table" id="directorEmployeesTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>رقم الحساب (CCP)</th>
+                <th>الاسم واللقب</th>
+                <th>الطور</th>
+                <th>الصفة</th>
+                <th>الرتبة</th>
+                <th>مدة العمل</th>
+                <th>الفترة (من - إلى)</th>
+                <th>وضعية الملف الحالية</th>
+                <th style="text-align: center;">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="employeesTableBody">
+              <tr>
+                <td colspan="10" style="text-align: center; padding: 30px; color: #718096;">
+                  <i class="fas fa-spinner fa-spin fa-2x"></i><br>جاري تحميل قائمة الموظفين...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let currentDirector = null;
+    let institutionEmployees = [];
+    let activeAcademicYear = "2026-2027";
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      // 1. فحص حماية الجلسة لمدير المؤسسة
+      currentDirector = AuthGuard.requireDirector();
+      if (!currentDirector) return;
+
+      // 2. تحديث بيانات الواجهة
+      document.getElementById("directorNameBadge").textContent = `المدير: ${currentDirector.directorName}`;
+      document.getElementById("directorSchoolLabel").textContent = `${currentDirector.schoolName} (${currentDirector.level || 'تعليم'})`;
+      document.getElementById("currentSchoolTitle").textContent = currentDirector.schoolName;
+
+      // 3. جلب السنة الدراسية النشطة
+      const sys = await getSystemSettings();
+      if (sys && sys.active_academic_year) {
+        activeAcademicYear = sys.active_academic_year;
+        document.getElementById("activeYearBadge").textContent = `السنة: ${activeAcademicYear}`;
+      }
+
+      // 4. تحميل مستخلفي المؤسسة
+      await loadInstitutionEmployees();
+    });
+
+    // جلب مستخلفي المؤسسة من Firestore مع الفلترة التلقائية
+    async function loadInstitutionEmployees() {
+      try {
+        const tbody = document.getElementById("employeesTableBody");
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin fa-2x"></i><br>جاري التحميل...</td></tr>`;
+
+        // جلب السجلات التابعة لمؤسسة المدير والسنة المحددة
+        const q = window.db.collection("contract_registrations")
+          .where("school_name", "==", currentDirector.schoolName)
+          .where("academic_year", "==", activeAcademicYear);
+
+        const snap = await q.get();
+        institutionEmployees = [];
+
+        snap.forEach(doc => {
+          institutionEmployees.push({ id: doc.id, ...doc.data() });
+        });
+
+        // ترتيب حسب تاريخ الإنشاء الأحدث
+        institutionEmployees.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+
+        updateStatsCounters(institutionEmployees);
+        renderEmployeesTable(institutionEmployees);
+
+      } catch (err) {
+        console.error("خطأ جلب الموظفين:", err);
+        document.getElementById("employeesTableBody").innerHTML = `
+          <tr><td colspan="10" style="text-align:center; color:#dc3545; padding:20px;">
+            <i class="fas fa-exclamation-triangle"></i> حدث خطأ أثناء تحميل السجلات من قاعدة البيانات.
+          </td></tr>
+        `;
+      }
+    }
+
+    // تحديث بطاقات الإحصائيات
+    function updateStatsCounters(list) {
+      document.getElementById("statTotal").textContent = list.length;
+      document.getElementById("statDraft").textContent = list.filter(e => e.workflow_status === "pending_director").length;
+      document.getElementById("statOffice").textContent = list.filter(e => e.workflow_status === "submitted_to_office").length;
+      document.getElementById("statApproved").textContent = list.filter(e => e.workflow_status === "payroll_approved").length;
+      document.getElementById("statReturned").textContent = list.filter(e => e.workflow_status === "returned_to_director" || e.workflow_status === "payroll_rejected").length;
+    }
+
+    // رسم صفوف الجدول
+    function renderEmployeesTable(list) {
+      const tbody = document.getElementById("employeesTableBody");
+      tbody.innerHTML = "";
+
+      if (list.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="10" style="text-align:center; padding:35px; color:#718096;">
+              <i class="fas fa-folder-open fa-2x" style="margin-bottom:8px; display:block; opacity:0.6;"></i>
+              لا يوجد أي مستخلف أو متعاقد مسجل بالمؤسسة للسنة الدراسية ${activeAcademicYear} حتى الآن.<br>
+              <button class="btn btn-main btn-sm" style="margin-top:12px;" onclick="openNewCandidateCheck()">
+                <i class="fas fa-user-plus"></i> تسجيل مستخلف جديد الآن
+              </button>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      list.forEach((emp, idx) => {
+        const tr = document.createElement("tr");
+        const statusBadge = getStatusBadge(emp.workflow_status);
+        const nameAr = `${emp.fmn_ar || ''} ${emp.frn_ar || ''}`.trim() || '---';
+        const dates = `${emp.start_date || '---'} ⬅️ ${emp.end_date || '---'}`;
+        const duration = emp.duration_text || (emp.duration_days ? `${emp.duration_days} يوم` : '---');
+
+        // تحديد إمكانية التعديل والإحالة
+        const isDraft = emp.workflow_status === "pending_director" || emp.workflow_status === "returned_to_director";
+        const isApprovedFinal = emp.workflow_status === "payroll_approved";
+
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td><b style="color:var(--primary-color);">${emp.ccp}</b></td>
+          <td>
+            <strong>${nameAr}</strong>
+            <small style="display:block; color:#718096; font-size:11px;">${emp.fmn_en || ''} ${emp.frn_en || ''}</small>
+          </td>
+          <td><span class="badge" style="background:#f1f5f9; color:#334155;">${emp.level || '---'}</span></td>
+          <td>${emp.status_type || '---'}</td>
+          <td><span style="font-size:12px; font-weight:700;">${emp.rank || '---'}</span></td>
+          <td>${duration}</td>
+          <td style="font-size:11px; direction:ltr; text-align:right;">${dates}</td>
+          <td>
+            <div style="cursor:pointer;" onclick="showWorkflowModal('${emp.id}')" title="اضغط لعرض مسار الملف">${statusBadge}</div>
+          </td>
+          <td style="text-align: center;">
+            <div class="action-btns" style="justify-content:center;">
+              
+              <!-- معاينة مسار وتفاصيل الملف -->
+              <button class="btn-icon" style="background:var(--info-color);" onclick="showWorkflowModal('${emp.id}')" title="مسار وتفاصيل الملف">
+                <i class="fas fa-eye"></i>
+              </button>
+
+              <!-- إحالة الملف إلى مكتب الطور بالمديرية -->
+              ${isDraft ? `
+                <button class="btn-icon" style="background:#f59f00;" onclick="submitToOfficeModal('${emp.id}', '${nameAr}')" title="إحالة إلى مكتب الطور">
+                  <i class="fas fa-paper-plane"></i>
+                </button>
+                <button class="btn-icon" style="background:var(--primary-color);" onclick="editRegistration('${emp.id}')" title="تعديل البيانات">
+                  <i class="fas fa-pen-to-square"></i>
+                </button>
+              ` : ''}
+
+              <!-- طباعة الاستمارة الرسمية A4 -->
+              <a href="print-sheet.html?id=${emp.id}&type=sheet" target="_blank" class="btn-icon" style="background:#6a11cb;" title="طباعة الاستمارة الرسمية A4">
+                <i class="fas fa-print"></i>
+              </a>
+
+              <!-- طباعة مقرر الاستخلاف في حال الاعتماد -->
+              ${isApprovedFinal ? `
+                <a href="print-sheet.html?id=${emp.id}&type=decision" target="_blank" class="btn-icon" style="background:var(--success-color);" title="طباعة مقرر الاستخلاف المعتمد">
+                  <i class="fas fa-certificate"></i>
+                </a>
+              ` : ''}
+
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // تصفية الجدول بالبحث
+    function filterDirectorTable() {
+      const q = document.getElementById("directorSearchInput").value.trim().toLowerCase();
+      if (!q) {
+        renderEmployeesTable(institutionEmployees);
+        return;
+      }
+      const filtered = institutionEmployees.filter(e => {
+        const full = `${e.fmn_ar || ''} ${e.frn_ar || ''} ${e.ccp || ''} ${e.nin || ''}`.toLowerCase();
+        return full.includes(q);
+      });
+      renderEmployeesTable(filtered);
+    }
+
+    // فتح نافذة فحص رقم الحساب للموظف الجديد
+    function openNewCandidateCheck() {
+      Swal.fire({
+        title: 'فحص رقم حساب الموظف (CCP Check)',
+        html: `
+          <div style="text-align: right; direction: rtl; font-size: 13px;">
+            <p style="color:#555; margin-bottom:12px;">
+              أدخل رقم الحساب الجاري للمستخلف/المتعاقد المراد تسجيله بالمؤسسة (<b>من 10 إلى 12 رقماً</b>):
+            </p>
+            <input type="text" id="candidateCcpInput" class="swal2-input" placeholder="أدخل من 10 إلى 12 رقماً" 
+                   style="text-align:center; font-size:18px; width:90%; font-weight: bold; letter-spacing: 2px;"
+                   maxlength="12" oninput="this.value = this.value.replace(/\\D/g, '')">
+            <small style="color:#718096; display:block; margin-top:5px; text-align:center;">
+              * فحص آلي لمنع تسجيل الموظفين الدائمين والتعرف على المستخلفين المسجلين سابقاً
+            </small>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'فحص الحساب للمتابعة',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#2575fc',
+        preConfirm: () => {
+          const raw = document.getElementById("candidateCcpInput").value.trim();
+          const clean = raw.replace(/\D/g, '');
+          if (clean.length < 10 || clean.length > 12) {
+            Swal.showValidationMessage(`رقم الحساب البريدي الجاري CCP يجب أن يتكون من 10 إلى 12 رقماً فقط (أدخلت ${clean.length} رقم)`);
+            return false;
+          }
+          return clean;
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          DirectorLogic.verifyCandidateForRegistration(result.value);
+        }
+      });
+    }
+
+    // نافذة عرض تفاصيل ومسار الملف والستبر
+    function showWorkflowModal(empId) {
+      const emp = institutionEmployees.find(e => e.id === empId);
+      if (!emp) return;
+
+      const stepperHtml = renderWorkflowStepper(emp.workflow_status, emp.rejection_reason);
+
+      Swal.fire({
+        title: `وضعية ملف: ${emp.fmn_ar || ''} ${emp.frn_ar || ''}`,
+        html: `
+          <div style="direction: rtl; text-align: right;">
+            ${stepperHtml}
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:15px; font-size:13px; line-height:1.8;">
+              <strong>رقم الحساب:</strong> ${emp.ccp} | <strong>الضمان الاجتماعي:</strong> ${emp.nss || '---'}<br>
+              <strong>الرتبة:</strong> ${emp.rank || '---'} | <strong>الطور:</strong> ${emp.level || '---'}<br>
+              <strong>الفترة:</strong> من ${emp.start_date || '---'} إلى ${emp.end_date || '---'} (${emp.duration_text || ''})<br>
+              <strong>رقم الهاتف:</strong> <span dir="ltr">${emp.phone || '---'}</span>
+            </div>
+          </div>
+        `,
+        width: '650px',
+        showCloseButton: true,
+        confirmButtonText: 'إغلاق',
+        confirmButtonColor: '#2575fc'
+      });
+    }
+
+    // إحالة الملف إلى مكتب الطور بالمديرية
+    function submitToOfficeModal(empId, empName) {
+      Swal.fire({
+        title: 'إحالة الملف إلى مكتب الطور بالمديرية',
+        text: `هل تؤكد إحالة ملف الأستاذ(ة) "${empName}" لمكتب التعليم (${currentDirector.level}) بالمديرية للدراسة والمطابقة؟`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، إحالة الملف الآن',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d'
+      }).then(async (res) => {
+        if (res.isConfirmed) {
+          Swal.fire({ title: 'جاري الإحالة...', didOpen: () => Swal.showLoading() });
+          try {
+            await updateFileStatus(
+              empId,
+              "submitted_to_office",
+              currentDirector.directorName,
+              `مدير مؤسسة (${currentDirector.schoolName})`,
+              "تمت إحالة الملف من طرف مدير المؤسسة بعد استيفاء البيانات"
+            );
+            Swal.fire({
+              icon: 'success',
+              title: 'تمت الإحالة بنجاح',
+              text: 'أصبح الملف الآن قيد دراسة ومطابقة رئيس مكتب الطور بالمديرية',
+              timer: 2000,
+              showConfirmButton: false
+            });
+            await loadInstitutionEmployees();
+          } catch (e) {
+            Swal.fire('خطأ', 'فشل تحديث حالة الملف', 'error');
+          }
+        }
+      });
+    }
+
+    // الانتقال لتعديل الاستمارة
+    function editRegistration(empId) {
+      window.location.href = `contract-form.html?id=${empId}&mode=edit`;
+    }
+
+    // نسخ ومشاركة رابط استعلام الموظفين
+    function copyEmployeeInquiryLink() {
+      const fullUrl = window.location.origin + window.location.pathname.replace("director-dashboard.html", "employee-status.html");
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(fullUrl).then(() => {
+          showCopySuccess(fullUrl);
+        }).catch(() => fallbackPrompt(fullUrl));
+      } else {
+        fallbackPrompt(fullUrl);
+      }
+    }
+
+    function showCopySuccess(url) {
+      Swal.fire({
+        icon: 'success',
+        title: 'تم نسخ الرابط بنجاح',
+        html: `
+          <div style="direction: rtl; text-align: right; font-size: 13px; line-height: 1.8;">
+            <p style="color: #475569; margin-bottom: 8px;">
+              تم نسخ رابط بوابة استعلام الموظفين المستخلفين إلى الحافظة:
+            </p>
+            <div style="background:#f1f5f9; padding:8px; border-radius:6px; direction:ltr; text-align:left; font-family:monospace; color:#2575fc; word-break:break-all; font-weight:bold;">
+              ${url}
+            </div>
+            <p style="color: #059669; font-size: 12px; margin-top: 8px; font-weight: 600;">
+              <i class="fas fa-check-circle"></i> يمكنكم الآن إرساله أو مشاركته مع الأساتذة المستخلفين والمتعاقدين للاطلاع على مسار ملفاتهم ومستحقاتهم التقديرية.
+            </p>
+          </div>
+        `,
+        confirmButtonText: 'حسناً',
+        confirmButtonColor: '#2575fc'
+      });
+    }
+
+    function fallbackPrompt(url) {
+      prompt("يرجى نسخ الرابط لمشاركته مع الموظفين:", url);
+    }
+  </script>
+</body>
+</html>

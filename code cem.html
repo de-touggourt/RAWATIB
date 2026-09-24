@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>مديرية التربية لولاية توقرت</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- مكتبات -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+      display: flex; justify-content: center; align-items: center;
+      min-height: 100vh; padding: 15px; overflow-x: hidden;
+    }
+
+    /* ====== تصميم الواجهة (قبل التحقق) ====== */
+    .container {
+      position: relative; background: white;
+      padding: 35px 40px 10px;
+      border-radius: 18px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+      text-align: center; width: 100%; max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .page-header .header-logo {
+      width: 250px;
+      height: auto;
+      display: block;
+      margin: 0 auto 0px auto;
+      filter: contrast(1.05) brightness(1.1);
+      animation: pulseLogo 2.5s ease-in-out infinite;
+    }
+
+    @keyframes pulseLogo {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    .header-text {
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.5;
+      color: #444;
+      margin-bottom: 10px;
+    }
+
+    .gradient-title {
+      font-size: 20px;
+      font-weight: 600;
+      background: linear-gradient(to right, #6a11cb, #2575fc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-top: 0px;
+      margin-bottom: 15px;
+      display: inline-block;
+      position: relative;
+    }
+
+    .gradient-title::after {
+      content: "";
+      position: absolute;
+      bottom: -5px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(to right, #6a11cb, #2575fc);
+      border-radius: 2px;
+    }
+
+    /* ====== عناصر الإدخال (واجهة التحقق فقط) ====== */
+    input, select, textarea {
+      width: 100%; padding: 12px 14px; margin-bottom: 12px;
+      border-radius: 8px; border: 2px solid #e0e0e0;
+      font-size: 14px; text-align: center;
+      font-family: 'Cairo', sans-serif; font-weight: 500;
+    }
+
+    input[readonly] { background:#f5f5f5; }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #2575fc;
+    }
+
+    button {
+      background: linear-gradient(45deg, #6a11cb, #2575fc);
+      color: white; border: none;
+      padding: 14px 0; border-radius: 10px;
+      font-size: 15px; cursor: pointer;
+      font-weight: 600; width: 100%;
+      font-family: 'Cairo', sans-serif;
+    }
+
+    .small-note { font-size:12px; color:#666; margin-bottom:8px; text-align:center; }
+
+    /* ====== تنسيق تجاوب الهواتف ====== */
+    @media (max-width: 600px) {
+      .container {
+        padding: 25px 20px 15px;
+        border-radius: 14px;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+      }
+
+      .page-header .header-logo {
+        width: 120px;
+      }
+
+      .gradient-title {
+        font-size: 20px;
+        margin-top: 20px;
+      }
+
+      input, select, button {
+        font-size: 14px;
+        padding: 12px;
+      }
+    }
+
+/* ====== تنسيق الاستمارة ====== */
+#registrationForm {
+  text-align: center;
+}
+
+form label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
+  font-size: 14px;
+  text-align: center;
+  font-family: 'Cairo', sans-serif;
+  font-weight: 500;
+}
+
+input[readonly] {
+  background: #f5f5f5;
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: #2575fc;
+}
+
+button {
+  background: linear-gradient(45deg, #6a11cb, #2575fc);
+  color: white;
+  border: none;
+  padding: 14px 0;
+  border-radius: 10px;
+  font-size: 15px;
+  cursor: pointer;
+  font-weight: 600;
+  width: 100%;
+  font-family: 'Cairo', sans-serif;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.col {
+  flex: 1;
+}
+
+@media (max-width: 680px) {
+  .row { flex-direction: column; }
+}
+
+/* ====== تنسيق خاص لحقول أرقام الهواتف ====== */
+#phoneDirectorField::placeholder,
+#phoneFinancialField::placeholder {
+  text-align: center;
+  direction: rtl;
+}
+
+#phoneDirectorField,
+#phoneFinancialField {
+  text-align: center;
+  direction: ltr;
+}
+
+  </style>
+</head>
+
+<body>
+  <div class="container" id="mainContainer">
+    <div class="page-header">
+     
+      <div class="header-text">
+        الجمهورية الجزائرية الديمقراطية الشعبية<br>
+        وزارة التربية الوطنية<br>
+      </div>
+ <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار اللجنة" class="header-logo">
+      <h2 class="gradient-title">بوابة مديرية التربية لولاية توقرت</h2>
+      <input type="text" id="empId" placeholder="أدخل رقم التعريف الوظيفي الخاص بالمدير أو المكلف" oninput="validateNumber(this)">
+      <button onclick="checkEmployee()">تسجيل الدخول</button>
+    </div>
+  </div>
+
+<!-- ✅ قسم الاستمارة -->
+<div id="registrationForm" style="display:none; margin-top:25px;">
+
+  <form id="empForm">
+    
+    <!-- الصف 1 -->
+    <div class="row">
+      <div class="col">
+        <label for="empIdField">رقم التعريف الوظيفي</label>
+        <input type="text" id="empIdField" name="empId" readonly>
+      </div>
+      <div class="col">
+        <label for="fullName">الاسم الكامل</label>
+        <input type="text" id="fullName" name="fullName" required>
+      </div>
+    </div>
+
+    <!-- الصف 2 -->
+    <div class="row">
+      <div class="col">
+        <label for="rank">الرتبة</label>
+        <input type="text" id="rank" name="rank" required>
+      </div>
+      <div class="col">
+        <label for="workPlace">مكان العمل</label>
+        <input type="text" id="workPlace" name="workPlace" required>
+      </div>
+    </div>
+
+    <!-- الصف 3 -->
+    <div class="row">
+      <div class="col">
+        <label for="position">الصفة</label>
+        <input type="text" id="position" name="position" required>
+      </div>
+      <div class="col">
+        <label for="level">الطور</label>
+        <input type="text" id="level" name="level" required>
+      </div>
+    </div>
+
+    <!-- الصف 4 -->
+    <div class="row">
+      <div class="col">
+        <label for="district">الدائرة</label>
+        <input type="text" id="district" name="district" required>
+      </div>
+      <div class="col">
+        <label for="municipality">البلدية</label>
+        <input type="text" id="municipality" name="municipality" required>
+      </div>
+    </div>
+
+    <!-- الصف 5 -->
+    <div class="row">
+      <div class="col">
+        <label for="schoolName">اسم المتوسطة</label>
+        <input type="text" id="schoolName" name="schoolName" required>
+      </div>
+      <div class="col">
+        <label for="code">الرمز</label>
+        <input type="text" id="code" name="code" required>
+      </div>
+    </div>
+
+    <!-- الصف 6 -->
+    <div class="row">
+      <div class="col">
+        <label for="email">البريد الإلكتروني</label>
+        <input type="email" id="email" name="email" required>
+      </div>
+      <div class="col">
+        <label for="managerPhone">رقم هاتف المدير</label>
+        <input type="tel" id="managerPhone" name="managerPhone" required>
+      </div>
+    </div>
+
+    <!-- الصف 7 -->
+    <div class="row">
+      <div class="col">
+        <label for="finName">الاسم الكامل للمسير المالي</label>
+        <input type="text" id="finName" name="finName" required>
+      </div>
+      <div class="col">
+        <label for="finPhone">رقم هاتف المسير المالي</label>
+        <input type="tel" id="finPhone" name="finPhone" required>
+      </div>
+    </div>
+
+    <button type="submit">تأكيد التسجيل</button>
+  </form>
+</div>
+
+
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAkQz9pB2ZNlYIvdlTRvi4try3D8LLXS4g",
+  authDomain: "databaseemploye.firebaseapp.com",
+  projectId: "databaseemploye",
+  storageBucket: "databaseemploye.firebasestorage.app",
+  messagingSenderId: "408231477466",
+  appId: "1:408231477466:web:e3bf5bd3eaca7cdcd3a5e3",
+  measurementId: "G-DW8QJ5B231"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const scriptURL = "https://script.google.com/macros/s/AKfycbwj95A1PV4atxKueEvFjt13OY8np1qH4gJV2W0L0zBjLH-si_RGl2JQZz8hehU5XrfU/exec";
+
+
+
+
+
+
+
+function validateNumber(input) {
+  input.value = input.value.replace(/\D/g, '');
+  if (input.value.length > 16) input.value = input.value.slice(0, 16);
+}
+
+async function checkEmployee() {
+  const empId = document.getElementById("empId").value.trim();
+
+  if (empId.length < 16) {
+    Swal.fire({ icon: 'warning', title: 'خطأ', text: 'رقم التعريف الوظيفي يجب أن يتكون من 16 رقمًا' });
+    return;
+  }
+
+  Swal.fire({ title: 'جاري التحقق...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+  try {
+    const docRef = db.collection("employeescom").doc(empId);
+    const docSnap = await docRef.get();
+
+    if (!docSnap.exists) {
+      Swal.close();
+      Swal.fire("❌ خطأ", "رقم الموظف غير موجود في قاعدة البيانات", "error");
+      return;
+    }
+
+    const data = docSnap.data();
+
+    // ✅ التحقق من وجود تسجيل سابق قبل عرض الاستمارة
+    const params = new URLSearchParams();
+    params.append("action", "check_existing");
+    params.append("empId", empId);
+
+    try {
+      const res = await fetch(scriptURL, {
+        method: "POST",
+        body: params
+      });
+      const result = await res.json();
+
+      Swal.close();
+
+      if (result.result === "exists") {
+        const d = result.data || {};
+        const currentWorkLine = (d.role === "مدير مكلف" && d.currentWork)
+          ? `<b>مؤسسة العمل الحالية:</b> ${d.currentWork}<br>` : "";
+
+        Swal.fire({
+          title: "⚠️ التسجيل موجود مسبقًا",
+          html: `
+            <div style="text-align:right;direction:rtl;font-family:'Cairo',sans-serif;">
+              <b>رقم التعريف:</b> ${d.empId || ''}<br>
+              <b>الاسم واللقب:</b> ${d.name || ''}<br>
+              <b>الرتبة:</b> ${d.grade || ''}<br>
+              <b>مؤسسة العمل الأصلية:</b> ${d.place || ''}<br>
+              <b>الصفة:</b> ${d.role || ''}<br>
+              ${currentWorkLine}
+              <b>الطور:</b> ${d.level || ''}<br>
+              <b>الدائرة:</b> ${d.daira || ''}<br>
+              <b>البلدية:</b> ${d.baladiya || ''}<br>
+              <b>اسم المؤسسة:</b> ${d.school || ''}<br>
+              <b>رمز المؤسسة:</b> ${d.schoolCode || ''}<br>
+              <b>البريد الإلكتروني:</b> ${d.email || ''}<br>
+              <b>هاتف المدير:</b> <span style="direction:ltr;unicode-bidi:bidi-override;display:inline-block;text-align:left;">${formatPhoneNumber(d.directorPhone || '')}</span><br>
+              <b>اسم المسير المالي:</b> ${d.financialName || ''}<br>
+              <b>هاتف المسير المالي:</b> <span style="direction:ltr;unicode-bidi:bidi-override;display:inline-block;text-align:left;">${formatPhoneNumber(d.financialPhone || '')}</span><br>
+              ${d.institutionFixedPhone ? `<b>رقم الهاتف الثابت للمؤسسة:</b> <span style="direction:ltr;unicode-bidi:bidi-override;display:inline-block;text-align:left;">${formatFixedPhoneNumber(d.institutionFixedPhone || '')}</span><br>` : ''}
+              <b>تاريخ التسجيل:</b> <span style="direction:ltr;unicode-bidi:bidi-override;display:inline-block;text-align:left;">${formatDateFromISO(d.date || '')}</span>${d.modificationDate ? `<br><b>تاريخ التعديل:</b> <span style="direction:ltr;unicode-bidi:bidi-override;display:inline-block;text-align:left;">${formatDateFromISO(d.modificationDate || '')}</span>` : ''}
+            </div>`,
+          icon: "warning",
+          showCancelButton: true,
+          showDenyButton: true,
+          confirmButtonText: "تعديل البيانات",
+          denyButtonText: "حذف التسجيل",
+          cancelButtonText: "إغلاق",
+          confirmButtonColor: "#FFAD29",
+          denyButtonColor: "#dc3545"
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // عرض الاستمارة مع البيانات للتعديل
+            showEditForm(empId, data, d);
+          } else if (result.isDenied) {
+            // حذف التسجيل
+            deleteRegistration(empId);
+          }
+        });
+        return; // 🟥 لا نعرض الاستمارة إلا عند الضغط على تعديل
+      }
+
+      // 🟢 في حالة عدم وجود تسجيل سابق → نسمح بمتابعة التسجيل
+      Swal.fire({
+        title: "✅ تم التحقق بنجاح",
+        html: `<b>الاسم واللقب:</b> ${escapeHtml(data.name)}<br><b>الرتبة:</b> ${escapeHtml(data.grade)}<br><b>مكان العمل:</b> ${escapeHtml(data.place)}`,
+        icon: "success",
+        confirmButtonText: "متابعة التسجيل"
+      }).then(() => showForm(empId, data));
+
+    } catch (err) {
+      Swal.close();
+      Swal.fire("❌ خطأ", "تعذر التحقق من التسجيلات السابقة", "error");
+      console.error("check_existing error:", err);
+    }
+
+  } catch (err) {
+    Swal.close();
+    Swal.fire("❌ خطأ", "حدث خطأ أثناء الاتصال بقاعدة بيانات الموظفين", "error");
+    console.error("Firebase error:", err);
+  }
+}
+
+
+function escapeHtml(str){ return String(str || '').replace(/[&<>"'`=\/]/g, function(s){ return '&#' + s.charCodeAt(0) + ';'; }); }
+
+// دالة لتحويل التاريخ من صيغة ISO إلى صيغة "dd-MM-yyyy HH:mm:ss"
+function formatDateFromISO(dateStr) {
+  if (!dateStr) return 'غير محدد';
+  
+  try {
+    let date;
+    
+    // التحقق إذا كان التاريخ بصيغة ISO (مثل: 2025-11-14T12:17:26.000Z)
+    if (dateStr.includes('T')) {
+      date = new Date(dateStr);
+    } else if (dateStr.includes('-') && dateStr.includes(' ')) {
+      // إذا كان بصيغة "dd-MM-yyyy HH:mm:ss" نعيده كما هو
+      return dateStr;
+    } else {
+      // محاولة تحويله كتاريخ
+      date = new Date(dateStr);
+    }
+    
+    // التحقق من صحة التاريخ
+    if (isNaN(date.getTime())) {
+      return dateStr;
+    }
+    
+    // تحويل التاريخ إلى صيغة "dd-MM-yyyy HH:mm:ss"
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    
+    return `${hours}:${minutes}:${seconds} ${year}-${month}-${day}`;
+  } catch (err) {
+    return dateStr; // في حالة الخطأ، نعيد التاريخ الأصلي
+  }
+}
+
+/* ----- بيانات المؤسسات حسب الدائرة (متوسط / ثانوي) ----- 
+   يمكن توسيع هذا الكائن لاحقًا أو جلبه من ملف خارجي.
+*/
+window.institutionsByDaaira = {
+  "توقرت": {
+    "متوسط": [
+      { name: "متوسطة سعد بن أبي وقاص تقرت", code: "551201" },
+      { name: "متوسطة الإمام علي توقرت", code: "551202" },
+      { name: "متوسطة محمد الأمين العمودي تقرت", code: "551203" },
+      { name: "متوسطة الشيخ المقراني تبسبست", code: "551204" },
+      { name: "متوسطة بن هدية المدني النزلة", code: "551205" },
+      { name: "متوسطة عبد الحميد بن باديس توقرت", code: "551206" },
+      { name: "متوسطة حمزة بن عبد المطلب الزاوية العابدية", code: "551207" },
+      { name: "متوسطة نصرات حشاني تبسبست", code: "551208" },
+      { name: "متوسطة عيسات ايدير البهجة تبسبست", code: "551209" },
+      { name: "متوسطة تجيني محمد عين الصحراء النزلة", code: "551210" },
+      { name: "متوسطة ابن رشد حي العرقوب توقرت", code: "551211" },
+      { name: "متوسطة رضا حوحو الزاوية العابدية", code: "551212" },
+      { name: "متوسطة ميعادي فخر الدين النزلة", code: "551213" },
+      { name: "متوسطة عطالي محمد الصغير سيدي مهدي النزلة", code: "551214" },
+      { name: "متوسطة محمد عمران بوليفة حي الرمال توقرت", code: "551215" },
+      { name: "متوسطة عبد المؤمن بن علي النزلة", code: "551216" },
+      { name: "متوسطة بن الزاوي علي تبسبست", code: "551217" },
+      { name: "متوسطة البشير الابراهيمي توقرت", code: "551218" },
+      { name: "متوسطة حي 5 جويلية الزاوية العابدية", code: "551219" },
+      { name: "متوسطة بن حيزية عبد الله عين الصحراء 1 النزلة", code: "551220" },
+      { name: "متوسطة بن قلية محمد الزاوية العابدية", code: "551221" },
+      { name: "متوسطة تمرني محمد توقرت", code: "551222" },
+      { name: "متوسطة شاوش محمد تبسبست", code: "551223" },
+      { name: "متوسطة المجاهد التجاني الصادق النزلة", code: "551224" },
+      { name: "متوسطة خروبي محمد لخضر النزلة", code: "551225" },
+      { name: "متوسطة المجاهد سبقاق العيد توقرت", code: "551226" },
+      { name: "متوسطة دقعة الطاهر تبسبست", code: "551227" },
+      { name: "متوسطة بدودة معمر بن علي النزلة", code: "551228" },
+      { name: "متوسطة داشر الحاج حي المستقبل توقرت", code: "551229" },
+      { name: "متوسطة المجاهد رواص محمد حي المستقبل توقرت", code: "551230" },
+      { name: "متوسطة المجاهد بوليفة م العيدحي المستقبل توقرت", code: "551231" },
+      { name: "متوسطة المجاهد عماري السايححي المستقبل توقرت", code: "551232" }
+    ],
+    "ثانوي": [
+      { name: "ثانوية الأمير عبد القادر توقرت", code: "551101" },
+      { name: "ثانوية عبد الرحمان الكواكبي تبسبست", code: "551102" },
+      { name: "ثانوية الحسن بن الهيثم النزلة", code: "551103" },
+      { name: "ثانوية البشير الابراهيمي تبسبست", code: "551104" },
+      { name: "ثانوية هواري بومدين الزاوية العابدية", code: "551105" },
+      { name: "ثانوية أبو بكر بلقايد النزلة", code: "551106" },
+      { name: "ثانوية لزهاري تونسي الزاوية العابدية", code: "551107" },
+      { name: "ثانوية بوخاري عبد المالك النزلة", code: "551108" },
+      { name: "ثانوية عبودة علي -حي المستقبل - توقرت", code: "551109" },
+      { name: "ثانوية مسغوني م الصالح - حي المستقبل", code: "551110" }
+    ]
+  },
+
+  "الحجيرة": {
+    "متوسط": [
+      { name: "متوسطة ابن سينا الحجيرة", code: "552201" },
+      { name: "متوسطة لخضاري لخضر العالية", code: "552202" },
+      { name: "متوسطة زوابري مسعود لقراف الحجيرة", code: "552203" },
+      { name: "متوسطة السايح بن عيسى محمد السايح العالية", code: "552204" },
+      { name: "متوسطة بن شويحة حمزة الحجيرة", code: "552205" },
+      { name: "متوسطة شلغوم بشير الشقة -العالية-", code: "552206" },
+      { name: "المجاهد شعيب الأخضر الحجيرة", code: "552206" }
+    ],
+    "ثانوي": [
+      { name: "ثانوية طارق بن زياد الحجيرة", code: "552101" },
+      { name: "ثانوية بساسي محمد الصغير العالية", code: "552102" },
+      { name: "ثانوية لحسيني محمد الحجيرة", code: "552103" },
+      { name: "ثانوية بالضياف محمد لقراف الحجيرة", code: "552104" }
+    ]
+  },
+
+  "الطيبات": {
+    "متوسط": [
+      { name: "متوسطة أحمد زبانة الطيبات", code: "553201" },
+      { name: "متوسطة موسى بن نصير المنقر", code: "553202" },
+      { name: "متوسطة طارق بن زياد بن ناصر", code: "553203" },
+      { name: "متوسطة نتاري محمد الدليلعي الطيبات", code: "553204" },
+      { name: "متوسطة العقون محمد الكبير الطيبات", code: "553205" },
+      { name: "متوسطة معمري محمد بن ناصر", code: "553206" },
+      { name: "متوسطة العيد زقرير المنقر", code: "553207" },
+      { name: "متوسطة بلعجال أحمد الخبنة الطيبات", code: "553208" },
+      { name: "متوسطة المجاهد الخذير أحمد المنقر", code: "553209" },
+      { name: "متوسطة المجاهد رابحي العيد المنقر", code: "553210" },
+      { name: "متوسطة المجاهد بكاري ع القادر دليليعي الطيبات", code: "553211" }
+    ],
+    "ثانوي": [
+      { name: "ثانوية ابن رشيق القيرواني الطيبات", code: "553101" },
+      { name: "ثانوية المنقر - دقعة علي المنقر", code: "553102" },
+      { name: "ثانوية عبيد أحمد بن ناصر", code: "553103" },
+      { name: "ثانوية زقوني الصغير الدليليعي الطيبات", code: "553104" }
+    ]
+  },
+
+  "المقارين": {
+    "متوسط": [
+      { name: "متوسطة الفرابي المقارين", code: "554201" },
+      { name: "متوسطة طفحي مسعود سيدي سليمان", code: "554202" },
+      { name: "متوسطة بلحارث محمد السايح سيدي سليمان", code: "554203" },
+      { name: "متوسطة سوفي الهاشمي الطيبات", code: "554204" },
+      { name: "متوسطة الشهيد عبد الرحمان قوتال القصور المقارين", code: "554205" },
+      { name: "متوسطة الشهيد أحميدة بوحفص المقارين", code: "554206" },
+      { name: "متوسطة بركبية عبد الرزاق المقارين", code: "554207" },
+      { name: "متوسطة الشهيد تماسيني ع الرحمان لهريهيرة المقارين", code: "554208" }
+    ],
+    "ثانوي": [
+      { name: "ثانوية خالد بن الوليد المقارين", code: "554101" },
+      { name: "ثانوية بن عمر النوي سيدي سليمان", code: "554102" },
+      { name: "ثانوية عميش سعدون المقارين", code: "554103" }
+    ]
+  },
+
+  "تماسين": {
+    "متوسط": [
+      { name: "متوسطة عمر بن الخطاب تماسين", code: "555201" },
+      { name: "متوسطة مولاتي محمد السايح بلدة عمر", code: "555202" },
+      { name: "متوسطة أبو بكر الرازي البحور تماسين", code: "555203" },
+      { name: "متوسطة قوني محمد الطيب سيدي عامر تماسين", code: "555204" },
+      { name: "متوسطة معركة قرداش بلدة عمر", code: "555205" },
+      { name: "متوسطة محمد الصديق بن يحي حي الكدية تماسين", code: "555206" },
+      { name: "متوسطة بركة عبد الرزاق قوق بلدة عمر", code: "555207" },
+      { name: "متوسطة بدودة السايح تملاحت تماسين", code: "555208" },
+      { name: "متوسطة ع ابن باديس قوق بلدة عمر", code: "555209" }
+    ],
+    "ثانوي": [
+      { name: "ثانوية مفدي زكريا تماسين", code: "555101" },
+      { name: "ثانوية العيد بن الصحراوي بلدة عمر", code: "555102" },
+      { name: "ثانوية قويدري محمد العيد تماسين", code: "555103" },
+      { name: "ثانوية تجيني محمد لخضر بلدة عمر", code: "555104" },
+      { name: "ثانوية مالك بن نبي قوق", code: "555105" }
+    ]
+  }
+};
+
+/* ----- خريطة البلديات الأصلية (كما في كودك السابق) ----- */
+window.baladiyaMap = {
+  "توقرت": ["توقرت", "النزلة", "تبسبست", "الزاوية العابدية"],
+  "تماسين": ["تماسين", "بلدة عمر"],
+  "المقارين": ["المقارين", "سيدي سليمان"],
+  "الحجيرة": ["الحجيرة", "العالية"],
+  "الطيبات": ["الطيبات", "المنقر", "ابن ناصر"]
+};
+
+// متغير لتتبع وضع التعديل
+let isEditMode = false;
+
+function showForm(empId, data) {
+  isEditMode = false;
+  const container = document.getElementById("mainContainer");
+  container.innerHTML = `
+    <h2 style="margin-bottom:12px;">استمارة المعلومات الخاصة بالمؤسسة</h2>
+
+    <div class="row">
+      <div class="col"><input type="text" id="empIdField" value="${escapeHtml(empId)}" readonly></div>
+      <div class="col"><input type="text" id="nameField" value="${escapeHtml(data.name || '')}" readonly></div>
+    </div>
+
+    <div class="row">
+      <div class="col"><input type="text" id="gradeField" value="${escapeHtml(data.grade || '')}" readonly></div>
+      <div class="col"><input type="text" id="placeField" value="${escapeHtml(data.place || '')}" readonly></div>
+    </div>
+
+    <select id="sifaField">
+      <option value="">اختر الصفة</option>
+      <option value="مدير">مدير</option>
+      <option value="مدير مكلف">مدير مكلف</option>
+    </select>
+
+<div class="form-group" id="currentWorkDiv" style="display:none;">
+  <label for="currentWorkField">مؤسسة العمل الحالية</label>
+  <input type="text" id="currentWorkField" class="form-control" placeholder="أدخل اسم المؤسسة التي تعمل بها حاليا">
+</div>
+
+
+    <div class="row">
+      <div class="col">
+        <select id="levelField" onchange="onLevelOrDaairaChange()">
+          <option value="">اختر الطور</option>
+          <option value="ابتدائي">ابتدائي</option>
+          <option value="متوسط">متوسط</option>
+          <option value="ثانوي">ثانوي</option>
+        </select>
+      </div>
+      <div class="col">
+        <select id="daairaField" onchange="onLevelOrDaairaChange(); updateBaladiya();">
+          <option value="">اختر الدائرة</option>
+          <option value="توقرت">توقرت</option>
+          <option value="تماسين">تماسين</option>
+          <option value="المقارين">المقارين</option>
+          <option value="الحجيرة">الحجيرة</option>
+          <option value="الطيبات">الطيبات</option>
+        </select>
+      </div>
+    </div>
+
+    <select id="baladiyaField">
+      <option value="">اختر البلدية</option>
+    </select>
+
+    <!-- منطقة اسم المؤسسة / سلوك ديناميكي -->
+    <div id="institutionArea">
+      <!-- سيملأ ديناميكياً -->
+      <input type="text" id="institutionPlaceholder" value="" readonly style="display:none;">
+    </div>
+
+    <input type="text" id="institutionCodeField" placeholder="رمز المؤسسة" readonly style="display:none; margin-top:6px;">
+
+    <input type="text" id="institutionEmailField" placeholder="البريد الإلكتروني للمؤسسة (example123@gmail.com)" oninput="validateGmail(this)">
+
+    <input type="text" id="phoneDirectorField" placeholder="رقم هاتف المدير (10 أرقام)" oninput="formatPhoneSimple(this)" dir="ltr">
+    <input type="text" id="financialManagerField" placeholder="اسم ولقب المسير المالي">
+    <input type="text" id="phoneFinancialField" placeholder="رقم هاتف المسير المالي (10 أرقام)" oninput="formatPhoneSimple(this)" dir="ltr">
+    <input type="text" id="institutionFixedPhoneField" placeholder="رقم الهاتف الثابت للمؤسسة (إذا كان متوفر)" oninput="formatFixedPhone(this)" dir="ltr">
+
+    <div class="small-note">تحقق من إدخال جميع الحقول المطلوبة ثم اضغط تسجيل</div>
+    <button id="submitBtn" onclick="submitForm()">تسجيل</button>
+  `;
+
+  // تهيئة الاستمارة
+  initializeForm();
+}
+
+// دالة لتهيئة الاستمارة
+function initializeForm() {
+// بعد حقن النموذج
+  const sifaField = document.getElementById("sifaField");
+  if (sifaField) {
+    // إزالة أي event listeners سابقة لتجنب التكرار
+    const newSifaField = sifaField.cloneNode(true);
+    sifaField.parentNode.replaceChild(newSifaField, sifaField);
+    
+    // إضافة event listener جديد
+document.getElementById("sifaField").addEventListener("change", function() {
+  const currentWorkDiv = document.getElementById("currentWorkDiv");
+      const currentWorkField = document.getElementById("currentWorkField");
+      
+  if (this.value === "مدير مكلف") {
+        // إظهار حقل مؤسسة العمل الحالية
+        if (currentWorkDiv) {
+    currentWorkDiv.style.display = "block";
+        }
+  } else {
+        // إخفاء حقل مؤسسة العمل الحالية وتفريغه
+        if (currentWorkDiv) {
+    currentWorkDiv.style.display = "none";
+        }
+        if (currentWorkField) {
+          currentWorkField.value = ""; // ✅ تفريغ الحقل عند التغيير من "مدير مكلف" إلى "مدير"
+        }
+  }
+});
+  }
+
+  // عناصر مساعدة
+  const baladiyaField = document.getElementById("baladiyaField");
+  if (baladiyaField) {
+    baladiyaField.innerHTML = '<option value="">اختر البلدية</option>';
+  }
+}
+
+// دالة لعرض الاستمارة في وضع التعديل
+function showEditForm(empId, firebaseData, existingData) {
+  isEditMode = true;
+  const container = document.getElementById("mainContainer");
+  container.innerHTML = `
+    <h2 style="margin-bottom:12px;">تعديل بيانات التسجيل</h2>
+
+    <div class="row">
+      <div class="col"><input type="text" id="empIdField" value="${escapeHtml(empId)}" readonly></div>
+      <div class="col"><input type="text" id="nameField" value="${escapeHtml(firebaseData.name || '')}" readonly></div>
+    </div>
+
+    <div class="row">
+      <div class="col"><input type="text" id="gradeField" value="${escapeHtml(firebaseData.grade || '')}" readonly></div>
+      <div class="col"><input type="text" id="placeField" value="${escapeHtml(firebaseData.place || '')}" readonly></div>
+    </div>
+
+    <select id="sifaField">
+      <option value="">اختر الصفة</option>
+      <option value="مدير">مدير</option>
+      <option value="مدير مكلف">مدير مكلف</option>
+    </select>
+
+    <div class="form-group" id="currentWorkDiv" style="display:none;">
+      <label for="currentWorkField">مؤسسة العمل الحالية</label>
+      <input type="text" id="currentWorkField" class="form-control" placeholder="أدخل اسم المؤسسة التي تعمل بها حاليا">
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <select id="levelField" onchange="onLevelOrDaairaChange()">
+          <option value="">اختر الطور</option>
+          <option value="ابتدائي">ابتدائي</option>
+          <option value="متوسط">متوسط</option>
+          <option value="ثانوي">ثانوي</option>
+        </select>
+      </div>
+      <div class="col">
+        <select id="daairaField" onchange="onLevelOrDaairaChange(); updateBaladiya();">
+          <option value="">اختر الدائرة</option>
+          <option value="توقرت">توقرت</option>
+          <option value="تماسين">تماسين</option>
+          <option value="المقارين">المقارين</option>
+          <option value="الحجيرة">الحجيرة</option>
+          <option value="الطيبات">الطيبات</option>
+        </select>
+      </div>
+    </div>
+
+    <select id="baladiyaField">
+      <option value="">اختر البلدية</option>
+    </select>
+
+    <div id="institutionArea">
+      <input type="text" id="institutionPlaceholder" value="" readonly style="display:none;">
+    </div>
+
+    <input type="text" id="institutionCodeField" placeholder="رمز المؤسسة" readonly style="display:none; margin-top:6px;">
+
+    <input type="text" id="institutionEmailField" placeholder="البريد الإلكتروني للمؤسسة (example123@gmail.com)" oninput="validateGmail(this)">
+
+    <input type="text" id="phoneDirectorField" placeholder="رقم هاتف المدير (10 أرقام)" oninput="formatPhoneSimple(this)" dir="ltr">
+    <input type="text" id="financialManagerField" placeholder="اسم ولقب المسير المالي">
+    <input type="text" id="phoneFinancialField" placeholder="رقم هاتف المسير المالي (10 أرقام)" oninput="formatPhoneSimple(this)" dir="ltr">
+    <input type="text" id="institutionFixedPhoneField" placeholder="رقم الهاتف الثابت للمؤسسة (9 أرقام: 000 00 00 00)" oninput="formatFixedPhone(this)" dir="ltr">
+    
+    <div class="small-note">يمكنك تعديل البيانات أدناه (الحقول المظللة غير قابلة للتعديل)</div>
+    <button id="submitBtn" onclick="submitForm()">حفظ التعديلات</button>
+  `;
+  
+  // تهيئة الاستمارة
+  initializeForm();
+  
+  // تعبئة البيانات الموجودة
+  setTimeout(() => {
+    document.getElementById("sifaField").value = existingData.role || "";
+    if (existingData.role === "مدير مكلف") {
+      document.getElementById("currentWorkDiv").style.display = "block";
+      document.getElementById("currentWorkField").value = existingData.currentWork || "";
+    }
+    document.getElementById("levelField").value = existingData.level || "";
+    document.getElementById("daairaField").value = existingData.daira || "";
+    
+    // تحديث البلديات والمؤسسات
+    updateBaladiya();
+    setTimeout(() => {
+      document.getElementById("baladiyaField").value = existingData.baladiya || "";
+      onLevelOrDaairaChange();
+      
+      // تعبئة اسم المؤسسة ورمزها
+      setTimeout(() => {
+        const level = existingData.level || "";
+        if (level === "ابتدائي") {
+          const linkedSelect = document.getElementById("linkedMiddleSelect");
+          if (linkedSelect) {
+            linkedSelect.value = existingData.schoolCode || "";
+            linkedSelect.dispatchEvent(new Event('change'));
+          }
+        } else {
+          const instSelect = document.getElementById("instSelect");
+          if (instSelect) {
+            instSelect.value = existingData.schoolCode || "";
+            instSelect.dispatchEvent(new Event('change'));
+          }
+        }
+        
+        document.getElementById("institutionEmailField").value = existingData.email || "";
+        document.getElementById("phoneDirectorField").value = formatPhoneNumber(existingData.directorPhone || "");
+        document.getElementById("financialManagerField").value = existingData.financialName || "";
+        document.getElementById("phoneFinancialField").value = formatPhoneNumber(existingData.financialPhone || "");
+        // تعبئة رقم الهاتف الثابت عند التعديل فقط (إذا كانت البيانات موجودة)
+        if (existingData.institutionFixedPhone) {
+          document.getElementById("institutionFixedPhoneField").value = formatFixedPhoneNumber(existingData.institutionFixedPhone || "");
+        }
+      }, 300);
+    }, 200);
+  }, 100);
+}
+
+/* عند تغيير الطور أو الدائرة - تحديث سلوك اسم المؤسسة والقوائم */
+function onLevelOrDaairaChange() {
+  const level = document.getElementById("levelField").value;
+  const daaira = document.getElementById("daairaField").value;
+  const area = document.getElementById("institutionArea");
+  const codeField = document.getElementById("institutionCodeField");
+
+  area.innerHTML = '';
+  codeField.style.display = 'none';
+  codeField.value = '';
+
+  if (!level || !daaira) return;
+
+  const insts = window.institutionsByDaaira[daaira] || { "متوسط": [], "ثانوي": [] };
+
+  if (level === 'ابتدائي') {
+    // ✅ الآن: لا نضع "مؤسسة المأمن"، بل نضع placeholder فقط
+    area.innerHTML = `
+      <input type="text" id="instNamePrimary" placeholder="اختر المتوسطة التابعة لها الابتدائية (المأمن)" readonly>
+      <select id="linkedMiddleSelect">
+      <option value="">-- اختر المتوسطة التابعة لها الابتدائية --</option>
+      </select>
+       <div style="font-size:12px;color:#444;margin-bottom:8px;">سيظهر رمز المؤسسة عند الإختيار:</div> 
+    `;
+    const linked = document.getElementById("linkedMiddleSelect");
+    (insts["متوسط"] || []).forEach(i => {
+      const opt = document.createElement("option");
+      opt.value = i.code;
+      opt.text = `${i.name} — ${i.code}`;
+      linked.add(opt);
+    });
+    linked.addEventListener('change', (e) => {
+      const codeField = document.getElementById("institutionCodeField");
+      const instNamePrimary = document.getElementById("instNamePrimary");
+      if (e.target.value) {
+        const selectedOption = e.target.options[e.target.selectedIndex].text.split(' — ')[0];
+        instNamePrimary.value = selectedOption; // ✅ اسم المتوسطة التابعة
+        codeField.style.display = '';
+        codeField.value = e.target.value;       // ✅ رمز المتوسطة
+      } else {
+        instNamePrimary.value = '';
+        codeField.style.display = 'none';
+        codeField.value = '';
+      }
+    });
+
+  } else if (level === 'متوسط' || level === 'ثانوي') {
+    const list = insts[level] || [];
+    area.innerHTML = `<select id="instSelect"><option value="">-- اختر ${level} --</option></select>`;
+    const select = document.getElementById("instSelect");
+    list.forEach(i => {
+      const opt = document.createElement("option");
+      opt.value = i.code;
+      opt.text = `${i.name} — ${i.code}`;
+      select.add(opt);
+    });
+    select.addEventListener('change', (e) => {
+      const codeField = document.getElementById("institutionCodeField");
+      if (e.target.value) {
+        codeField.style.display = '';
+        codeField.value = e.target.value;
+      } else {
+        codeField.style.display = 'none';
+        codeField.value = '';
+      }
+    });
+  }
+}
+
+function updateBaladiya() {
+  const daaira = document.getElementById("daairaField").value;
+  const baladiyaSelect = document.getElementById("baladiyaField");
+  baladiyaSelect.innerHTML = '<option value="">اختر البلدية</option>';
+  if (daaira && window.baladiyaMap[daaira]) {
+    window.baladiyaMap[daaira].forEach(b => {
+      const option = document.createElement("option");
+      option.value = b; option.text = b;
+      baladiyaSelect.add(option);
+    });
+  }
+  // بعد تغيير الدائرة، نعيد حساب سلوك المؤسّسة اذا الطور محدد
+  setTimeout(onLevelOrDaairaChange, 50);
+}
+
+/* تنسيق رقم الهاتف على شكل 00 00 00 00 00 */
+function formatPhoneSimple(input) {
+  // إزالة كل شيء ما عدا الأرقام
+  let value = input.value.replace(/\D/g, '');
+  
+  // تحديد إلى 10 أرقام
+  value = value.slice(0, 10);
+  
+  // تنسيق على شكل 00 00 00 00 00
+  if (value.length > 0) {
+    let formatted = '';
+    for (let i = 0; i < value.length; i++) {
+      if (i > 0 && i % 2 === 0) {
+        formatted += ' ';
+      }
+      formatted += value[i];
+    }
+    input.value = formatted;
+  } else {
+    input.value = '';
+  }
+}
+
+/* تنسيق رقم الهاتف الثابت على شكل 000 00 00 00 (9 أرقام) */
+function formatFixedPhone(input) {
+  // إزالة كل شيء ما عدا الأرقام
+  let value = input.value.replace(/\D/g, '');
+  
+  // تحديد إلى 9 أرقام
+  value = value.slice(0, 9);
+  
+  // تنسيق على شكل 000 00 00 00
+  if (value.length > 0) {
+    let formatted = '';
+    // أول 3 أرقام
+    if (value.length >= 3) {
+      formatted = value.slice(0, 3);
+      if (value.length > 3) {
+        formatted += ' ' + value.slice(3, 5);
+        if (value.length > 5) {
+          formatted += ' ' + value.slice(5, 7);
+          if (value.length > 7) {
+            formatted += ' ' + value.slice(7, 9);
+          }
+        }
+      }
+    } else {
+      formatted = value;
+    }
+    input.value = formatted;
+  } else {
+    input.value = '';
+  }
+}
+
+/* دالة لتنسيق رقم الهاتف من رقم عادي إلى تنسيق 00 00 00 00 00 */
+function formatPhoneNumber(phone) {
+  if (!phone) return '';
+  // إزالة علامة الاقتباس في البداية إن وجدت (من Google Sheets)
+  let phoneStr = String(phone).replace(/^'/, '');
+  // إزالة كل شيء ما عدا الأرقام والمسافات
+  let value = phoneStr.replace(/[^\d\s]/g, '');
+  // إزالة المسافات ثم إعادة التنسيق
+  value = value.replace(/\s/g, '');
+  // تحديد إلى 10 أرقام
+  value = value.slice(0, 10);
+  // تنسيق على شكل 00 00 00 00 00
+  if (value.length === 10) {
+    return value.slice(0, 2) + ' ' + value.slice(2, 4) + ' ' + 
+           value.slice(4, 6) + ' ' + value.slice(6, 8) + ' ' + value.slice(8, 10);
+  } else if (value.length > 0) {
+    // إذا كان الرقم أقل من 10 أرقام، ننسقه كما هو
+    let formatted = '';
+    for (let i = 0; i < value.length; i++) {
+      if (i > 0 && i % 2 === 0) {
+        formatted += ' ';
+      }
+      formatted += value[i];
+    }
+    return formatted;
+  }
+  return '';
+}
+
+/* دالة لتنسيق رقم الهاتف الثابت من رقم عادي إلى تنسيق 000 00 00 00 */
+function formatFixedPhoneNumber(phone) {
+  if (!phone) return '';
+  // إزالة علامة الاقتباس في البداية إن وجدت (من Google Sheets)
+  let phoneStr = String(phone).replace(/^'/, '');
+  // إزالة كل شيء ما عدا الأرقام والمسافات
+  let value = phoneStr.replace(/[^\d\s]/g, '');
+  // إزالة المسافات ثم إعادة التنسيق
+  value = value.replace(/\s/g, '');
+  // تحديد إلى 9 أرقام
+  value = value.slice(0, 9);
+  // تنسيق على شكل 000 00 00 00
+  if (value.length === 9) {
+    return value.slice(0, 3) + ' ' + value.slice(3, 5) + ' ' + 
+           value.slice(5, 7) + ' ' + value.slice(7, 9);
+  } else if (value.length > 0) {
+    // إذا كان الرقم أقل من 9 أرقام، ننسقه تدريجياً
+    let formatted = '';
+    if (value.length >= 3) {
+      formatted = value.slice(0, 3) + ' ';
+      if (value.length >= 5) {
+        formatted += value.slice(3, 5) + ' ';
+        if (value.length >= 7) {
+          formatted += value.slice(5, 7) + ' ';
+          if (value.length >= 9) {
+            formatted += value.slice(7, 9);
+          } else {
+            formatted += value.slice(7);
+          }
+        } else {
+          formatted += value.slice(5);
+        }
+      } else {
+        formatted += value.slice(3);
+      }
+    } else {
+      formatted = value;
+    }
+    return formatted;
+  }
+  return '';
+}       
+
+
+
+/* تحقق من الإيميل */
+function validateEmail(email) {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(String(email).toLowerCase());
+}
+
+function validateGmail(input) {
+  // إزالة المسافات
+  input.value = input.value.replace(/\s/g, '');
+  
+  // منع الحروف العربية
+  input.value = input.value.replace(/[\u0600-\u06FF]/g, '');
+  
+  // إجبار النص على حروف صغيرة
+  input.value = input.value.toLowerCase();
+  
+  // السماح فقط بـ gmail
+  if (!input.value.endsWith("@gmail.com") && input.value.length > 0) {
+    input.setCustomValidity("يُسمح فقط بحسابات gmail");
+  } else {
+    input.setCustomValidity("");
+  }
+}
+
+
+async function submitForm() {
+  const submitBtn = document.getElementById("submitBtn");
+  submitBtn.disabled = true;
+  submitBtn.style.opacity = 0.6;
+
+  const empId = document.getElementById("empIdField").value.trim();
+  const name = document.getElementById("nameField").value.trim();
+  const grade = document.getElementById("gradeField").value.trim();
+  const place = document.getElementById("placeField").value.trim();
+  const sifa = document.getElementById("sifaField").value.trim();
+  const currentWork = document.getElementById("currentWorkField").value.trim();
+  const level = document.getElementById("levelField").value.trim();
+  const daaira = document.getElementById("daairaField").value.trim();
+  const baladiya = document.getElementById("baladiyaField").value.trim();
+  // ✅ الحصول على أرقام الهواتف مع الحفاظ على التنسيق 00 00 00 00 00
+  const phoneDirector = document.getElementById("phoneDirectorField").value.trim();
+  const financialManager = document.getElementById("financialManagerField").value.trim();
+  const phoneFinancial = document.getElementById("phoneFinancialField").value.trim();
+  const instEmail = document.getElementById("institutionEmailField").value.trim();
+  const institutionFixedPhone = document.getElementById("institutionFixedPhoneField")?.value.trim() || "";
+  
+
+  // ✅ المؤسسة حسب الطور
+  let institutionName = "";
+  let institutionCode = "";
+  if (level === "ابتدائي") {
+    institutionName = document.getElementById("instNamePrimary")?.value || "";
+    institutionCode = document.getElementById("linkedMiddleSelect")?.value || "";
+  } else {
+    const sel = document.getElementById("instSelect");
+    if (sel && sel.value) {
+      institutionCode = sel.value;
+      institutionName = sel.options[sel.selectedIndex].text.split(" — ")[0];
+    }
+  }
+
+  // 🟥 تحقق من الحقول المطلوبة + تلوين الفارغ
+  const requiredFields = [
+    { id: "sifaField", value: sifa },
+    { id: "levelField", value: level },
+    { id: "daairaField", value: daaira },
+    { id: "baladiyaField", value: baladiya },
+    { id: "phoneDirectorField", value: phoneDirector },
+    { id: "financialManagerField", value: financialManager },
+    { id: "phoneFinancialField", value: phoneFinancial },
+    { id: "institutionEmailField", value: instEmail },
+  ];
+
+  // أضف الحقول الخاصة بالمؤسسة
+  if (level === "ابتدائي") {
+    requiredFields.push({ id: "instNamePrimary", value: institutionName });
+    requiredFields.push({ id: "linkedMiddleSelect", value: institutionCode });
+  } else {
+    requiredFields.push({ id: "instSelect", value: institutionCode });
+  }
+
+  let missing = false;
+  requiredFields.forEach(f => {
+    const el = document.getElementById(f.id);
+    if (el && !f.value) {
+      el.style.border = "2px solid red";
+      missing = true;
+      setTimeout(() => el.style.border = "", 3000); // بعد 3 ثوانٍ يعود لطبيعته
+    }
+  });
+
+  if (missing) {
+    Swal.fire({
+      icon: "warning",
+      title: "تنبيه",
+      text: "الرجاء ملء جميع الحقول المطلوبة قبل التسجيل",
+    });
+    submitBtn.disabled = false;
+    submitBtn.style.opacity = 1;
+    return;
+  }
+
+  // ✅ تحقق من أرقام الهاتف (إزالة المسافات للتحقق من الطول)
+  const phoneDirectorDigits = phoneDirector.replace(/\s/g, '');
+  const phoneFinancialDigits = phoneFinancial.replace(/\s/g, '');
+  if (phoneDirectorDigits.length !== 10 || phoneFinancialDigits.length !== 10) {
+    Swal.fire("تنبيه", "أرقام الهواتف يجب أن تحتوي على 10 أرقام", "warning");
+    submitBtn.disabled = false;
+    submitBtn.style.opacity = 1;
+    return;
+  }
+
+  // ✅ تحقق من البريد الإلكتروني
+  if (!instEmail.endsWith("@gmail.com")) {
+  Swal.fire("تنبيه", "يُسمح فقط ببريد gmail", "warning");
+  submitBtn.disabled = false;
+  submitBtn.style.opacity = 1;
+  return;
+}
+if (/[أ-ي]/.test(instEmail)) {
+  Swal.fire("تنبيه", "البريد الإلكتروني لا يجب أن يحتوي على حروف عربية", "warning");
+  submitBtn.disabled = false;
+  submitBtn.style.opacity = 1;
+  return;
+}
+
+
+  if (sifa === "مدير مكلف" && !currentWork) {
+  Swal.fire({
+    icon: "warning",
+    title: "تنبيه",
+    text: "الرجاء إدخال اسم مؤسسة العمل الحالية",
+  });
+  document.getElementById("currentWorkField").style.border = "2px solid red";
+  setTimeout(() => document.getElementById("currentWorkField").style.border = "", 3000);
+  submitBtn.disabled = false;
+  submitBtn.style.opacity = 1;
+  return;
+}
+
+
+  // 🟢 الآن تابع باقي الكود (إرسال البيانات عبر fetch كما في كودك الأصلي)...
+
+
+  // ✅ إعداد البيانات مع action=register أو update
+  // ⚠️ ملاحظة مهمة: يجب أن يدعم سكريبت Google Apps action="update" لتحديث البيانات
+  // إذا لم يكن مدعوماً، ستحتاج إلى إضافة معالجة update في السكريبت
+  const params = new URLSearchParams();
+  
+  params.append("action", isEditMode ? "update" : "register"); // ✅ استخدام update في وضع التعديل
+  params.append("empId", empId);
+  params.append("name", name);
+  params.append("grade", grade);
+  params.append("place", place);
+  params.append("role", sifa); // ✅ بدل sifa
+  params.append("level", level);
+  params.append("daira", daaira); // ✅ بدل daaira
+  params.append("baladiya", baladiya);
+  params.append("school", institutionName); // ✅ بدل institutionName
+  params.append("schoolCode", institutionCode); // ✅ بدل institutionCode
+  params.append("directorPhone", phoneDirector); // ✅ بدل phoneDirector
+  params.append("financialName", financialManager); // ✅ بدل financialManager
+  params.append("financialPhone", phoneFinancial); // ✅ بدل phoneFinancial
+  params.append("email", instEmail); // ✅ بدل instEmail
+  params.append("currentWork", currentWork);
+  params.append("institutionFixedPhone", institutionFixedPhone); // ✅ رقم الهاتف الثابت للمؤسسة
+  
+  // ✅ إضافة تاريخ التعديل فقط في وضع التعديل
+  if (isEditMode) {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const modificationDate = `${hours}:${minutes}:${seconds} ll ${year}-${month}-${day}`;
+    params.append("modificationDate", modificationDate);
+  }
+
+  Swal.fire({ title: isEditMode ? 'جاري حفظ التعديلات...' : 'جاري تسجيل البيانات...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+  try {
+    const res = await fetch(scriptURL, {
+      method: "POST",
+      body: params
+    });
+    const data = await res.json();
+
+    // تسجيل الاستجابة للتشخيص
+    console.log("Response from server:", data);
+    console.log("Is edit mode:", isEditMode);
+    console.log("Action sent:", isEditMode ? "update" : "register");
+
+if (data.result === "success") {
+  Swal.fire({
+    title: isEditMode ? "✅ تم حفظ التعديلات بنجاح" : "✅ تم التسجيل بنجاح",
+    text: isEditMode ? "تم تحديث بياناتك في قاعدة بيانات مصلحة تسيير نفقات المستخدمين بنجاح" : "تم تسجيل بياناتك في قاعدة بيانات مصلحة تسيير نفقات المستخدمين بنجاح",
+    icon: "success",
+    confirmButtonText: "إغلاق"
+  }).then(() => {
+    location.reload(); // عند الإغلاق يعيد تحميل الصفحة فقط
+  });
+
+} else if (data.result === "exists") {
+  const d = data.data || {};
+  
+  // نُجهّز النص الخاص بمؤسسة العمل الحالية فقط إذا كانت الصفة "مدير مكلف"
+  const currentWorkLine = (d.role === "مدير مكلف" && d.currentWork)
+    ? `<b>مؤسسة العمل الحالية:</b> ${d.currentWork}<br>`
+    : "";
+
+  Swal.fire({
+    title: "⚠️ التسجيل موجود مسبقًا",
+    html: `
+      <div style="text-align:right;direction:rtl;font-family:'Cairo',sans-serif;">
+        <b>رقم التعريف:</b> ${d.empId || ''}<br>
+        <b>الاسم واللقب:</b> ${d.name || ''}<br>
+        <b>الرتبة:</b> ${d.grade || ''}<br>
+        <b>مؤسسة العمل الأصلية:</b> ${d.place || ''}<br>
+        <b>الصفة:</b> ${d.role || ''}<br>
+        ${currentWorkLine}
+        <b>الطور:</b> ${d.level || ''}<br>
+        <b>الدائرة:</b> ${d.daira || ''}<br>
+        <b>البلدية:</b> ${d.baladiya || ''}<br>
+        <b>اسم المؤسسة:</b> ${d.school || ''}<br>
+        <b>رمز المؤسسة:</b> ${d.schoolCode || ''}<br>
+        <b>البريد الإلكتروني:</b> ${d.email || ''}<br>
+        <b>هاتف المدير:</b> ${formatPhoneNumber(d.directorPhone || '')}<br>  
+        <b>اسم المسير المالي:</b> ${d.financialName || ''}<br>
+        <b>هاتف المسير المالي:</b> ${formatPhoneNumber(d.financialPhone || '')}<br>
+        ${d.institutionFixedPhone ? `<b>رقم الهاتف الثابت للمؤسسة:</b> <span style="direction:ltr;unicode-bidi:bidi-override;display:inline-block;text-align:left;">${formatFixedPhoneNumber(d.institutionFixedPhone || '')}</span><br>` : ''}
+        <b>تاريخ التسجيل:</b> <span style="direction:ltr;unicode-bidi:bidi-override;display:inline-block;text-align:left;">${formatDateFromISO(d.date || '')}</span>${d.modificationDate ? `<br><b>تاريخ التعديل:</b> <span style="direction:ltr;unicode-bidi:bidi-override;display:inline-block;text-align:left;">${formatDateFromISO(d.modificationDate || '')}</span>` : ''}
+      </div>
+    `,
+    icon: "warning",
+    confirmButtonText: "إغلاق"
+  }).then(() => location.reload());
+
+} else if (data.result === "email_exists") {
+  Swal.fire({
+    icon: "warning",
+    title: "⚠️ البريد الإلكتروني مستعمل",
+    text: "هذا البريد الإلكتروني مسجل مسبقًا. يرجى استخدام بريد آخر.",
+    confirmButtonText: "حسنًا"
+  });
+
+  // ✅ إعادة تفعيل زر التسجيل بعد التحذير
+  submitBtn.disabled = false;
+  submitBtn.style.opacity = 1;
+
+
+
+} else if (data.result === "phone_exists") {
+  Swal.fire({
+    icon: "warning",
+    title: "⚠️ رقم هاتف المدير مستعمل",
+    text: "رقم هاتف المدير مسجل مسبقًا. يرجى التحقق من الرقم.",
+    confirmButtonText: "حسنًا"
+  });
+
+  // ✅ إعادة تفعيل زر التسجيل بعد التحذير
+  submitBtn.disabled = false;
+  submitBtn.style.opacity = 1;
+
+
+
+
+} else {
+  // عرض تفاصيل الخطأ للمساعدة في التشخيص
+  const errorMsg = data.message || data.error || "تعذر إرسال البيانات";
+  console.error("Error response:", data);
+  Swal.fire({
+    icon: "error",
+    title: "❌ خطأ",
+    text: errorMsg + (isEditMode ? "\n\nملاحظة: تأكد من أن السكريبت يدعم action='update'" : ""),
+    footer: isEditMode ? "إذا استمرت المشكلة، قد تحتاج إلى إضافة دعم action='update' في سكريبت Google Apps" : ""
+  });
+  submitBtn.disabled = false;
+  submitBtn.style.opacity = 1;
+}
+
+
+  } catch (error) {
+    console.error("Fetch error:", error);
+    Swal.fire({
+      icon: "error",
+      title: "❌ خطأ",
+      text: "فشل الاتصال بخدمة التسجيل: " + error.message,
+      footer: isEditMode ? "تأكد من فتح Console (F12) لرؤية تفاصيل الخطأ" : ""
+    });
+    submitBtn.disabled = false; 
+    submitBtn.style.opacity = 1;
+  }
+}
+
+// دالة حذف التسجيل من Google Sheet
+async function deleteRegistration(empId) {
+  // طلب تأكيد من المستخدم قبل الحذف
+  const confirmResult = await Swal.fire({
+    title: "⚠️ تأكيد الحذف",
+    text: "هل أنت متأكد من حذف هذا التسجيل؟ لا يمكن التراجع عن هذه العملية.",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "نعم، احذف",
+    cancelButtonText: "إلغاء",
+    confirmButtonColor: "#dc3545",
+    cancelButtonColor: "#6c757d"
+  });
+
+  if (!confirmResult.isConfirmed) {
+    return; // المستخدم ألغى العملية
+  }
+
+  Swal.fire({ 
+    title: 'جاري حذف التسجيل...', 
+    allowOutsideClick: false, 
+    didOpen: () => Swal.showLoading() 
+  });
+
+  try {
+    const params = new URLSearchParams();
+    params.append("action", "delete");
+    params.append("empId", empId);
+
+    const res = await fetch(scriptURL, {
+      method: "POST",
+      body: params
+    });
+
+    const data = await res.json();
+
+    if (data.result === "success") {
+      Swal.fire({
+        title: "✅ تم الحذف بنجاح",
+        text: "تم حذف التسجيل من قاعدة البيانات بنجاح",
+        icon: "success",
+        confirmButtonText: "حسنًا"
+      }).then(() => {
+        location.reload(); // إعادة تحميل الصفحة بعد الحذف
+      });
+    } else if (data.result === "not_found") {
+      Swal.fire({
+        title: "⚠️ لم يتم العثور على التسجيل",
+        text: "التسجيل غير موجود في قاعدة البيانات",
+        icon: "warning",
+        confirmButtonText: "حسنًا"
+      });
+    } else {
+      const errorMsg = data.message || data.error || "تعذر حذف التسجيل";
+      Swal.fire({
+        icon: "error",
+        title: "❌ خطأ",
+        text: errorMsg,
+        confirmButtonText: "حسنًا"
+      });
+    }
+  } catch (error) {
+    console.error("Delete error:", error);
+    Swal.fire({
+      icon: "error",
+      title: "❌ خطأ",
+      text: "فشل الاتصال بخدمة الحذف: " + error.message,
+      confirmButtonText: "حسنًا"
+    });
+  }
+}    
+
+ // 🔒 تحكم في فتح وغلق التسجيل من هنا
+  const registrationOpen = true; // ← غيّر إلى true عند الفتح
+
+  window.onload = function() {
+    const container = document.querySelector(".container");
+    const empInput = document.getElementById("empId");
+    const checkBtn = container.querySelector("button");
+
+    if (!registrationOpen) {
+      // إخفاء حقل الإدخال وزر التحقق
+      empInput.style.display = "none";
+      checkBtn.style.display = "none";
+
+      // إضافة رسالة الإغلاق
+      const msg = document.createElement("div");
+      msg.innerHTML = `
+        <div style="
+          background: #f8d7da;
+          color: #721c24;
+          border: 1px solid #f5c6cb;
+          border-radius: 10px;
+          padding: 15px;
+          margin-top: 0px;
+           margin-bottom: 20px;
+          font-size: 20px;
+          font-weight: 600;">
+           التسجيل مغلق حاليًا<br>سيتم فتح الموقع قريبا...
+        </div>`;
+      container.appendChild(msg);
+    }
+  };   
+
+</script>
+</body>
+</html>
+
+
+
+
+

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>طباعة استمارة ومقرر الاستخلاف - مديرية التربية لولاية توقرت</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- الخطوط والأيقونات -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- مكتبات الباركود والـ QR -->
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <!-- التنسيقات -->
+  <link rel="stylesheet" href="../css/main.css">
+  <link rel="stylesheet" href="../css/print.css">
+  <script src="../js/firebase-init.js"></script>
+
+  <style>
+    /* شريط التحكم قبل الطباعة */
+    .print-control-bar {
+      max-width: 210mm;
+      margin: 15px auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: white;
+      padding: 12px 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+  </style>
+</head>
+<body style="background: #f1f5f9;">
+
+  <!-- شريط التحكم العلوي (يختفي أثناء الطباعة) -->
+  <div class="print-control-bar no-print">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <button class="btn btn-main" onclick="window.print()">
+        <i class="fas fa-print"></i> طباعة الوثيقة (A4)
+      </button>
+      <button class="btn btn-outline-primary" id="btnToggleDocType" onclick="toggleDocType()">
+        <i class="fas fa-file-invoice"></i> التبديل إلى مقرر الاستخلاف
+      </button>
+    </div>
+
+    <div>
+      <button class="btn btn-secondary" onclick="window.close(); if(history.length > 1) history.back();">
+        <i class="fas fa-arrow-right"></i> رجوع
+      </button>
+    </div>
+  </div>
+
+  <!-- حاوية الورقة الرسمية A4 -->
+  <div class="print-preview-container print-page-wrapper" id="printableArea">
+    
+    <!-- 1. الرأس الرسمي للجمهورية والمديرية -->
+    <div class="official-header">
+      <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" class="official-logo-img">
+      <div class="official-titles">
+        <h3>الجمهورية الجزائرية الديمقراطية الشعبية</h3>
+        <h3>وزارة التربية الوطنية</h3>
+        <h3>مديرية التربية لولاية توقرت</h3>
+        <h3 id="p_header_service">مصلحة تسيير نفقات المستخدمين</h3>
+      </div>
+      <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" class="official-logo-img">
+    </div>
+
+    <!-- قسم باركود التحقق الآلي السريع والـ QR -->
+    <div class="barcode-section">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <svg id="barcodeCanvas" class="barcode-svg"></svg>
+      </div>
+      <div style="text-align: center;">
+        <span style="font-size: 11px; font-weight: 800; display: block;">التحقق الآلي السريع</span>
+        <span id="barcode_num_label" style="font-size: 13px; font-weight: 900; letter-spacing: 2px;">---</span>
+      </div>
+      <div>
+        <canvas id="qrCanvas" class="qr-code-img"></canvas>
+      </div>
+    </div>
+
+    <!-- ==================== النموذج الأول: استمارة المعلومات الرسمية ==================== -->
+    <div id="view_sheet">
+      <div class="document-title-box">
+        <h2>استمارة معلومات مستخلف / متعاقد</h2>
+        <div class="document-meta-info">
+          <span>السنة الدراسية: <b id="p_academic_year">---</b></span>
+          <span>تاريخ الاستخراج: <b id="p_print_date">---</b></span>
+          <span>رمز الملف: <b id="p_doc_code">---</b></span>
+        </div>
+      </div>
+
+      <!-- جدول 1: الهوية والحالة المدنية -->
+      <table class="print-table">
+        <tr>
+          <th colspan="4" class="print-section-header">أولاً: بيانات الهوية والحساب البريدي والحالة المدنية</th>
+        </tr>
+        <tr>
+          <th>رقم الحساب الجاري (CCP):</th>
+          <td><b id="p_ccp" style="font-size: 14px;">---</b></td>
+          <th>رقم الضمان الاجتماعي (NSS):</th>
+          <td><b id="p_nss">---</b></td>
+        </tr>
+        <tr>
+          <th>رقم التعريف الوطني (NIN):</th>
+          <td colspan="3"><b id="p_nin" style="letter-spacing: 1px;">---</b></td>
+        </tr>
+        <tr>
+          <th>اللقب والاسم بالعربية:</th>
+          <td><b id="p_name_ar" style="font-size: 13px;">---</b></td>
+          <th>اللقب والاسم بالإنجليزية:</th>
+          <td><b id="p_name_en" dir="ltr">---</b></td>
+        </tr>
+        <tr>
+          <th>تاريخ ومكان الميلاد:</th>
+          <td><span id="p_dob">---</span> بـ: <span id="p_pob">---</span></td>
+          <th>رقم الهاتف الشخصي:</th>
+          <td><b id="p_phone" dir="ltr">---</b></td>
+        </tr>
+        <tr>
+          <th>الحالة العائلية:</th>
+          <td><span id="p_marital">---</span> (عدد الأولاد: <span id="p_children">0</span>)</td>
+          <th>بيانات الزوج(ة):</th>
+          <td><span id="p_spouse">---</span></td>
+        </tr>
+      </table>
+
+      <!-- جدول 2: بيانات التعيين والتعاقد والمؤسسة -->
+      <table class="print-table">
+        <tr>
+          <th colspan="4" class="print-section-header">ثانياً: بيانات التعيين والاستخلاف بالمؤسسة التربوية</th>
+        </tr>
+        <tr>
+          <th>الطور التعليمي:</th>
+          <td><b id="p_level">---</b></td>
+          <th>الصفة والشهادة:</th>
+          <td><span id="p_status_diploma">---</span></td>
+        </tr>
+        <tr>
+          <th>الرتبة المعتمدة:</th>
+          <td><b id="p_rank" style="font-size: 13px; color: #000;">---</b></td>
+          <th>رمز الرتبة / الإدارة:</th>
+          <td>رتبة: <b id="p_rank_code">---</b> | إدارة: <b id="p_admin_code">---</b></td>
+        </tr>
+        <tr>
+          <th>المؤسسة التربوية:</th>
+          <td><b id="p_school" style="font-size: 13px;">---</b></td>
+          <th>الدائرة والبلدية:</th>
+          <td>دائرة: <span id="p_daaira">---</span> - بلدية: <span id="p_baladiya">---</span></td>
+        </tr>
+        <tr>
+          <th>فترة الاستخلاف المحددة:</th>
+          <td>من: <b id="p_start_date">---</b> إلى: <b id="p_end_date">---</b></td>
+          <th>المدة الإجمالية للعمل:</th>
+          <td><b id="p_duration">---</b></td>
+        </tr>
+        <tr>
+          <th>حالة الملف بالمنظومة:</th>
+          <td colspan="3"><b id="p_workflow_status">---</b></td>
+        </tr>
+      </table>
+
+      <!-- مربعات التأشيرات والتوقيعات الأربعة الرسمية -->
+      <div class="signatures-grid">
+        <div class="signature-card">
+          <div class="sig-title">إمضاء المعني بالأمر</div>
+          <div class="sig-space"></div>
+          <div class="sig-sub">أصرح بشرفي بصحة المعلومات</div>
+        </div>
+
+        <div class="signature-card">
+          <div class="sig-title">إمضاء وختم مدير المؤسسة</div>
+          <div class="sig-space"></div>
+          <div class="sig-sub">مصادق عليه بالمؤسسة</div>
+        </div>
+
+        <div class="signature-card">
+          <div class="sig-title">تأشيرة رئيس مكتب الطور بالمديرية</div>
+          <div class="sig-space"></div>
+          <div class="sig-sub">مكتب التعليم الابتدائي / المتوسط / الثانوي</div>
+        </div>
+
+        <div class="signature-card">
+          <div class="sig-title">تأشيرة مصلحة نفقات المستخدمين</div>
+          <div class="sig-space"></div>
+          <div class="sig-sub">معتمد للصرف والرواتب</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== النموذج الثاني: مقرر الاستخلاف والتعاقد الرسمي ==================== -->
+    <div id="view_decision" style="display: none;">
+      <div class="document-title-box">
+        <h2>مـقـرر اسـتـخـلاف وتـعـاقـد مـؤقـت</h2>
+        <div class="document-meta-info">
+          <span>السنة الدراسية: <b id="dec_academic_year">---</b></span>
+          <span>رقم المقرر: <b id="dec_num">--- / م.ت / م.ن.م</b></span>
+          <span>التاريخ: <b id="dec_date">---</b></span>
+        </div>
+      </div>
+
+      <div style="font-size: 13px; line-height: 2; text-align: justify; padding: 10px 0;">
+        <p>إن مدير التربية لولاية توقرت،</p>
+        <p>- بمقتضى الأمر رقم 06-03 المؤرخ في 15 يوليو 2006 المتضمن القانون الأساسي العام للوظيفة العمومية،</p>
+        <p>- وبمقتضى المرسوم التنفيذي رقم 08-315 المؤرخ في 11 أكتوبر 2008 والمتضمن القانون الأساسي الخاص بالموظفين المنتمين للأسلاك الخاصة بالتربية الوطنية، المعدل والمتمم،</p>
+        <p>- وبناءً على اقتراح السيد مدير مؤسسة: <b id="dec_school" style="text-decoration: underline;">---</b>،</p>
+        <p>- ونظراً لضرورة المصلحة وشغور المنصب أو عطلة الموظف الأصلي،</p>
+        
+        <div style="text-align: center; margin: 15px 0;">
+          <h3 style="font-size: 16px; font-weight: 900; text-decoration: underline;">يـــقـــرر مـــا يـــلـــي:</h3>
+        </div>
+
+        <p><b>المادة الأولى:</b> يُعين السيد(ة): <b id="dec_name_ar" style="font-size: 14px;">---</b>، المولود(ة) بتاريخ: <span id="dec_dob">---</span> بـ: <span id="dec_pob">---</span>، الحامل(ة) لرقم التعريف الوطني: <b id="dec_nin">---</b>، بصفة: <b id="dec_status_type">---</b>، في رتبة: <b id="dec_rank">---</b> (رمز: <span id="dec_grade_code">---</span>).</p>
+
+        <p><b>المادة الثانية:</b> يُكلف المعني(ة) بمهام التدريس بمؤسسة: <b id="dec_school2">---</b>، لدائرة: <span id="dec_daaira">---</span>، ابتداءً من: <b id="dec_start_date">---</b> إلى غاية: <b id="dec_end_date">---</b> (المدة: <span id="dec_duration">---</span>).</p>
+
+        <p><b>المادة الثالثة:</b> يتقاضى المعني بالأمر المستحقات المالية والراتب المقابل لمدة العمل المنجزة فعلياً وفقاً للتنظيم والتشريع المعمول بهما عبر حسابه البريدي الجاري رقم: <b id="dec_ccp">---</b>.</p>
+
+        <p><b>المادة الرابعة:</b> يكلف كل من مدير المؤسسة ورئيس مصلحة تسيير نفقات المستخدمين بتنفيذ هذا المقرر كل فيما يخصه.</p>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; margin-top: 35px; padding: 0 30px;">
+        <div style="text-align: center; width: 220px; border: 1px solid #000; padding: 10px; border-radius: 6px;">
+          <strong>تأشيرة مدير المؤسسة</strong>
+          <div style="height: 60px;"></div>
+        </div>
+
+        <div style="text-align: center; width: 240px; border: 1.5px solid #000; padding: 10px; border-radius: 6px;">
+          <strong>عن مدير التربية<br>رئيس مصلحة نفقات المستخدمين</strong>
+          <div style="height: 60px;"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let currentDocData = null;
+    let currentDocType = "sheet"; // "sheet" or "decision"
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const docId = urlParams.get("id");
+      const typeParam = urlParams.get("type");
+
+      if (typeParam === "decision") currentDocType = "decision";
+
+      // ضبط تاريخ اليوم
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
+      document.getElementById("p_print_date").textContent = dateStr;
+      document.getElementById("dec_date").textContent = dateStr;
+
+      if (!docId) {
+        alert("لم يتم تحديد معرّف الوثيقة المطلوب طباعتها");
+        return;
+      }
+
+      await loadDocumentData(docId);
+    });
+
+    async function loadDocumentData(docId) {
+      try {
+        const snap = await window.db.collection("contract_registrations").doc(docId).get();
+        if (!snap.exists) {
+          alert("الوثيقة غير موجودة في قاعدة البيانات");
+          return;
+        }
+
+        currentDocData = snap.data();
+        populateFields(currentDocData, docId);
+
+        // توليد الباركود والـ QR
+        generateBarcodeAndQR(currentDocData.ccp, currentDocData.nin, docId);
+
+        // تبديل العرض للنموذج المطلوب
+        updateView();
+
+      } catch (err) {
+        console.error("خطأ قراءة بيانات الوثيقة:", err);
+      }
+    }
+
+    function populateFields(d, docId) {
+      document.getElementById("p_doc_code").textContent = docId;
+      document.getElementById("p_academic_year").textContent = d.academic_year || "---";
+      document.getElementById("p_ccp").textContent = d.ccp || "---";
+      document.getElementById("p_nss").textContent = d.nss || "---";
+      document.getElementById("p_nin").textContent = d.nin || "---";
+      document.getElementById("p_name_ar").textContent = `${d.fmn_ar || ''} ${d.frn_ar || ''}`.trim();
+      document.getElementById("p_name_en").textContent = `${d.fmn_en || ''} ${d.frn_en || ''}`.trim();
+      document.getElementById("p_dob").textContent = d.birth_date || "---";
+      document.getElementById("p_pob").textContent = d.birth_place || "---";
+      document.getElementById("p_phone").textContent = d.phone || "---";
+      document.getElementById("p_marital").textContent = d.marital_status || "---";
+      document.getElementById("p_children").textContent = d.children_count || "0";
+      
+      let spouseInfo = "لا يوجد";
+      if (d.marital_status === "متزوج(ة)") {
+        spouseInfo = `${d.spouse_name || ''} (${d.spouse_job || 'مهنة غير محددة'})`;
+      }
+      document.getElementById("p_spouse").textContent = spouseInfo;
+
+      document.getElementById("p_level").textContent = d.level || "---";
+      document.getElementById("p_status_diploma").textContent = `${d.status_type || '---'} (شهادة: ${d.diploma || '---'})`;
+      document.getElementById("p_rank").textContent = d.rank || "---";
+      document.getElementById("p_rank_code").textContent = d.rank_code || "---";
+      document.getElementById("p_admin_code").textContent = d.admin_code || "---";
+      document.getElementById("p_school").textContent = d.school_name || "---";
+      document.getElementById("p_daaira").textContent = d.daaira || "---";
+      document.getElementById("p_baladiya").textContent = d.baladiya || "---";
+      document.getElementById("p_start_date").textContent = d.start_date || "---";
+      document.getElementById("p_end_date").textContent = d.end_date || "---";
+      document.getElementById("p_duration").textContent = d.duration_text || `${d.duration_days || 0} يوم`;
+
+      // حالة الملف
+      const statusLabel = d.workflow_status === "payroll_approved" ? "معتمد نهائياً للصرف والرواتب ✅" :
+                         (d.workflow_status === "office_approved" ? "مطابق من طرف مكتب الطور ✅" :
+                         (d.workflow_status === "submitted_to_office" ? "محال لمكتب الطور بالمديرية ⏳" : "قيد الدراسة والتحضير بالمؤسسة"));
+      document.getElementById("p_workflow_status").textContent = statusLabel;
+
+      // حقول المقرر الرسمي
+      document.getElementById("dec_academic_year").textContent = d.academic_year || "---";
+      document.getElementById("dec_num").textContent = `${(d.ccp || '').substring(0, 5)} / ${d.academic_year || ''}`;
+      document.getElementById("dec_school").textContent = d.school_name || "---";
+      document.getElementById("dec_school2").textContent = d.school_name || "---";
+      document.getElementById("dec_name_ar").textContent = `${d.fmn_ar || ''} ${d.frn_ar || ''}`.trim();
+      document.getElementById("dec_dob").textContent = d.birth_date || "---";
+      document.getElementById("dec_pob").textContent = d.birth_place || "---";
+      document.getElementById("dec_nin").textContent = d.nin || "---";
+      document.getElementById("dec_status_type").textContent = d.status_type || "مستخلف(ة)";
+      document.getElementById("dec_rank").textContent = d.rank || "أستاذ";
+      document.getElementById("dec_grade_code").textContent = d.rank_code || "---";
+      document.getElementById("dec_daaira").textContent = d.daaira || "---";
+      document.getElementById("dec_start_date").textContent = d.start_date || "---";
+      document.getElementById("dec_end_date").textContent = d.end_date || "---";
+      document.getElementById("dec_duration").textContent = d.duration_text || `${d.duration_days || 0} يوم`;
+      document.getElementById("dec_ccp").textContent = d.ccp || "---";
+    }
+
+    function generateBarcodeAndQR(ccp, nin, docId) {
+      if (!ccp) return;
+      document.getElementById("barcode_num_label").textContent = `CCP: ${ccp}`;
+
+      // 1. توليد الباركود Code128
+      try {
+        JsBarcode("#barcodeCanvas", ccp, {
+          format: "CODE128",
+          lineColor: "#000",
+          width: 1.6,
+          height: 38,
+          displayValue: false,
+          margin: 0
+        });
+      } catch (e) {
+        console.warn("خطأ توليد الباركود:", e);
+      }
+
+      // 2. توليد رمز QR السريع
+      try {
+        const qrData = `DED-TOUGGOURT|CCP:${ccp}|NIN:${nin || ''}|ID:${docId}`;
+        new QRious({
+          element: document.getElementById("qrCanvas"),
+          value: qrData,
+          size: 55,
+          level: 'M'
+        });
+      } catch (e) {
+        console.warn("خطأ توليد QR:", e);
+      }
+    }
+
+    function toggleDocType() {
+      currentDocType = currentDocType === "sheet" ? "decision" : "sheet";
+      updateView();
+    }
+
+    function updateView() {
+      const viewSheet = document.getElementById("view_sheet");
+      const viewDecision = document.getElementById("view_decision");
+      const btnToggle = document.getElementById("btnToggleDocType");
+
+      if (currentDocType === "decision") {
+        viewSheet.style.display = "none";
+        viewDecision.style.display = "block";
+        btnToggle.innerHTML = '<i class="fas fa-file-lines"></i> التبديل إلى استمارة المعلومات';
+        document.title = `مقرر استخلاف - ${currentDocData?.fmn_ar || ''} ${currentDocData?.frn_ar || ''}`;
+      } else {
+        viewSheet.style.display = "block";
+        viewDecision.style.display = "none";
+        btnToggle.innerHTML = '<i class="fas fa-certificate"></i> التبديل إلى مقرر الاستخلاف';
+        document.title = `استمارة مستخلف - ${currentDocData?.fmn_ar || ''} ${currentDocData?.frn_ar || ''}`;
+      }
+    }
+  </script>
+</body>
+</html>

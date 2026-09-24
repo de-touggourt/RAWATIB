@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>لوحة التحكم المركزية - مديرية التربية لولاية توقرت</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- الخطوط والأيقونات -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- المكتبات الأساسية -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <!-- ملفات المنظومة -->
+  <link rel="stylesheet" href="../css/main.css">
+  <script src="../js/firebase-init.js"></script>
+  <script src="../js/geo-data.js"></script>
+  <script src="../js/app-core.js"></script>
+  <script src="../js/ranks-manager.js"></script>
+  <script src="../js/auth-check.js"></script>
+  <script src="../js/google-sheets-sync.js"></script>
+
+  <style>
+    .admin-nav-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 25px;
+      overflow-x: auto;
+      padding-bottom: 5px;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .admin-tab-btn {
+      padding: 10px 16px;
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
+      border: none;
+      background: #edf2f7;
+      color: #4a5568;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .admin-tab-btn.active {
+      background: var(--primary-color);
+      color: white;
+      box-shadow: 0 -2px 8px rgba(37, 117, 252, 0.2);
+    }
+
+    .admin-tab-content {
+      display: none;
+    }
+
+    .admin-tab-content.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 26px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #ccc; transition: .4s; border-radius: 34px;
+    }
+    .slider:before {
+      position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px;
+      background-color: white; transition: .4s; border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--success-color); }
+    input:checked + .slider:before { transform: translateX(24px); }
+
+    .stat-card-box {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+
+    .stat-card-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- شريط علوي -->
+    <div class="top-navbar">
+      <div class="brand-section">
+        <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" class="brand-logo">
+        <div class="brand-info">
+          <h1>لوحة الإشراف والتحكم المركزية (Super Admin)</h1>
+          <p>مصلحة نفقات المستخدمين - مديرية التربية لولاية توقرت</p>
+        </div>
+      </div>
+
+      <div class="navbar-user-box">
+        <div class="user-badge" style="background:#e0e7ff; color:#3730a3;">
+          <i class="fas fa-crown"></i> المشرف العام
+        </div>
+        <a href="../portals.html" class="btn btn-outline-primary btn-sm" style="text-decoration:none;">
+          <i class="fas fa-table-cells"></i> فضاء البوابات
+        </a>
+        <button class="btn btn-danger btn-sm" onclick="AuthGuard.logout('../login.html')">
+          <i class="fas fa-sign-out-alt"></i> خروج
+        </button>
+      </div>
+    </div>
+
+    <!-- تبويبات لوحة التحكم -->
+    <div class="admin-nav-tabs">
+      <button class="admin-tab-btn active" onclick="switchTab('tab_users')">
+        <i class="fas fa-users"></i> المستخدمون
+      </button>
+      <button class="admin-tab-btn" onclick="switchTab('tab_permissions')">
+        <i class="fas fa-shield-halved"></i> الصلاحيات والرتب
+      </button>
+      <button class="admin-tab-btn" onclick="switchTab('tab_gateway')">
+        <i class="fas fa-toggle-on"></i> تسيير البوابات
+      </button>
+      <button class="admin-tab-btn" onclick="switchTab('tab_institutions')">
+        <i class="fas fa-school"></i> تسيير المؤسسات
+      </button>
+      <button class="admin-tab-btn" onclick="switchTab('tab_employees')">
+        <i class="fas fa-user-tie"></i> الموظفون الدائمون
+      </button>
+      <button class="admin-tab-btn" onclick="switchTab('tab_stats')">
+        <i class="fas fa-chart-pie"></i> الإحصائيات
+      </button>
+      <button class="admin-tab-btn" onclick="switchTab('tab_offices')">
+        <i class="fas fa-key"></i> كلمات مرور المكاتب (config/pass)
+      </button>
+      <button class="admin-tab-btn" onclick="switchTab('tab_years')">
+        <i class="fas fa-calendar-alt"></i> السنوات الدراسية
+      </button>
+      <button class="admin-tab-btn" onclick="switchTab('tab_sync')">
+        <i class="fas fa-file-excel"></i> مزامنة Google Sheets
+      </button>
+    </div>
+
+    <!-- ==================== 1. قسم المستخدمين ==================== -->
+    <div class="admin-tab-content active" id="tab_users">
+      <div class="portal-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+          <div>
+            <h2 style="font-size: 18px; font-weight: 800; color: var(--dark-color); margin: 0;">
+              <i class="fas fa-users-gear" style="color: var(--primary-color);"></i> إدارة حسابات المستخدمين والمدراء
+            </h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin: 3px 0 0 0;">
+              تفعيل، تعطيل، وتعديل صلاحيات الحسابات المنشأة عبر المنظومة
+            </p>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <input type="text" id="usersSearchInput" placeholder="بحث بالاسم أو CCP أو المؤسسة..." 
+                   style="width: 250px; height: 38px; font-size: 13px;" oninput="filterUsersTable()">
+            <button class="btn btn-primary" onclick="loadUsersAccounts()">
+              <i class="fas fa-sync-alt"></i> تحديث
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="custom-table" id="usersTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>اسم المستخدم</th>
+                <th>الاسم واللقب</th>
+                <th>رقم الحساب CCP</th>
+                <th>المؤسسة والطور</th>
+                <th>الرتبة</th>
+                <th>الحالة</th>
+                <th>تاريخ الإنشاء</th>
+                <th style="text-align: center;">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody">
+              <tr><td colspan="9" style="text-align: center; padding: 25px;">جاري تحميل المستخدمين...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 2. قسم الصلاحيات والرتب ==================== -->
+    <div class="admin-tab-content" id="tab_permissions">
+      <div class="portal-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div>
+            <h2 style="font-size: 18px; font-weight: 800; color: var(--dark-color); margin: 0;">
+              <i class="fas fa-layer-group" style="color: var(--primary-color);"></i> الرتب المسموح لها بإنشاء الحسابات وإدارة النظام
+            </h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin: 3px 0 0 0;">
+              يتم السماح حصرياً للموظفين الذين تطابق رتبتهم هذه القائمة بإنشاء حسابات بالمنظومة
+            </p>
+          </div>
+          <button class="btn btn-main" onclick="openAddAllowedGradeModal()">
+            <i class="fas fa-plus"></i> إضافة رتبة مسموح لها
+          </button>
+        </div>
+
+        <div class="table-wrapper" style="margin-bottom: 25px;">
+          <table class="custom-table" id="allowedGradesTable">
+            <thead>
+              <tr>
+                <th>كود الرتبة (Grade Code)</th>
+                <th>مسمى الرتبة الرسمي</th>
+                <th>الحالة والصلاحية</th>
+                <th style="text-align: center;">إجراء</th>
+              </tr>
+            </thead>
+            <tbody id="allowedGradesTableBody">
+              <tr><td colspan="4" style="text-align:center; padding:20px;">جاري تحميل الرتب...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 12px; color: var(--dark-color);">
+          صلاحيات التعديل والحذف العامة للمدراء
+        </h3>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <h4 style="font-size: 15px; font-weight: 800; margin-bottom: 4px;">السماح لمدراء المؤسسات بالتعديل بعد إرسال الملفات</h4>
+            <p style="font-size: 12px; color: var(--text-muted); margin: 0;">فتح أو غلق إمكانية التعديل بعد إحالة الملف لمكتب الطور</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="perm_statewide_edit" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <h4 style="font-size: 15px; font-weight: 800; margin-bottom: 4px;">السماح بحذف الملفات قيد التحضير</h4>
+            <p style="font-size: 12px; color: var(--text-muted); margin: 0;">يسمح للمدير بحذف مسودات المستخلفين قبل اعتمادها</p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="perm_director_delete" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <button class="btn btn-main" onclick="savePermissions()">
+          <i class="fas fa-save"></i> حفظ إعدادات الصلاحيات
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== 3. تسيير البوابات ==================== -->
+    <div class="admin-tab-content" id="tab_gateway">
+      <div class="portal-card">
+        <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 20px; color: var(--dark-color);">
+          <i class="fas fa-toggle-on" style="color: var(--primary-color);"></i> تسيير وفتح/تجميد البوابات المركزية
+        </h2>
+
+        <!-- مفتاح بوابة الموظفين الدائمين (مجمدة افتراضياً) -->
+        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 14px; padding: 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <span class="badge" style="background:#2563eb; color:white; margin-bottom:6px;">بوابة الموظفين الدائمين</span>
+            <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px;">مفتاح فتح أو تجميد بوابة الموظفين الدائمين (Permanent Portal)</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin: 0;">
+              عند الغلق (تجميد)، تظهر البوابة مغلقة في فضاء البوابات ولا يمكن الدخول إليها إلا بعد تفعيلها من هنا.
+            </p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="sw_permanent_portal" onchange="togglePermanentPortal(this.checked)">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- مفتاح بوابة المستخلفين -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <span class="badge" style="background:#059669; color:white; margin-bottom:6px;">بوابة المستخلفين والمتعاقدين</span>
+            <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px;">مفتاح تشغيل/إيقاف تسجيلات المستخلفين والمتعاقدين</h3>
+            <p style="font-size: 13px; color: var(--text-muted); margin: 0;">
+              عند إيقافها، يُمنع تسجيل وإضافة مستخلفين جدد وتظهر رسالة الإغلاق المخصصة.
+            </p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="sw_contract_portal" onchange="toggleContractPortal(this.checked)">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>نص رسالة الإغلاق المخصصة عند غلق البوابة:</label>
+          <textarea id="txt_closure_message" class="form-control" style="width: 100%; height: 80px;"></textarea>
+        </div>
+
+        <button class="btn btn-main" onclick="saveGatewaysSettings()">
+          <i class="fas fa-save"></i> حفظ إعدادات البوابات
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== 4. تسيير المؤسسات ==================== -->
+    <div class="admin-tab-content" id="tab_institutions">
+      <div class="portal-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
+          <div>
+            <h2 style="font-size: 18px; font-weight: 800; color: var(--dark-color); margin: 0;">
+              <i class="fas fa-school" style="color: var(--primary-color);"></i> تسيير المؤسسات التعليمية بولاية توقرت
+            </h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin: 3px 0 0 0;">
+              إضافة، تعديل، حذف، والبحث عن المؤسسات حسب الطور والدائرة والبلدية مع منع تكرار الأسماء والأكواد
+            </p>
+          </div>
+          <button class="btn btn-main" onclick="openAddInstitutionModal()">
+            <i class="fas fa-plus"></i> إضافة مؤسسة تعليمية جديدة
+          </button>
+        </div>
+
+        <!-- فلاتر المؤسسات -->
+        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 18px; background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0;">
+          <div>
+            <label style="font-size: 12px;">تصفية حسب الطور:</label>
+            <select id="filterSchoolLevel" onchange="applyInstitutionsFilter()" style="height: 38px;">
+              <option value="">جميع الأطوار</option>
+              <option value="ابتدائي">ابتدائي</option>
+              <option value="متوسط">متوسط</option>
+              <option value="ثانوي">ثانوي</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 12px;">تصفية حسب الدائرة:</label>
+            <select id="filterSchoolDaaira" onchange="applyInstitutionsFilter()" style="height: 38px;">
+              <option value="">جميع الدوائر</option>
+              <option value="توقرت">توقرت</option>
+              <option value="الحجيرة">الحجيرة</option>
+              <option value="الطيبات">الطيبات</option>
+              <option value="المقارين">المقارين</option>
+              <option value="تماسين">تماسين</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 12px;">بحث بالاسم أو الرمز:</label>
+            <input type="text" id="filterSchoolSearch" placeholder="ابحث باسم المؤسسة أو الرمز..." 
+                   oninput="applyInstitutionsFilter()" style="height: 38px;">
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="custom-table" id="institutionsTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>اسم المؤسسة التعليمية</th>
+                <th>الطور</th>
+                <th>الدائرة</th>
+                <th>البلدية</th>
+                <th>رمز المؤسسة</th>
+                <th style="text-align: center;">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="institutionsTableBody">
+              <tr><td colspan="7" style="text-align: center; padding: 25px;">جاري تحميل المؤسسات...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 5. قسم الموظفين الدائمين ==================== -->
+    <div class="admin-tab-content" id="tab_employees">
+      <div class="portal-card">
+        <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 20px; color: var(--dark-color);">
+          <i class="fas fa-address-book" style="color: var(--primary-color);"></i> استعلام موظفي القطاع الدائمين (employeescompay)
+        </h2>
+
+        <div class="form-grid" style="grid-template-columns: 1fr auto; gap: 10px; margin-bottom: 20px;">
+          <input type="text" id="employeeSearchInput" placeholder="أدخل رقم الحساب الجاري CCP أو الاسم للبحث المباشر..." 
+                 style="font-size: 15px;" onkeypress="if(event.key === 'Enter') searchPermanentEmployee()">
+          <button class="btn btn-main" onclick="searchPermanentEmployee()">
+            <i class="fas fa-search"></i> بحث في قاعدة الموظفين
+          </button>
+        </div>
+
+        <div id="employeeSearchResultArea"></div>
+      </div>
+    </div>
+
+    <!-- ==================== 6. قسم الإحصائيات ==================== -->
+    <div class="admin-tab-content" id="tab_stats">
+      <div class="portal-card">
+        <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 20px; color: var(--dark-color);">
+          <i class="fas fa-chart-line" style="color: var(--primary-color);"></i> لوحة المؤشرات والإحصائيات الرقمية
+        </h2>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 25px;">
+          
+          <div class="stat-card-box">
+            <div class="stat-card-icon" style="background:#eff6ff; color:#2563eb;">
+              <i class="fas fa-users"></i>
+            </div>
+            <div>
+              <h3 id="statTotalEmployees" style="margin:0; font-size:24px; font-weight:900;">...</h3>
+              <p style="margin:0; color:#64748b; font-size:13px; font-weight:700;">الموظفون الدائمون</p>
+            </div>
+          </div>
+
+          <div class="stat-card-box">
+            <div class="stat-card-icon" style="background:#ecfdf5; color:#059669;">
+              <i class="fas fa-user-check"></i>
+            </div>
+            <div>
+              <h3 id="statTotalAccounts" style="margin:0; font-size:24px; font-weight:900;">...</h3>
+              <p style="margin:0; color:#64748b; font-size:13px; font-weight:700;">الحسابات المنشأة</p>
+            </div>
+          </div>
+
+          <div class="stat-card-box">
+            <div class="stat-card-icon" style="background:#fffbeb; color:#d97706;">
+              <i class="fas fa-school"></i>
+            </div>
+            <div>
+              <h3 id="statTotalInstitutions" style="margin:0; font-size:24px; font-weight:900;">...</h3>
+              <p style="margin:0; color:#64748b; font-size:13px; font-weight:700;">المؤسسات التعليمية</p>
+            </div>
+          </div>
+
+          <div class="stat-card-box">
+            <div class="stat-card-icon" style="background:#faf5ff; color:#7c3aed;">
+              <i class="fas fa-file-signature"></i>
+            </div>
+            <div>
+              <h3 id="statTotalContracts" style="margin:0; font-size:24px; font-weight:900;">...</h3>
+              <p style="margin:0; color:#64748b; font-size:13px; font-weight:700;">المستخلفون والمتعاقدون</p>
+            </div>
+          </div>
+
+        </div>
+
+        <button class="btn btn-secondary" onclick="loadLiveStatistics()">
+          <i class="fas fa-rotate"></i> تحديث الإحصائيات
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== 7. تسيير حسابات المكاتب config/pass ==================== -->
+    <div class="admin-tab-content" id="tab_offices">
+      <div class="portal-card">
+        <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 10px; color: var(--dark-color);">
+          <i class="fas fa-key" style="color: var(--primary-color);"></i> إدارة كلمات مرور الإدارة والمكاتب (config/pass)
+        </h2>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+          يتم جلب هذه القيم مباشرة وحصرياً من وثيقة <code>config/pass</code> في Firebase. يمكنك تغيير أي كلمة مرور وحفظها فوراً دون المساس بالكود.
+        </p>
+
+        <div id="configPassFieldsContainer" class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 15px; margin-bottom: 25px;">
+          <div style="text-align: center; padding: 25px; grid-column: 1/-1;">جاري جلب كلمات المرور من config/pass...</div>
+        </div>
+
+        <button class="btn btn-main" onclick="saveConfigPassUpdates()">
+          <i class="fas fa-save"></i> حفظ وتحديث كلمات المرور في Firebase
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== 8. السنوات الدراسية ==================== -->
+    <div class="admin-tab-content" id="tab_years">
+      <div class="portal-card">
+        <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 20px; color: var(--dark-color);">
+          <i class="fas fa-calendar-days" style="color: var(--primary-color);"></i> تسيير السنوات الدراسية
+        </h2>
+
+        <div class="form-grid" style="align-items: flex-end; margin-bottom: 20px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>السنة الدراسية النشطة حالياً:</label>
+            <select id="sel_active_year" style="font-size: 15px; font-weight: bold;"></select>
+          </div>
+          <button class="btn btn-success" style="height: var(--input-height);" onclick="setActiveYear()">
+            <i class="fas fa-check"></i> تفعيل السنة المحددة
+          </button>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #edf2f7; margin: 25px 0;">
+
+        <div class="form-grid" style="align-items: flex-end;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>إضافة سنة دراسية جديدة (مثال: 2027-2028):</label>
+            <input type="text" id="new_year_input" placeholder="2027-2028">
+          </div>
+          <button class="btn btn-main" style="height: var(--input-height);" onclick="addNewYear()">
+            <i class="fas fa-plus"></i> إضافة السنة الدراسية
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 9. مزامنة Google Sheets ==================== -->
+    <div class="admin-tab-content" id="tab_sync">
+      <div class="portal-card">
+        <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 20px; color: var(--dark-color);">
+          <i class="fas fa-cloud-arrow-up" style="color: var(--primary-color);"></i> إعدادات وتكامل Google Sheets
+        </h2>
+
+        <div class="form-group">
+          <label>رابط Google Apps Script Webhook (المستلم للبيانات):</label>
+          <input type="text" id="txt_sheets_url" dir="ltr" placeholder="https://script.google.com/macros/s/.../exec">
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 25px;">
+          <button class="btn btn-main" onclick="saveSheetsWebhook()">
+            <i class="fas fa-save"></i> حفظ رابط المزامنة
+          </button>
+          <button class="btn btn-secondary" onclick="copyAppsScriptCode()">
+            <i class="fas fa-copy"></i> نسخ كود Google Apps Script الجاهز
+          </button>
+        </div>
+
+        <div style="background: #1e293b; color: #f8fafc; border-radius: 12px; padding: 20px; text-align: left; direction: ltr; font-family: monospace; font-size: 12px; overflow-x: auto; max-height: 250px;">
+          <pre id="code_snippet"></pre>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let currentSettings = null;
+    let allUsersList = [];
+    let allInstitutionsList = [];
+    let allowedGradesList = [];
+    let currentConfigPassData = {};
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      // 1. فحص تصريح المشرف
+      if (!AuthGuard.requireAdmin()) return;
+
+      // 2. تحميل البيانات
+      await loadDashboardData();
+    });
+
+    function switchTab(tabId) {
+      document.querySelectorAll(".admin-tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".admin-tab-content").forEach(c => c.classList.remove("active"));
+
+      const targetBtn = Array.from(document.querySelectorAll(".admin-tab-btn")).find(b => b.getAttribute("onclick").includes(tabId));
+      if (targetBtn) targetBtn.classList.add("active");
+      
+      const targetContent = document.getElementById(tabId);
+      if (targetContent) targetContent.classList.add("active");
+
+      // تحميل بيانات خاصة بالتبويب عند النقر
+      if (tabId === "tab_users") loadUsersAccounts();
+      if (tabId === "tab_permissions") loadAllowedGrades();
+      if (tabId === "tab_institutions") loadAllInstitutions();
+      if (tabId === "tab_stats") loadLiveStatistics();
+      if (tabId === "tab_offices") loadConfigPassData();
+    }
+
+    async function loadDashboardData() {
+      Swal.fire({ title: 'جاري تحميل لوحة التحكم...', didOpen: () => Swal.showLoading() });
+      try {
+        currentSettings = await AppCore.Gateways.getSettings();
+        Swal.close();
+
+        // 1. مفاتيح البوابات
+        document.getElementById("sw_permanent_portal").checked = currentSettings.permanent_portal_enabled === true;
+        document.getElementById("sw_contract_portal").checked = currentSettings.contract_portal_enabled !== false;
+        document.getElementById("txt_closure_message").value = currentSettings.closure_message || "التسجيل مغلق مؤقتاً لانتهاء الآجال المحددة.";
+
+        // 2. السنوات الدراسية
+        const yearSelect = document.getElementById("sel_active_year");
+        yearSelect.innerHTML = "";
+        const years = currentSettings.academic_years || ["2026-2027", "2025-2026"];
+        years.forEach(y => {
+          yearSelect.innerHTML += `<option value="${y}" ${y === currentSettings.active_academic_year ? 'selected' : ''}>${y}</option>`;
+        });
+
+        // 3. الصلاحيات
+        if (currentSettings.permissions) {
+          document.getElementById("perm_statewide_edit").checked = currentSettings.permissions.allow_director_edit !== false;
+          document.getElementById("perm_director_delete").checked = currentSettings.permissions.allow_director_delete !== false;
+        }
+
+        // 4. رابط Google Sheets
+        document.getElementById("txt_sheets_url").value = currentSettings.google_sheets_url || "";
+        document.getElementById("code_snippet").textContent = GoogleSheetsSync.getAppsScriptTemplate();
+
+        // تحميل أولي للمستخدمين والمؤسسات
+        loadUsersAccounts();
+        loadAllowedGrades();
+        loadAllInstitutions();
+
+      } catch (err) {
+        Swal.close();
+        console.error("خطأ تحميل الإعدادات:", err);
+      }
+    }
+
+    // ============================================================
+    // إدارة المستخدمين (users_accounts)
+    // ============================================================
+    async function loadUsersAccounts() {
+      const tbody = document.getElementById("usersTableBody");
+      try {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 25px;"><i class="fas fa-spinner fa-spin fa-2x"></i><br>جاري جلب حسابات المستخدمين...</td></tr>`;
+        const snap = await window.db.collection("users_accounts").get();
+        allUsersList = [];
+
+        snap.forEach(doc => {
+          allUsersList.push({ id: doc.id, ...doc.data() });
+        });
+
+        renderUsersTable(allUsersList);
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; color:#dc2626; padding:20px;">تعذر تحميل المستخدمين</td></tr>`;
+      }
+    }
+
+    function renderUsersTable(users) {
+      const tbody = document.getElementById("usersTableBody");
+      tbody.innerHTML = "";
+
+      if (users.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 25px; color: #64748b;">لا توجد حسابات مستخدمين مسجلة حتى الآن.</td></tr>`;
+        return;
+      }
+
+      users.forEach((u, idx) => {
+        const isActive = u.status !== "suspended";
+        const statusBadge = isActive 
+          ? `<span class="badge" style="background:#dcfce7; color:#15803d;"><i class="fas fa-check-circle"></i> نشط</span>`
+          : `<span class="badge" style="background:#fee2e2; color:#dc2626;"><i class="fas fa-ban"></i> معطل</span>`;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td><b style="color:#2563eb;">${u.username || ''}</b></td>
+          <td>${u.first_name || ''} ${u.last_name || ''}</td>
+          <td style="font-family:monospace; letter-spacing:1px; font-weight:bold;">${u.ccp || ''}</td>
+          <td>${u.school_name || ''} <small style="color:#64748b;">(${u.level || ''})</small></td>
+          <td><span style="font-size:12px; font-weight:700;">${u.grade_title || u.grade || ''}</span></td>
+          <td>${statusBadge}</td>
+          <td style="font-size:12px; color:#64748b;">${u.created_at ? new Date(u.created_at).toLocaleDateString('ar-DZ') : '---'}</td>
+          <td style="text-align: center;">
+            <div style="display:flex; gap:6px; justify-content:center;">
+              <button class="btn btn-sm ${isActive ? 'btn-danger' : 'btn-success'}" onclick="toggleUserStatus('${u.id}', ${isActive})" title="${isActive ? 'تعطيل الحساب' : 'تفعيل الحساب'}">
+                <i class="fas ${isActive ? 'fa-user-slash' : 'fa-user-check'}"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteUserAccount('${u.id}', '${u.username}')" title="حذف الحساب">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterUsersTable() {
+      const q = document.getElementById("usersSearchInput").value.trim().toLowerCase();
+      if (!q) {
+        renderUsersTable(allUsersList);
+        return;
+      }
+      const filtered = allUsersList.filter(u => {
+        const str = `${u.username || ''} ${u.first_name || ''} ${u.last_name || ''} ${u.ccp || ''} ${u.school_name || ''}`.toLowerCase();
+        return str.includes(q);
+      });
+      renderUsersTable(filtered);
+    }
+
+    async function toggleUserStatus(userId, isCurrentlyActive) {
+      const newStatus = isCurrentlyActive ? "suspended" : "active";
+      const actionName = isCurrentlyActive ? "تعطيل" : "تفعيل";
+
+      const res = await Swal.fire({
+        title: `تأكيد ${actionName} الحساب`,
+        text: `هل أنت متأكد من ${actionName} هذا الحساب؟`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: `نعم، ${actionName}`,
+        cancelButtonText: 'إلغاء'
+      });
+
+      if (res.isConfirmed) {
+        await window.db.collection("users_accounts").doc(userId).update({ status: newStatus });
+        Swal.fire("تم", `تم ${actionName} الحساب بنجاح`, "success");
+        loadUsersAccounts();
+      }
+    }
+
+    async function deleteUserAccount(userId, username) {
+      const res = await Swal.fire({
+        title: 'حذف الحساب نهائياً',
+        text: `هل أنت متأكد من حذف حساب المستخدم (${username})؟ لا يمكن التراجع عن هذا الإجراء.`,
+        icon: 'error',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، حذف نهائي',
+        confirmButtonColor: '#dc2626',
+        cancelButtonText: 'إلغاء'
+      });
+
+      if (res.isConfirmed) {
+        await window.db.collection("users_accounts").doc(userId).delete();
+        Swal.fire("تم الحذف", "تم حذف الحساب بنجاح", "success");
+        loadUsersAccounts();
+      }
+    }
+
+    // ============================================================
+    // إدارة الرتب المسموح لها بالإنشاء
+    // ============================================================
+    async function loadAllowedGrades() {
+      allowedGradesList = await AppCore.Grades.getAllowedGrades();
+      const tbody = document.getElementById("allowedGradesTableBody");
+      tbody.innerHTML = "";
+
+      allowedGradesList.forEach(code => {
+        const title = AppCore.Grades.getTitle(code);
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><b style="font-family:monospace; font-size:15px; color:#2563eb;">${code}</b></td>
+          <td><b>${title}</b></td>
+          <td><span class="badge" style="background:#dcfce7; color:#15803d;"><i class="fas fa-shield-check"></i> مصرح بإنشاء الحساب</span></td>
+          <td style="text-align: center;">
+            <button class="btn btn-sm btn-outline-danger" onclick="removeAllowedGrade('${code}')">
+              <i class="fas fa-trash"></i> إزالة
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function openAddAllowedGradeModal() {
+      let optionsHtml = '<option value="">-- اختر من قاموس الرتب --</option>';
+      for (const [code, title] of Object.entries(AppCore.Grades.dictionary)) {
+        if (!allowedGradesList.includes(code)) {
+          optionsHtml += `<option value="${code}">${code} - ${title}</option>`;
+        }
+      }
+
+      Swal.fire({
+        title: 'إضافة رتبة مسموح لها بإنشاء الحسابات',
+        html: `
+          <div style="direction: rtl; text-align: right; font-size: 13.5px;">
+            <div class="form-group">
+              <label>اختر من الرتب المعروفة:</label>
+              <select id="modal_select_grade" class="form-control" onchange="document.getElementById('modal_custom_grade').value = this.value">
+                ${optionsHtml}
+              </select>
+            </div>
+            <div class="form-group" style="margin-top: 12px;">
+              <label>أو أدخل كود الرتبة يدوياً:</label>
+              <input type="text" id="modal_custom_grade" class="form-control" placeholder="مثال: 4000">
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'إضافة واعتماد',
+        cancelButtonText: 'إلغاء',
+        preConfirm: () => {
+          const code = document.getElementById("modal_custom_grade").value.trim();
+          if (!code) {
+            Swal.showValidationMessage('يرجى تحديد أو إدخال كود الرتبة');
+            return false;
+          }
+          return code;
+        }
+      }).then(async (res) => {
+        if (res.isConfirmed) {
+          const code = res.value;
+          if (!allowedGradesList.includes(code)) {
+            allowedGradesList.push(code);
+            await AppCore.Grades.saveAllowedGrades(allowedGradesList);
+            Swal.fire("تمت الإضافة", `تمت إضافة الرتبة كود ${code} بنجاح`, "success");
+            loadAllowedGrades();
+          }
+        }
+      });
+    }
+
+    async function removeAllowedGrade(code) {
+      allowedGradesList = allowedGradesList.filter(c => c !== code);
+      await AppCore.Grades.saveAllowedGrades(allowedGradesList);
+      Swal.fire("تم الحذف", `تم حذف الرتبة ${code} من القائمة المسموحة`, "info");
+      loadAllowedGrades();
+    }
+
+    // ============================================================
+    // تسيير المؤسسات التعليمية (Institutions)
+    // ============================================================
+    async function loadAllInstitutions() {
+      const tbody = document.getElementById("institutionsTableBody");
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 25px;"><i class="fas fa-spinner fa-spin fa-2x"></i><br>جاري جلب المؤسسات...</td></tr>`;
+
+      try {
+        // فحص Firestore أولاً
+        const snap = await window.db.collection("institutions").get();
+        allInstitutionsList = [];
+
+        if (!snap.empty) {
+          snap.forEach(doc => {
+            allInstitutionsList.push({ id: doc.id, ...doc.data() });
+          });
+        } else {
+          // بذر أولي من geo-data.js و code cem.html
+          allInstitutionsList = seedInstitutionsFromGeoData();
+        }
+
+        renderInstitutionsTable(allInstitutionsList);
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#dc2626;">فشل تحميل المؤسسات</td></tr>`;
+      }
+    }
+
+    function seedInstitutionsFromGeoData() {
+      const list = [];
+      let idCounter = 1;
+
+      // 1. الابتدائيات
+      if (typeof primarySchoolsByBaladiya !== "undefined") {
+        for (const [baladiya, schools] of Object.entries(primarySchoolsByBaladiya)) {
+          // تحديد الدائرة
+          let daaira = "توقرت";
+          for (const [d, bals] of Object.entries(baladiyaMap)) {
+            if (bals.includes(baladiya)) { daaira = d; break; }
+          }
+          schools.forEach(s => {
+            list.push({
+              id: `prim_${idCounter++}`,
+              name: s.name,
+              level: "ابتدائي",
+              daaira: daaira,
+              baladiya: baladiya,
+              code: s.code || ""
+            });
+          });
+        }
+      }
+
+      // 2. المتوسطات والثانويات من institutionsByDaaira
+      if (typeof institutionsByDaaira !== "undefined") {
+        for (const [daaira, levels] of Object.entries(institutionsByDaaira)) {
+          for (const [lvl, schools] of Object.entries(levels)) {
+            schools.forEach(s => {
+              // استخراج الرمز إن وجد في code cem
+              let code = s.code || "";
+              if (!code && typeof window.institutionsByDaaira !== "undefined" && window.institutionsByDaaira[daaira] && window.institutionsByDaaira[daaira][lvl]) {
+                const found = window.institutionsByDaaira[daaira][lvl].find(x => x.name.includes(s.name.replace(/[–-]/g, '').trim()) || s.name.includes(x.name.replace(/[–-]/g, '').trim()));
+                if (found) code = found.code;
+              }
+              list.push({
+                id: `sec_${idCounter++}`,
+                name: s.name,
+                level: lvl,
+                daaira: daaira,
+                baladiya: baladiyaMap[daaira] ? baladiyaMap[daaira][0] : daaira,
+                code: code
+              });
+            });
+          }
+        }
+      }
+      return list;
+    }
+
+    function renderInstitutionsTable(list) {
+      const tbody = document.getElementById("institutionsTableBody");
+      tbody.innerHTML = "";
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 25px; color: #64748b;">لا توجد مؤسسات مطابقة لخيارات البحث والتصفية.</td></tr>`;
+        return;
+      }
+
+      list.forEach((item, idx) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td><b>${item.name}</b></td>
+          <td><span class="badge" style="background:#e0f2fe; color:#0369a1;">${item.level}</span></td>
+          <td>${item.daaira}</td>
+          <td>${item.baladiya}</td>
+          <td><b style="font-family:monospace; color:#2563eb;">${item.code || '---'}</b></td>
+          <td style="text-align: center;">
+            <div style="display:flex; gap:6px; justify-content:center;">
+              <button class="btn btn-sm btn-outline-primary" onclick="openEditInstitutionModal('${item.id}')" title="تعديل">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn btn-sm btn-outline-danger" onclick="deleteInstitution('${item.id}')" title="حذف">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function applyInstitutionsFilter() {
+      const level = document.getElementById("filterSchoolLevel").value;
+      const daaira = document.getElementById("filterSchoolDaaira").value;
+      const q = document.getElementById("filterSchoolSearch").value.trim().toLowerCase();
+
+      let filtered = allInstitutionsList.filter(item => {
+        let matchLevel = !level || item.level === level;
+        let matchDaaira = !daaira || item.daaira === daaira;
+        let matchSearch = !q || item.name.toLowerCase().includes(q) || (item.code && item.code.includes(q));
+        return matchLevel && matchDaaira && matchSearch;
+      });
+
+      renderInstitutionsTable(filtered);
+    }
+
+    function openAddInstitutionModal() {
+      let daairaOptions = '<option value="">-- اختر الدائرة --</option>';
+      for (const d in baladiyaMap) daairaOptions += `<option value="${d}">${d}</option>`;
+
+      Swal.fire({
+        title: 'إضافة مؤسسة تعليمية جديدة',
+        html: `
+          <div style="direction: rtl; text-align: right; font-size: 13px;">
+            <div class="form-group">
+              <label>الطور التعليمي: *</label>
+              <select id="m_inst_level" class="form-control">
+                <option value="ابتدائي">ابتدائي</option>
+                <option value="متوسط">متوسط</option>
+                <option value="ثانوي">ثانوي</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+              <label>الدائرة: *</label>
+              <select id="m_inst_daaira" class="form-control" onchange="updateModalBaladiyas(this.value)">
+                ${daairaOptions}
+              </select>
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+              <label>البلدية: *</label>
+              <select id="m_inst_baladiya" class="form-control">
+                <option value="">-- اختر الدائرة أولاً --</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+              <label>اسم المؤسسة الكامل: *</label>
+              <input type="text" id="m_inst_name" class="form-control" placeholder="مثال: متوسطة الأمير عبد القادر">
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+              <label>رمز المؤسسة (Code):</label>
+              <input type="text" id="m_inst_code" class="form-control" placeholder="مثال: 551201">
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'حفظ المؤسسة',
+        cancelButtonText: 'إلغاء',
+        preConfirm: () => {
+          const level = document.getElementById("m_inst_level").value;
+          const daaira = document.getElementById("m_inst_daaira").value;
+          const baladiya = document.getElementById("m_inst_baladiya").value;
+          const name = document.getElementById("m_inst_name").value.trim();
+          const code = document.getElementById("m_inst_code").value.trim();
+
+          if (!level || !daaira || !baladiya || !name) {
+            Swal.showValidationMessage('يرجى ملء جميع الحقول الإلزامية');
+            return false;
+          }
+
+          // منع التكرار في الأسماء والأكواد
+          const duplicateName = allInstitutionsList.find(x => x.name.trim() === name);
+          if (duplicateName) {
+            Swal.showValidationMessage('يوجد مؤسسة مسجلة مسبقاً بنفس هذا الاسم بالضبط');
+            return false;
+          }
+
+          if (code) {
+            const duplicateCode = allInstitutionsList.find(x => x.code && x.code.trim() === code);
+            if (duplicateCode) {
+              Swal.showValidationMessage(`رمز المؤسسة (${code}) مستخدم مسبقاً لمؤسسة: ${duplicateCode.name}`);
+              return false;
+            }
+          }
+
+          return { level, daaira, baladiya, name, code };
+        }
+      }).then(async (res) => {
+        if (res.isConfirmed) {
+          const d = res.value;
+          const docRef = await window.db.collection("institutions").add({
+            ...d,
+            created_at: new Date().toISOString()
+          });
+
+          allInstitutionsList.unshift({ id: docRef.id, ...d });
+          Swal.fire("تم الحفظ", "تمت إضافة المؤسسة التعليمية بنجاح", "success");
+          applyInstitutionsFilter();
+        }
+      });
+    }
+
+    function updateModalBaladiyas(daaira) {
+      const bSel = document.getElementById("m_inst_baladiya");
+      bSel.innerHTML = '<option value="">-- اختر البلدية --</option>';
+      if (daaira && baladiyaMap[daaira]) {
+        baladiyaMap[daaira].forEach(b => {
+          bSel.innerHTML += `<option value="${b}">${b}</option>`;
+        });
+      }
+    }
+
+    async function deleteInstitution(id) {
+      const res = await Swal.fire({
+        title: 'حذف المؤسسة',
+        text: 'هل أنت متأكد من حذف هذه المؤسسة من قاعدة البيانات؟',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، حذف',
+        confirmButtonColor: '#dc2626',
+        cancelButtonText: 'إلغاء'
+      });
+
+      if (res.isConfirmed) {
+        try {
+          await window.db.collection("institutions").doc(id).delete();
+        } catch (e) {}
+        allInstitutionsList = allInstitutionsList.filter(x => x.id !== id);
+        Swal.fire("تم الحذف", "تم حذف المؤسسة بنجاح", "success");
+        applyInstitutionsFilter();
+      }
+    }
+
+    function openEditInstitutionModal(id) {
+      const inst = allInstitutionsList.find(x => x.id === id);
+      if (!inst) return;
+
+      Swal.fire({
+        title: 'تعديل بيانات المؤسسة',
+        html: `
+          <div style="direction: rtl; text-align: right; font-size: 13px;">
+            <div class="form-group">
+              <label>اسم المؤسسة:</label>
+              <input type="text" id="edit_inst_name" class="form-control" value="${inst.name}">
+            </div>
+            <div class="form-group" style="margin-top:10px;">
+              <label>رمز المؤسسة:</label>
+              <input type="text" id="edit_inst_code" class="form-control" value="${inst.code || ''}">
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'حفظ التعديل',
+        cancelButtonText: 'إلغاء',
+        preConfirm: () => {
+          const name = document.getElementById("edit_inst_name").value.trim();
+          const code = document.getElementById("edit_inst_code").value.trim();
+          if (!name) {
+            Swal.showValidationMessage('اسم المؤسسة مطلوب');
+            return false;
+          }
+          return { name, code };
+        }
+      }).then(async (res) => {
+        if (res.isConfirmed) {
+          inst.name = res.value.name;
+          inst.code = res.value.code;
+          try {
+            await window.db.collection("institutions").doc(id).set(inst, { merge: true });
+          } catch(e) {}
+          Swal.fire("تم التعديل", "تم تحديث بيانات المؤسسة بنجاح", "success");
+          applyInstitutionsFilter();
+        }
+      });
+    }
+
+    // ============================================================
+    // استعلام الموظفين الدائمين (employeescompay)
+    // ============================================================
+    async function searchPermanentEmployee() {
+      const q = document.getElementById("employeeSearchInput").value.trim();
+      if (!q) {
+        Swal.fire("تنبيه", "يرجى إدخال رقم CCP أو الاسم للبحث.", "warning");
+        return;
+      }
+
+      const resArea = document.getElementById("employeeSearchResultArea");
+      resArea.innerHTML = `<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin fa-2x"></i> جاري البحث...</div>`;
+
+      try {
+        const perm = await AppCore.PermanentEmployee.findByCcp(q);
+
+        if (perm.exists) {
+          const d = perm.data;
+          resArea.innerHTML = `
+            <div style="background:white; border:2px solid #2563eb; border-radius:14px; padding:20px; margin-top:15px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:10px; margin-bottom:15px;">
+                <h3 style="margin:0; color:#1e40af; font-size:18px;">
+                  <i class="fas fa-id-card"></i> ${d.fmn || ''} ${d.frn || ''}
+                </h3>
+                <span class="badge" style="background:#dcfce7; color:#15803d;">موظف دائم مسجل</span>
+              </div>
+              <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+                <div><b>رقم CCP:</b> <span style="font-family:monospace; font-weight:bold;">${perm.ccp}</span></div>
+                <div><b>تاريخ الميلاد:</b> ${d.diz || d.date_naissance || '---'}</div>
+                <div><b>الرتبة:</b> ${AppCore.Grades.getTitle(d.grade || d.gr)} (${d.grade || d.gr || '---'})</div>
+                <div><b>المؤسسة / مكان العمل:</b> ${d.place || d.schoolName || '---'}</div>
+                <div><b>رقم الضمان (NSS):</b> ${d.ass || '---'}</div>
+                <div><b>الرقم التعريفي (NIN):</b> ${d.nin || '---'}</div>
+              </div>
+            </div>
+          `;
+        } else {
+          resArea.innerHTML = `
+            <div style="background:#fee2e2; border:1px solid #fecaca; color:#dc2626; border-radius:12px; padding:15px; text-align:center; margin-top:15px;">
+              <i class="fas fa-circle-xmark"></i> لم يتم العثور على أي موظف دائم بهذا الرقم أو الاسم في كولكشن <b>employeescompay</b>.
+            </div>
+          `;
+        }
+      } catch (err) {
+        resArea.innerHTML = `<div style="color:#dc2626; text-align:center;">حدث خطأ في الاتصال بقاعدة البيانات.</div>`;
+      }
+    }
+
+    // ============================================================
+    // الإحصائيات العامة الحية
+    // ============================================================
+    async function loadLiveStatistics() {
+      try {
+        // 1. عدد الموظفين الدائمين
+        window.db.collection("employeescompay").limit(1000).get().then(snap => {
+          document.getElementById("statTotalEmployees").textContent = snap.size >= 1000 ? "+1000" : snap.size;
+        });
+
+        // 2. عدد الحسابات المنشأة
+        window.db.collection("users_accounts").get().then(snap => {
+          document.getElementById("statTotalAccounts").textContent = snap.size;
+        });
+
+        // 3. عدد المؤسسات
+        document.getElementById("statTotalInstitutions").textContent = allInstitutionsList.length || "170+";
+
+        // 4. عدد المستخلفين والمتعاقدين
+        window.db.collection("contract_registrations").get().then(snap => {
+          document.getElementById("statTotalContracts").textContent = snap.size;
+        });
+
+      } catch (e) {
+        console.warn("إحصائيات:", e);
+      }
+    }
+
+    // ============================================================
+    // تسيير كلمات مرور config/pass
+    // ============================================================
+    async function loadConfigPassData() {
+      const container = document.getElementById("configPassFieldsContainer");
+      container.innerHTML = `<div style="text-align: center; padding: 25px; grid-column: 1/-1;"><i class="fas fa-spinner fa-spin fa-2x"></i> جاري قراءة config/pass...</div>`;
+
+      try {
+        currentConfigPassData = await AppCore.ConfigAuth.getAdminAccountsList();
+        container.innerHTML = "";
+
+        if (Object.keys(currentConfigPassData).length === 0) {
+          container.innerHTML = `<div style="text-align:center; grid-column:1/-1; color:#dc2626;">وثيقة config/pass فارغة أو غير موجودة.</div>`;
+          return;
+        }
+
+        for (const [key, val] of Object.entries(currentConfigPassData)) {
+          const div = document.createElement("div");
+          div.style = "background: #f8fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0;";
+          div.innerHTML = `
+            <label style="font-weight: 800; color: #1e40af; font-size: 13.5px; display: block; margin-bottom: 6px;">
+              اسم المستخدم (المفتاح): <span style="font-family: monospace; font-size: 15px; color:#0f172a;">${key}</span>
+            </label>
+            <div style="position: relative;">
+              <input type="text" class="config-pass-input" data-key="${key}" value="${val}" 
+                     style="height: 40px; font-weight: bold; letter-spacing: 1px; width: 100%;">
+            </div>
+            <small style="color: #64748b; font-size: 11px;">* قيمة كلمة المرور المقابلة في Firestore</small>
+          `;
+          container.appendChild(div);
+        }
+      } catch (e) {
+        container.innerHTML = `<div style="color:#dc2626; text-align:center; grid-column:1/-1;">تعذر جلب كلمات المرور</div>`;
+      }
+    }
+
+    async function saveConfigPassUpdates() {
+      const inputs = document.querySelectorAll(".config-pass-input");
+      if (inputs.length === 0) return;
+
+      const updates = {};
+      inputs.forEach(inp => {
+        const key = inp.getAttribute("data-key");
+        updates[key] = inp.value.trim();
+      });
+
+      Swal.fire({ title: 'جاري تحديث كلمات المرور...', didOpen: () => Swal.showLoading() });
+
+      try {
+        await window.db.collection("config").doc("pass").set(updates, { merge: true });
+        Swal.fire("تم الحفظ", "تم تحديث كلمات المرور في config/pass بنجاح!", "success");
+      } catch (e) {
+        Swal.fire("خطأ", "فشل تحديث كلمات المرور في Firebase", "error");
+      }
+    }
+
+    // ============================================================
+    // تسيير البوابات وحفظ الإعدادات
+    // ============================================================
+    async function togglePermanentPortal(checked) {
+      await AppCore.Gateways.updateSettings({ permanent_portal_enabled: checked });
+      const msg = checked ? "تم فتح بوابة الموظفين الدائمين بنجاح." : "تم تجميد بوابة الموظفين الدائمين بنجاح.";
+      Swal.fire("حالة البوابة", msg, checked ? "success" : "info");
+    }
+
+    async function toggleContractPortal(checked) {
+      await AppCore.Gateways.updateSettings({ contract_portal_enabled: checked });
+    }
+
+    async function saveGatewaysSettings() {
+      const perm = document.getElementById("sw_permanent_portal").checked;
+      const contra = document.getElementById("sw_contract_portal").checked;
+      const msg = document.getElementById("txt_closure_message").value.trim();
+
+      await AppCore.Gateways.updateSettings({
+        permanent_portal_enabled: perm,
+        contract_portal_enabled: contra,
+        closure_message: msg
+      });
+
+      Swal.fire("تم الحفظ", "تم حفظ إعدادات البوابات بنجاح!", "success");
+    }
+
+    async function savePermissions() {
+      const edit = document.getElementById("perm_statewide_edit").checked;
+      const del = document.getElementById("perm_director_delete").checked;
+
+      await window.db.collection("system_settings").doc("general").set({
+        permissions: {
+          allow_director_edit: edit,
+          allow_director_delete: del
+        }
+      }, { merge: true });
+
+      Swal.fire("تم الحفظ", "تم تحديث صلاحيات التعديل والحذف بنجاح!", "success");
+    }
+
+    async function setActiveYear() {
+      const y = document.getElementById("sel_active_year").value;
+      await window.db.collection("system_settings").doc("general").set({ active_academic_year: y }, { merge: true });
+      Swal.fire("تم التفعيل", `تم اعتماد السنة الدراسية: ${y}`, "success");
+    }
+
+    async function addNewYear() {
+      const newY = document.getElementById("new_year_input").value.trim();
+      if (!newY) return;
+
+      const currentYears = currentSettings.academic_years || ["2026-2027"];
+      if (!currentYears.includes(newY)) currentYears.push(newY);
+
+      await window.db.collection("system_settings").doc("general").set({ academic_years: currentYears }, { merge: true });
+      Swal.fire("تمت الإضافة", `تمت إضافة السنة الدراسية ${newY}`, "success");
+      location.reload();
+    }
+
+    async function saveSheetsWebhook() {
+      const url = document.getElementById("txt_sheets_url").value.trim();
+      await window.db.collection("system_settings").doc("general").set({ google_sheets_url: url }, { merge: true });
+      Swal.fire("تم الحفظ", "تم حفظ رابط مزامنة Google Sheets بنجاح!", "success");
+    }
+
+    function copyAppsScriptCode() {
+      const code = document.getElementById("code_snippet").textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        Swal.fire("تم النسخ", "تم نسخ كود Google Apps Script إلى الحافظة", "success");
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>استمارة تسجيل مستخلف / متعاقد - مديرية التربية لولاية توقرت</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- الخطوط والأيقونات -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- المكتبات الأساسية -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <!-- ملفات المنظومة -->
+  <link rel="stylesheet" href="../css/main.css">
+  <script src="../js/firebase-init.js"></script>
+  <script src="../js/geo-data.js"></script>
+  <script src="../js/ranks-manager.js"></script>
+  <script src="../js/workflow.js"></script>
+  <script src="../js/auth-check.js"></script>
+  <script src="../js/google-sheets-sync.js"></script>
+</head>
+<body>
+
+  <div class="app-container" style="max-width: 900px;">
+    
+    <!-- شريط علوي -->
+    <div class="top-navbar" style="margin-bottom: 20px;">
+      <div class="brand-section">
+        <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" class="brand-logo">
+        <div class="brand-info">
+          <h1>استمارة معلومات المستخلفين والمتعاقدين</h1>
+          <p id="formSchoolSubtitle">مديرية التربية لولاية توقرت</p>
+        </div>
+      </div>
+      <a href="director-dashboard.html" class="btn btn-secondary">
+        <i class="fas fa-arrow-right"></i> العودة للوحة المؤسسة
+      </a>
+    </div>
+
+    <!-- بطاقة الاستمارة الرئيسية -->
+    <div class="portal-card">
+      
+      <div style="text-align: center; margin-bottom: 25px;">
+        <h2 class="gradient-title-text" style="font-size: 24px;">استمارة تسجيل واعتماد الموظف المستخلف</h2>
+        <p style="font-size: 13px; color: var(--text-muted); font-weight: 600;">
+          يرجى ملء كافة الحقول الإلزامية بدقة مطابقة للوثائق الرسمية وبطاقة التعريف البيومترية
+        </p>
+      </div>
+
+      <form id="contractRegistrationForm" onsubmit="event.preventDefault(); submitContractForm();">
+        
+        <!-- الحقول المخفية المحددة في البرومبت (تُرسل تلقائياً) -->
+        <input type="hidden" id="hidden_grade_code">
+        <input type="hidden" id="hidden_admin_code">
+        <input type="hidden" id="hidden_edit_id">
+
+        <!-- ==================== 1. الحساب والهوية الوطنية ==================== -->
+        <div class="section-divider">
+          <span class="section-title"><i class="fas fa-id-card"></i> الحساب والهوية البيومترية</span>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>رقم الحساب الجاري (CCP): <span class="required-star">*</span></label>
+            <input type="text" id="field_ccp" class="readonly-field" readonly required>
+          </div>
+
+          <div class="form-group">
+            <label>رقم الضمان الاجتماعي (NSS): <span class="required-star">* (12 رقماً)</span></label>
+            <input type="text" id="field_nss" maxlength="12" placeholder="أدخل 12 رقماً بالضبط"
+                   oninput="this.value = this.value.replace(/\D/g, ''); validateLength(this, 12)" required>
+            <div id="nss_error" class="error-text" style="display: none;">يجب أن يتكون رقم الضمان من 12 رقماً تماماً</div>
+          </div>
+
+          <div class="form-group">
+            <label>رقم التعريف الوطني (NIN): <span class="required-star">* (18 رقماً)</span></label>
+            <input type="text" id="field_nin" maxlength="18" placeholder="أدخل 18 رقماً بالضبط من البطاقة البيومترية"
+                   oninput="this.value = this.value.replace(/\D/g, ''); validateLength(this, 18)" required>
+            <div id="nin_error" class="error-text" style="display: none;">يجب أن يتكون رقم التعريف من 18 رقماً تماماً</div>
+          </div>
+        </div>
+
+        <!-- ==================== 2. البيانات الشخصية والاسم ==================== -->
+        <div class="section-divider">
+          <span class="section-title"><i class="fas fa-user"></i> البيانات الشخصية والمدنية</span>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>اللقب بالعربية: <span class="required-star">*</span></label>
+            <input type="text" id="field_fmn_ar" placeholder="اللقب بالعربية فقط" 
+                   oninput="this.value = this.value.replace(/[^\u0600-\u06FF\s]/g, '')" required>
+          </div>
+
+          <div class="form-group">
+            <label>الاسم بالعربية: <span class="required-star">*</span></label>
+            <input type="text" id="field_frn_ar" placeholder="الاسم بالعربية فقط" 
+                   oninput="this.value = this.value.replace(/[^\u0600-\u06FF\s]/g, '')" required>
+          </div>
+
+          <div class="form-group">
+            <label>اللقب بالإنجليزية: <span class="required-star">*</span></label>
+            <input type="text" id="field_fmn_en" placeholder="NOM (مطابق للبطاقة البيومترية)" 
+                   dir="ltr" oninput="this.value = this.value.toUpperCase().replace(/[^A-Z\s]/g, '')" required>
+          </div>
+
+          <div class="form-group">
+            <label>الاسم بالإنجليزية: <span class="required-star">*</span></label>
+            <input type="text" id="field_frn_en" placeholder="PRENOM (مطابق للبطاقة)" 
+                   dir="ltr" oninput="this.value = this.value.toUpperCase().replace(/[^A-Z\s]/g, '')" required>
+          </div>
+        </div>
+
+        <!-- تاريخ ومكان الميلاد -->
+        <div class="form-grid">
+          <div class="form-group">
+            <label>تاريخ الميلاد (يوم / شهر / سنة): <span class="required-star">*</span></label>
+            <div class="dob-group">
+              <input type="number" id="dob_day" min="1" max="31" placeholder="اليوم (01-31)" required>
+              <input type="number" id="dob_month" min="1" max="12" placeholder="الشهر (01-12)" required>
+              <input type="number" id="dob_year" min="1950" max="2010" placeholder="السنة (مثال: 1995)" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>مكان الميلاد: <span class="required-star">*</span></label>
+            <input type="text" id="field_birth_place" placeholder="مكان الميلاد كما هو مسجل بالحالة المدنية" required>
+          </div>
+
+          <div class="form-group">
+            <label>رقم الهاتف: <span class="required-star">* (يبدأ بـ 05 / 06 / 07)</span></label>
+            <input type="text" id="field_phone" maxlength="14" placeholder="06 00 00 00 00" dir="ltr"
+                   oninput="formatPhoneInput(this)" required>
+            <div id="phone_error" class="error-text" style="display: none;">يجب أن يبدأ الهاتف بـ 05 أو 06 أو 07 ويتكون من 10 أرقام</div>
+          </div>
+        </div>
+
+        <!-- ==================== 3. الحالة العائلية وبيانات الزوج والأولاد ==================== -->
+        <div class="section-divider">
+          <span class="section-title"><i class="fas fa-people-roof"></i> الحالة العائلية</span>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>الحالة العائلية: <span class="required-star">*</span></label>
+            <select id="field_marital_status" onchange="onMaritalStatusChange()" required>
+              <option value="أعزب(ة)">أعزب(ة)</option>
+              <option value="متزوج(ة)">متزوج(ة)</option>
+              <option value="مطلق(ة)">مطلق(ة)</option>
+              <option value="أرمل(ة)">أرمل(ة)</option>
+            </select>
+          </div>
+
+          <!-- عدد الأولاد (مخفي للأعزب، ظاهر للبقية) -->
+          <div class="form-group" id="group_children" style="display: none;">
+            <label>عدد الأولاد:</label>
+            <input type="number" id="field_children" min="0" max="25" value="0">
+          </div>
+        </div>
+
+        <!-- بيانات الزوج(ة) (تظهر للمتزوج فقط) -->
+        <div class="form-grid" id="group_spouse" style="display: none; background: #fdfefe; border: 1px dashed #cbd5e0; padding: 15px; border-radius: 12px; margin-bottom: 16px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>اسم ولقب الزوج(ة):</label>
+            <input type="text" id="field_spouse_name" placeholder="الاسم واللقب الكامل للزوج(ة)">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>وظيفة الزوج(ة):</label>
+            <select id="field_spouse_job">
+              <option value="بطال(ة)">بطال(ة)</option>
+              <option value="موظف(ة)">موظف(ة)</option>
+              <option value="نشاط تجاري أو حر">نشاط تجاري أو حر</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- ==================== 4. بيانات التعيين والتعاقد والرتبة ==================== -->
+        <div class="section-divider">
+          <span class="section-title"><i class="fas fa-graduation-cap"></i> بيانات الاستخلاف والتعاقد</span>
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>السنة الدراسية:</label>
+            <input type="text" id="field_academic_year" class="readonly-field" readonly>
+          </div>
+
+          <div class="form-group">
+            <label>الطور التعليمي: <span class="required-star">*</span></label>
+            <select id="field_level" onchange="onLevelChange(); triggerRankCalculation();" required>
+              <option value="ابتدائي">ابتدائي</option>
+              <option value="متوسط">متوسط</option>
+              <option value="ثانوي">ثانوي</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>الصفة: <span class="required-star">*</span></label>
+            <select id="field_status_type" onchange="triggerRankCalculation()" required>
+              <option value="مستخلف(ة)">مستخلف(ة)</option>
+              <option value="متعاقد(ة)">متعاقد(ة)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>شهادة التوظيف: <span class="required-star">*</span></label>
+            <select id="field_diploma" onchange="triggerRankCalculation()" required>
+              <option value="ليسانس">ليسانس</option>
+              <option value="ماستر">ماستر</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- الرتبة المولدة تلقائياً (صندوق بارز) -->
+        <div style="background: linear-gradient(135deg, #eef4ff 0%, #f4f0ff 100%); border: 2px solid #2575fc; border-radius: 14px; padding: 16px 20px; margin-bottom: 20px;">
+          <label style="color: #6a11cb; font-size: 14px; font-weight: 800; margin-bottom: 6px;">
+            <i class="fas fa-wand-magic-sparkles"></i> الرتبة المعتمدة (تُولد تلقائياً حسب الطور، الشهادة والصفة):
+          </label>
+          <div id="generatedRankDisplay" style="font-size: 17px; font-weight: 900; color: #1e3a8a; min-height: 25px;">
+            أستاذ التعليم الابتدائي مستخلف(ة)
+          </div>
+          <div style="font-size: 11px; color: #64748b; margin-top: 6px; display: flex; gap: 15px;">
+            <span>رمز الرتبة: <b id="displayGradeCode" style="color: #2575fc;">1006</b></span>
+            <span>رمز الإدارة: <b id="displayAdminCode" style="color: #2575fc;">10</b></span>
+          </div>
+        </div>
+
+        <!-- التعيين الجغرافي والمؤسسة -->
+        <div class="form-grid">
+          <div class="form-group">
+            <label>الدائرة: <span class="required-star">*</span></label>
+            <select id="field_daaira" onchange="onDaairaChange()" required></select>
+          </div>
+
+          <div class="form-group">
+            <label>البلدية: <span class="required-star">*</span></label>
+            <select id="field_baladiya" onchange="onBaladiyaChange()" required></select>
+          </div>
+
+          <div class="form-group">
+            <label>مؤسسة العمل: <span class="required-star">*</span></label>
+            <select id="field_school" required></select>
+          </div>
+        </div>
+
+        <!-- فترة الاستخلاف والتعاقد -->
+        <div class="form-grid">
+          <div class="form-group">
+            <label>تاريخ بداية الاستخلاف (من): <span class="required-star">*</span></label>
+            <input type="date" id="field_start_date" onchange="calculateDuration()" required>
+          </div>
+
+          <div class="form-group">
+            <label>تاريخ نهاية الاستخلاف (إلى): <span class="required-star">*</span></label>
+            <input type="date" id="field_end_date" onchange="calculateDuration()" required>
+          </div>
+
+          <div class="form-group">
+            <label>مدة العمل المحسوبة آلياً:</label>
+            <input type="text" id="field_duration_display" class="readonly-field" placeholder="تُحسب تلقائياً من التواريخ" readonly>
+          </div>
+        </div>
+
+        <!-- أزرار الإجراءات في أسفل الاستمارة -->
+        <div style="display: flex; gap: 15px; margin-top: 30px; flex-wrap: wrap;">
+          <button type="submit" class="btn btn-main btn-lg" style="flex: 2; min-width: 220px;" id="btnSubmitForm">
+            <i class="fas fa-floppy-disk"></i> حفظ وتأكيد المعلومات
+          </button>
+          
+          <a href="director-dashboard.html" class="btn btn-secondary btn-lg" style="flex: 1; min-width: 140px;">
+            <i class="fas fa-times"></i> إلغاء / خروج
+          </a>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+
+  <script>
+    let currentDirector = null;
+    let currentPrefill = null;
+    let editMode = false;
+    let editDocId = null;
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      // 1. فحص الحماية لجلسة المدير
+      currentDirector = AuthGuard.requireDirector();
+      if (!currentDirector) return;
+
+      document.getElementById("formSchoolSubtitle").textContent = `${currentDirector.schoolName} (${currentDirector.directorName})`;
+
+      // 2. إعداد الدوائر الجغرافية
+      initDaairaOptions();
+
+      // 3. قراءة بارامترات الرابط والذاكرة المؤقتة
+      const urlParams = new URLSearchParams(window.location.search);
+      const ccpParam = urlParams.get("ccp");
+      const modeParam = urlParams.get("mode");
+      const idParam = urlParams.get("id");
+
+      // 4. ضبط السنة الدراسية النشطة
+      const sys = await getSystemSettings();
+      document.getElementById("field_academic_year").value = sys.active_academic_year || "2026-2027";
+
+      // 5. التحقق إن كان وضع تعديل لسجل موجود
+      if (modeParam === "edit" && idParam) {
+        editMode = true;
+        editDocId = idParam;
+        document.getElementById("hidden_edit_id").value = idParam;
+        await loadExistingRecordForEdit(idParam);
+      } else {
+        // وضع إضافة جديد أو تعبئة مسبقة لمستخلف سابق
+        if (ccpParam) {
+          document.getElementById("field_ccp").value = ccpParam;
+        }
+
+        // تفريغ البيانات السابقة إذا كانت موجودة بالـ sessionStorage
+        const savedPrefill = sessionStorage.getItem("candidate_prefill");
+        if (savedPrefill) {
+          try {
+            currentPrefill = JSON.parse(savedPrefill);
+            if (currentPrefill && currentPrefill.data) {
+              prefillFromCandidateData(currentPrefill.data);
+            }
+          } catch(e) {}
+        }
+
+        // الضبط الافتراضي على مؤسسة ودائرة وبلدية المدير الحالي
+        applyDirectorGeoDefaults();
+      }
+
+      // حساب الرتبة الأولية
+      triggerRankCalculation();
+    });
+
+    // تهيئة خيارات الدوائر
+    function initDaairaOptions() {
+      const sel = document.getElementById("field_daaira");
+      sel.innerHTML = '<option value="">-- اختر الدائرة --</option>';
+      for (const d in baladiyaMap) {
+        sel.innerHTML += `<option value="${d}">${d}</option>`;
+      }
+    }
+
+    // تطبيق القيم الجغرافية الافتراضية التابعة لمؤسسة المدير
+    function applyDirectorGeoDefaults() {
+      if (!currentDirector) return;
+      if (currentDirector.level) {
+        document.getElementById("field_level").value = currentDirector.level;
+      }
+      if (currentDirector.daaira) {
+        document.getElementById("field_daaira").value = currentDirector.daaira;
+        onDaairaChange();
+      }
+      if (currentDirector.baladiya) {
+        document.getElementById("field_baladiya").value = currentDirector.baladiya;
+        onBaladiyaChange();
+      }
+      if (currentDirector.schoolName) {
+        document.getElementById("field_school").value = currentDirector.schoolName;
+      }
+    }
+
+    // عند تغيير الدائرة
+    function onDaairaChange() {
+      const daaira = document.getElementById("field_daaira").value;
+      const balSelect = document.getElementById("field_baladiya");
+      balSelect.innerHTML = '<option value="">-- اختر البلدية --</option>';
+
+      if (daaira && baladiyaMap[daaira]) {
+        baladiyaMap[daaira].forEach(b => {
+          balSelect.innerHTML += `<option value="${b}">${b}</option>`;
+        });
+      }
+      onBaladiyaChange();
+    }
+
+    // عند تغيير البلدية
+    function onBaladiyaChange() {
+      const daaira = document.getElementById("field_daaira").value;
+      const baladiya = document.getElementById("field_baladiya").value;
+      const level = document.getElementById("field_level").value;
+      const schSelect = document.getElementById("field_school");
+
+      schSelect.innerHTML = '<option value="">-- اختر المؤسسة --</option>';
+      const schools = getInstitutions(daaira, baladiya, level);
+
+      schools.forEach(s => {
+        schSelect.innerHTML += `<option value="${s}">${s}</option>`;
+      });
+
+      // إذا كانت مؤسسة المدير موجودة في القائمة يتم اختيارها افتراضياً
+      if (currentDirector && currentDirector.schoolName) {
+        schSelect.value = currentDirector.schoolName;
+      }
+    }
+
+    function onLevelChange() {
+      onBaladiyaChange();
+    }
+
+    // التعبئة المسبقة من بيانات مستخلف مسجل سابقاً
+    function prefillFromCandidateData(d) {
+      if (d.ass || d.nss) document.getElementById("field_nss").value = (d.ass || d.nss);
+      if (d.nin) document.getElementById("field_nin").value = d.nin;
+      if (d.fmn || d.fmn_ar) document.getElementById("field_fmn_ar").value = (d.fmn || d.fmn_ar);
+      if (d.frn || d.frn_ar) document.getElementById("field_frn_ar").value = (d.frn || d.frn_ar);
+      if (d.fmn_en) document.getElementById("field_fmn_en").value = d.fmn_en;
+      if (d.frn_en) document.getElementById("field_frn_en").value = d.frn_en;
+      if (d.birth_place) document.getElementById("field_birth_place").value = d.birth_place;
+      if (d.phone) document.getElementById("field_phone").value = d.phone;
+
+      // تاريخ الميلاد
+      if (d.diz || d.birth_date) {
+        const rawDate = d.diz || d.birth_date;
+        const p = String(rawDate).split("-");
+        if (p.length === 3) {
+          document.getElementById("dob_year").value = p[0];
+          document.getElementById("dob_month").value = parseInt(p[1], 10);
+          document.getElementById("dob_day").value = parseInt(p[2], 10);
+        }
+      }
+    }
+
+    // تحميل سجل موجود للتعديل
+    async function loadExistingRecordForEdit(docId) {
+      Swal.fire({ title: 'جاري جلب السجل للتعديل...', didOpen: () => Swal.showLoading() });
+      try {
+        const docSnap = await window.db.collection("contract_registrations").doc(docId).get();
+        if (!docSnap.exists) {
+          Swal.fire('خطأ', 'السجل المطلوب غير موجود', 'error');
+          return;
+        }
+        const data = docSnap.data();
+        Swal.close();
+
+        document.getElementById("field_ccp").value = data.ccp || '';
+        document.getElementById("field_nss").value = data.nss || '';
+        document.getElementById("field_nin").value = data.nin || '';
+        document.getElementById("field_fmn_ar").value = data.fmn_ar || '';
+        document.getElementById("field_frn_ar").value = data.frn_ar || '';
+        document.getElementById("field_fmn_en").value = data.fmn_en || '';
+        document.getElementById("field_frn_en").value = data.frn_en || '';
+        document.getElementById("field_birth_place").value = data.birth_place || '';
+        document.getElementById("field_phone").value = data.phone || '';
+
+        if (data.birth_date) {
+          const parts = data.birth_date.split("-");
+          if (parts.length === 3) {
+            document.getElementById("dob_year").value = parts[0];
+            document.getElementById("dob_month").value = parseInt(parts[1], 10);
+            document.getElementById("dob_day").value = parseInt(parts[2], 10);
+          }
+        }
+
+        if (data.marital_status) {
+          document.getElementById("field_marital_status").value = data.marital_status;
+          onMaritalStatusChange();
+        }
+        if (data.children_count) document.getElementById("field_children").value = data.children_count;
+        if (data.spouse_name) document.getElementById("field_spouse_name").value = data.spouse_name;
+        if (data.spouse_job) document.getElementById("field_spouse_job").value = data.spouse_job;
+
+        if (data.level) document.getElementById("field_level").value = data.level;
+        if (data.status_type) document.getElementById("field_status_type").value = data.status_type;
+        if (data.diploma) document.getElementById("field_diploma").value = data.diploma;
+
+        if (data.daaira) {
+          document.getElementById("field_daaira").value = data.daaira;
+          onDaairaChange();
+        }
+        if (data.baladiya) {
+          document.getElementById("field_baladiya").value = data.baladiya;
+          onBaladiyaChange();
+        }
+        if (data.school_name) {
+          document.getElementById("field_school").value = data.school_name;
+        }
+
+        if (data.start_date) document.getElementById("field_start_date").value = data.start_date;
+        if (data.end_date) document.getElementById("field_end_date").value = data.end_date;
+        calculateDuration();
+        triggerRankCalculation();
+
+      } catch (err) {
+        Swal.fire('خطأ', 'فشل قراءة السجل من قاعدة البيانات', 'error');
+      }
+    }
+
+    // إظهار وإخفاء حقول الحالة العائلية (الأولاد والزوج)
+    function onMaritalStatusChange() {
+      const status = document.getElementById("field_marital_status").value;
+      const groupChildren = document.getElementById("group_children");
+      const groupSpouse = document.getElementById("group_spouse");
+
+      if (status === "أعزب(ة)") {
+        groupChildren.style.display = "none";
+        groupSpouse.style.display = "none";
+      } else if (status === "متزوج(ة)") {
+        groupChildren.style.display = "block";
+        groupSpouse.style.display = "grid";
+      } else {
+        // مطلق أو أرمل
+        groupChildren.style.display = "block";
+        groupSpouse.style.display = "none";
+      }
+    }
+
+    // حساب الرتبة المولدة آلياً
+    function triggerRankCalculation() {
+      const level = document.getElementById("field_level").value;
+      const diploma = document.getElementById("field_diploma").value;
+      const statusType = document.getElementById("field_status_type").value;
+
+      const res = computeRank(level, diploma, statusType);
+
+      document.getElementById("generatedRankDisplay").textContent = res.rankTitle;
+      document.getElementById("displayGradeCode").textContent = res.gradeCode;
+      document.getElementById("displayAdminCode").textContent = res.adminCode;
+
+      document.getElementById("hidden_grade_code").value = res.gradeCode;
+      document.getElementById("hidden_admin_code").value = res.adminCode;
+    }
+
+    // تنسيق رقم الهاتف (00 00 00 00 00)
+    function formatPhoneInput(inp) {
+      let val = inp.value.replace(/\D/g, '');
+      if (val.length > 10) val = val.substring(0, 10);
+      
+      let formatted = "";
+      for (let i = 0; i < val.length; i++) {
+        if (i > 0 && i % 2 === 0) formatted += " ";
+        formatted += val[i];
+      }
+      inp.value = formatted;
+
+      const phoneErr = document.getElementById("phone_error");
+      if (val.length > 0 && !val.startsWith("05") && !val.startsWith("06") && !val.startsWith("07")) {
+        phoneErr.style.display = "block";
+      } else {
+        phoneErr.style.display = "none";
+      }
+    }
+
+    function validateLength(inp, exactLen) {
+      const errElem = document.getElementById(`${inp.id.replace('field_', '')}_error`);
+      if (errElem) {
+        errElem.style.display = (inp.value.length === exactLen || inp.value.length === 0) ? "none" : "block";
+      }
+    }
+
+    // حساب مدة العمل بين تاريخ البداية والنهاية
+    function calculateDuration() {
+      const startVal = document.getElementById("field_start_date").value;
+      const endVal = document.getElementById("field_end_date").value;
+      const display = document.getElementById("field_duration_display");
+
+      if (!startVal || !endVal) {
+        display.value = "";
+        return;
+      }
+
+      const d1 = new Date(startVal);
+      const d2 = new Date(endVal);
+
+      if (d2 < d1) {
+        display.value = "خطأ: تاريخ النهاية قبل البداية";
+        display.style.color = "red";
+        return;
+      }
+
+      display.style.color = "inherit";
+      const diffTime = Math.abs(d2 - d1);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // شامل يوم البدء
+      
+      const months = Math.floor(diffDays / 30);
+      const remainingDays = diffDays % 30;
+
+      let text = `${diffDays} يوم`;
+      if (months > 0) {
+        text += ` (حوالي ${months} شهر و ${remainingDays} يوم)`;
+      }
+      display.value = text;
+      return { diffDays, text };
+    }
+
+    // ==================== حفظ وتأكيد الاستمارة ====================
+    async function submitContractForm() {
+      // 1. التحقق من الحقول الإلزامية الصارمة
+      const ccp = document.getElementById("field_ccp").value.trim();
+      const nss = document.getElementById("field_nss").value.trim();
+      const nin = document.getElementById("field_nin").value.trim();
+      const fmnAr = document.getElementById("field_fmn_ar").value.trim();
+      const frnAr = document.getElementById("field_frn_ar").value.trim();
+      const fmnEn = document.getElementById("field_fmn_en").value.trim();
+      const frnEn = document.getElementById("field_frn_en").value.trim();
+      const birthPlace = document.getElementById("field_birth_place").value.trim();
+      
+      const dobDay = document.getElementById("dob_day").value.trim();
+      const dobMonth = document.getElementById("dob_month").value.trim();
+      const dobYear = document.getElementById("dob_year").value.trim();
+
+      const phoneRaw = document.getElementById("field_phone").value.replace(/\s/g, '');
+      const school = document.getElementById("field_school").value.trim();
+      const startDate = document.getElementById("field_start_date").value;
+      const endDate = document.getElementById("field_end_date").value;
+
+      if (!ccp || ccp.length < 10 || ccp.length > 12) {
+        return Swal.fire("تنبيه رقم الحساب (CCP)", "رقم الحساب البريدي الجاري (CCP) إجباري ويجب أن يتكون من 10 إلى 12 رقماً.", "warning");
+      }
+      if (!nss || nss.length !== 12) {
+        return Swal.fire("تنبيه", "رقم الضمان الاجتماعي (NSS) إجباري ويجب أن يتكون من 12 رقماً بالضبط.", "warning");
+      }
+      if (!nin || nin.length !== 18) {
+        return Swal.fire("تنبيه", "رقم التعريف الوطني (NIN) إجباري ويجب أن يتكون من 18 رقماً بالضبط.", "warning");
+      }
+      if (!fmnAr || !frnAr) {
+        return Swal.fire("تنبيه", "يرجى كتابة الاسم واللقب بالعربية.", "warning");
+      }
+      if (!fmnEn || !frnEn) {
+        return Swal.fire("تنبيه", "يرجى كتابة الاسم واللقب بالإنجليزية مطابقاً للبطاقة البيومترية.", "warning");
+      }
+      if (!dobDay || !dobMonth || !dobYear) {
+        return Swal.fire("تنبيه", "يرجى استكمال تاريخ الميلاد (يوم / شهر / سنة).", "warning");
+      }
+      if (!phoneRaw || phoneRaw.length !== 10 || (!phoneRaw.startsWith("05") && !phoneRaw.startsWith("06") && !phoneRaw.startsWith("07"))) {
+        return Swal.fire("تنبيه", "رقم الهاتف غير صحيح، يجب أن يتكون من 10 أرقام ويبدأ بـ 05 أو 06 أو 07.", "warning");
+      }
+      if (!school) {
+        return Swal.fire("تنبيه", "يرجى اختيار مؤسسة العمل بشكل صحيح.", "warning");
+      }
+      if (!startDate || !endDate) {
+        return Swal.fire("تنبيه", "يرجى تحديد فترة الاستخلاف (تاريخ البداية والنهاية).", "warning");
+      }
+
+      const birthDateStr = `${dobYear}-${String(dobMonth).padStart(2, '0')}-${String(dobDay).padStart(2, '0')}`;
+      const dur = calculateDuration();
+
+      // تجهيز الكائن النهائي للبيانات
+      const recordData = {
+        ccp: ccp,
+        nss: nss,
+        nin: nin,
+        fmn_ar: fmnAr,
+        frn_ar: frnAr,
+        fmn_en: fmnEn,
+        frn_en: frnEn,
+        birth_date: birthDateStr,
+        birth_day: dobDay,
+        birth_month: dobMonth,
+        birth_year: dobYear,
+        birth_place: birthPlace,
+        marital_status: document.getElementById("field_marital_status").value,
+        children_count: parseInt(document.getElementById("field_children").value, 10) || 0,
+        spouse_name: document.getElementById("field_spouse_name").value.trim(),
+        spouse_job: document.getElementById("field_spouse_job").value,
+        academic_year: document.getElementById("field_academic_year").value,
+        level: document.getElementById("field_level").value,
+        status_type: document.getElementById("field_status_type").value,
+        diploma: document.getElementById("field_diploma").value,
+        rank: document.getElementById("generatedRankDisplay").textContent.trim(),
+        rank_code: document.getElementById("hidden_grade_code").value,
+        admin_code: document.getElementById("hidden_admin_code").value,
+        daaira: document.getElementById("field_daaira").value,
+        baladiya: document.getElementById("field_baladiya").value,
+        school_name: school,
+        start_date: startDate,
+        end_date: endDate,
+        duration_days: dur ? dur.diffDays : 0,
+        duration_text: dur ? dur.text : "",
+        phone: phoneRaw,
+        director_ccp: currentDirector.ccp,
+        director_name: currentDirector.directorName
+      };
+
+      Swal.fire({
+        title: 'جاري الحفظ والتأكيد...',
+        text: 'يتم تسجيل الملف وتوليد الباركود وتحديث المزامنة',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
+        let savedDocId = editDocId;
+
+        if (editMode && editDocId) {
+          // تحديث سجل موجود
+          recordData.last_updated = new Date().toISOString();
+          await window.db.collection("contract_registrations").doc(editDocId).update(recordData);
+        } else {
+          // تسجيل ملف جديد
+          savedDocId = `${ccp}_${recordData.academic_year.replace('-', '_')}`;
+          recordData.created_at = new Date().toISOString();
+          recordData.workflow_status = "pending_director"; // بداية المسار عند المدير
+          recordData.rejection_reason = "";
+          recordData.workflow_history = [{
+            timestamp: new Date().toISOString(),
+            actorName: currentDirector.directorName,
+            actorRole: `مدير مؤسسة (${currentDirector.schoolName})`,
+            status: "pending_director",
+            note: "تم إنشاء وتسجيل الاستمارة بنجاح بالمؤسسة"
+          }];
+
+          await window.db.collection("contract_registrations").doc(savedDocId).set(recordData);
+
+          // حفظ السجل في قاعدة المستخلفين العامة أيضاً employeescompaycontra لسهولة التعرف عليه لاحقاً
+          try {
+            await window.db.collection("employeescompaycontra").doc(ccp).set({
+              ccp: ccp,
+              ass: nss,
+              nin: nin,
+              fmn_ar: fmnAr,
+              frn_ar: frnAr,
+              fmn_en: fmnEn,
+              frn_en: frnEn,
+              birth_date: birthDateStr,
+              birth_place: birthPlace,
+              phone: phoneRaw,
+              last_school: school,
+              last_updated: new Date().toISOString()
+            }, { merge: true });
+          } catch(e) {}
+        }
+
+        // مزامنة Google Sheets في الخلفية
+        GoogleSheetsSync.syncRegistration(recordData).catch(e => console.warn(e));
+
+        Swal.close();
+
+        // نافذة نجاح مع خيارات الطباعة الفورية أو العودة
+        Swal.fire({
+          icon: 'success',
+          title: 'تم حفظ وتأكيد المعلومات بنجاح',
+          html: `
+            <div style="font-size: 14px; text-align: center; line-height: 1.8;">
+              تم اعتماد بيانات الموظف: <b>${fmnAr} ${frnAr}</b><br>
+              رقم الحساب: <b>${ccp}</b> | الرتبة: <b>${recordData.rank}</b>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonText: '🖨️ طباعة الاستمارة الرسمية A4',
+          cancelButtonText: 'العودة لجدول المؤسسة',
+          confirmButtonColor: '#6a11cb',
+          cancelButtonColor: '#2575fc',
+          allowOutsideClick: false
+        }).then((result) => {
+          if (result.isConfirmed) {
+            window.location.href = `print-sheet.html?id=${savedDocId}&type=sheet`;
+          } else {
+            window.location.href = "director-dashboard.html";
+          }
+        });
+
+      } catch (err) {
+        Swal.close();
+        console.error("فشل حفظ الاستمارة:", err);
+        Swal.fire("خطأ", "حدث خطأ أثناء حفظ الملف في قاعدة البيانات، يرجى المحاولة مجدداً.", "error");
+      }
+    }
+  </script>
+</body>
+</html>

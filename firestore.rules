@@ -1,0 +1,67 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ========================================================
+    // قواعد حماية البيانات والأمان - مديرية التربية لولاية توقرت
+    // ========================================================
+
+    // 1. قاعدة بيانات الموظفين الدائمين (employeescompay)
+    // للقراءة فقط للتحقق من CCP، لا يمكن للعامة التعديل أو الحذف
+    match /employeescompay/{employeeId} {
+      allow read: if true;
+      allow write: if false; // الإدارة المركزية فقط عبر لوحة التحكم
+    }
+
+    // 2. قاعدة بيانات المستخلفين والمتعاقدين (employeescompaycontra)
+    match /employeescompaycontra/{contractorId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if false;
+    }
+
+    // 3. ملفات ومقررات الاستخلاف والتعاقد (contract_registrations)
+    match /contract_registrations/{registrationId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if resource.data.workflow_status == 'draft_director';
+    }
+
+    // 4. حسابات المستخدمين والمدراء (users_accounts)
+    match /users_accounts/{userId} {
+      allow read: if true;
+      allow create: if request.resource.data.ccp.size() >= 10 && request.resource.data.ccp.size() <= 12;
+      allow update, delete: if true;
+    }
+
+    // 5. حسابات المدراء (directors_accounts)
+    match /directors_accounts/{directorId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if false;
+    }
+
+    // 6. المؤسسات التعليمية (institutions)
+    match /institutions/{instId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 7. إعدادات النظام والبوابات والرتب (system_settings & ranks_settings)
+    match /system_settings/{settingDoc} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    match /ranks_settings/{rankDoc} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 8. كلمات المرور الإدارية (config/pass)
+    match /config/pass {
+      allow read: if true; // للتحقق من الدخول
+      allow write: if true; // لتحديث كلمات المرور من لوحة التحكم
+    }
+  }
+}

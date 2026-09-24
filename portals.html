@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>بوابات المنظومة الرقمية - مديرية التربية لولاية توقرت</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- الخطوط والأيقونات -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- المكتبات الأساسية -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <!-- ملفات المنظومة -->
+  <link rel="stylesheet" href="css/main.css">
+  <script src="js/firebase-init.js"></script>
+  <script src="js/app-core.js"></script>
+  <script src="js/auth-check.js"></script>
+  <script src="js/director-logic.js"></script>
+
+  <style>
+    body {
+      background: #f8fafc;
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      font-family: 'Cairo', sans-serif !important;
+      margin: 0;
+    }
+
+    .portals-topbar {
+      background: white;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 14px 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .container-wide {
+      max-width: 1150px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    .topbar-flex {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .user-profile-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .user-avatar-circle {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 3px 10px rgba(37,99,235,0.25);
+    }
+
+    .user-details h3 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .user-details p {
+      margin: 2px 0 0 0;
+      font-size: 12px;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-logout {
+      background: #fee2e2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-logout:hover {
+      background: #fca5a5;
+      color: #991b1b;
+    }
+
+    /* قسم الترحيب */
+    .portal-welcome-hero {
+      background: linear-gradient(135deg, #1e3a8a, #2563eb);
+      color: white;
+      padding: 45px 0 65px 0;
+      text-align: center;
+      position: relative;
+    }
+
+    .portal-welcome-hero h2 {
+      font-size: 28px;
+      font-weight: 900;
+      margin: 0 0 8px 0;
+    }
+
+    .portal-welcome-hero p {
+      font-size: 15px;
+      color: #cbd5e1;
+      margin: 0;
+      font-weight: 500;
+    }
+
+    /* شبكة كروت البوابات */
+    .portals-cards-wrapper {
+      max-width: 950px;
+      margin: -40px auto 50px auto;
+      padding: 0 20px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .portals-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 25px;
+    }
+
+    .portal-card-box {
+      background: white;
+      border-radius: 24px;
+      padding: 35px 30px;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.08);
+      border: 2px solid transparent;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    /* كارت بوابة الموظفين الدائمين (مجمدة افتراضياً) */
+    .portal-card-permanent {
+      border-color: #e2e8f0;
+    }
+
+    .portal-card-permanent.is-frozen {
+      opacity: 0.85;
+      background: #fafafa;
+      filter: grayscale(0.2);
+    }
+
+    .portal-card-permanent:not(.is-frozen):hover {
+      transform: translateY(-6px);
+      box-shadow: 0 20px 40px rgba(37,99,235,0.15);
+      border-color: #3b82f6;
+    }
+
+    /* كارت بوابة المستخلفين والمتعاقدين */
+    .portal-card-contracts {
+      border-color: #2563eb;
+      background: linear-gradient(to bottom, #ffffff, #f8faff);
+    }
+
+    .portal-card-contracts:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 20px 40px rgba(37,99,235,0.18);
+    }
+
+    .portal-icon-large {
+      width: 72px;
+      height: 72px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      margin-bottom: 20px;
+    }
+
+    .icon-bg-blue {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: white;
+      box-shadow: 0 8px 20px rgba(37,99,235,0.3);
+    }
+
+    .icon-bg-slate {
+      background: #f1f5f9;
+      color: #64748b;
+    }
+
+    .portal-card-box h3 {
+      font-size: 21px;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 10px 0;
+    }
+
+    .portal-card-box p {
+      font-size: 14px;
+      color: #64748b;
+      line-height: 1.7;
+      margin-bottom: 25px;
+      flex-grow: 1;
+    }
+
+    .btn-portal-entry {
+      width: 100%;
+      height: 50px;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 800;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      border: none;
+      box-sizing: border-box;
+    }
+
+    .btn-portal-blue {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: white;
+      box-shadow: 0 6px 18px rgba(37,99,235,0.3);
+    }
+
+    .btn-portal-blue:hover {
+      box-shadow: 0 8px 25px rgba(37,99,235,0.45);
+      color: white;
+    }
+
+    .btn-portal-disabled {
+      background: #e2e8f0;
+      color: #94a3b8;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .lock-badge-frozen {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #fee2e2;
+      color: #dc2626;
+      padding: 5px 12px;
+      border-radius: 50px;
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .active-badge-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #dcfce7;
+      color: #15803d;
+      padding: 5px 12px;
+      border-radius: 50px;
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== الشريط العلوي ==================== -->
+  <header class="portals-topbar">
+    <div class="container-wide">
+      <div class="topbar-flex">
+        
+        <div class="user-profile-badge">
+          <div class="user-avatar-circle">
+            <i class="fas fa-user-shield"></i>
+          </div>
+          <div class="user-details">
+            <h3 id="topUserName">جاري التحميل...</h3>
+            <p id="topUserSchool">مديرية التربية لولاية توقرت</p>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <button class="btn-logout" onclick="AuthGuard.logout('login.html')">
+            <i class="fas fa-arrow-right-from-bracket"></i>
+            <span>تسجيل الخروج</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== رأس الترحيب ==================== -->
+  <section class="portal-welcome-hero">
+    <div class="container-wide">
+      <h2>فضاء البوابات والخدمات الرقمية المعتمدة</h2>
+      <p>اختر البوابة الإدارية المطلوبة لمباشرة أعمالك الإدارية والمالية</p>
+    </div>
+  </section>
+
+  <!-- ==================== شبكة البوابات ==================== -->
+  <main class="portals-cards-wrapper">
+    <div class="portals-grid">
+
+      <!-- ==================== 1. بوابة الموظفين الدائمين ==================== -->
+      <div class="portal-card-box portal-card-permanent is-frozen" id="permanentPortalCard">
+        <div>
+          <div class="portal-icon-large icon-bg-slate" id="permanentIconBox">
+            <i class="fas fa-id-card-clip" id="permanentIcon"></i>
+          </div>
+
+          <div id="permanentPortalBadgeContainer">
+            <div class="lock-badge-frozen" id="permanentLockBadge">
+              <i class="fas fa-lock"></i> البوابة مجمدة حالياً من طرف الإدارة
+            </div>
+          </div>
+
+          <h3>بوابة الموظفين الدائمين</h3>
+          <p>
+            تتيح فحص الحساب واستخراج البطاقات المهنية واستمارات المعلومات الرسمية الخاصة بالموظفين المرسمين والدائمين بقطاع التربية.
+          </p>
+        </div>
+
+        <div id="permanentPortalAction">
+          <button class="btn-portal-entry btn-portal-disabled" id="btnPermanentEntry" disabled>
+            <i class="fas fa-lock"></i>
+            <span>البوابة مغلقة مؤقتاً</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ==================== 2. بوابة المستخلفين والمتعاقدين ==================== -->
+      <div class="portal-card-box portal-card-contracts">
+        <div>
+          <div class="portal-icon-large icon-bg-blue">
+            <i class="fas fa-file-signature"></i>
+          </div>
+
+          <div class="active-badge-live">
+            <i class="fas fa-circle-check"></i> بوابة نشطة ومتاحة
+          </div>
+
+          <h3>بوابة المستخلفين والمتعاقدين</h3>
+          <p>
+            فضاء تسيير وتسجيل ملفات الأساتذة والموظفين المستخلفين والمتعاقدين بالمؤسسة التعليمية، فحص رقم الحساب CCP، ومتابعة اعتماد الملفات بالرواتب.
+          </p>
+        </div>
+
+        <a href="contract-portal/director-dashboard.html" class="btn-portal-entry btn-portal-blue">
+          <span>دخول بوابة المستخلفين</span>
+          <i class="fas fa-arrow-left"></i>
+        </a>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    let currentUser = null;
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      // 1. فحص الجلسة النشطة
+      currentUser = AuthGuard.getUserSession() || AuthGuard.getDirectorSession();
+
+      if (!currentUser) {
+        // فحص هل هو المشرف العام
+        if (AuthGuard.getAdminSession()) {
+          currentUser = {
+            directorName: "المشرف العام",
+            school_name: "مديرية التربية لولاية توقرت",
+            first_name: "المشرف",
+            last_name: "العام"
+          };
+        } else {
+          window.location.replace("login.html");
+          return;
+        }
+      }
+
+      // 2. تحديث بيانات المستخدم في الشريط العلوي
+      const name = currentUser.directorName || `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || currentUser.username;
+      const school = currentUser.school_name || currentUser.schoolName || "المؤسسة التعليمية";
+      const level = currentUser.level ? `(${currentUser.level})` : "";
+
+      document.getElementById("topUserName").textContent = name;
+      document.getElementById("topUserSchool").textContent = `${school} ${level}`;
+
+      // 3. فحص حالة بوابة الموظفين الدائمين من Firebase
+      await checkPermanentPortalStatus();
+    });
+
+    // فحص حالة بوابة الموظفين الدائمين
+    async function checkPermanentPortalStatus() {
+      try {
+        const settings = await AppCore.Gateways.getSettings();
+        const isEnabled = settings.permanent_portal_enabled === true;
+
+        const card = document.getElementById("permanentPortalCard");
+        const iconBox = document.getElementById("permanentIconBox");
+        const badgeCont = document.getElementById("permanentPortalBadgeContainer");
+        const actionCont = document.getElementById("permanentPortalAction");
+
+        if (isEnabled) {
+          // البوابة مفعلة ومفتوحة
+          card.classList.remove("is-frozen");
+          iconBox.className = "portal-icon-large icon-bg-blue";
+          badgeCont.innerHTML = `
+            <div class="active-badge-live">
+              <i class="fas fa-circle-check"></i> البوابة مفتوحة ومفعلة
+            </div>
+          `;
+          actionCont.innerHTML = `
+            <a href="permanent-employee.html" class="btn-portal-entry btn-portal-blue" onclick="grantPermanentAccess()">
+              <span>دخول بوابة الموظفين الدائمين</span>
+              <i class="fas fa-arrow-left"></i>
+            </a>
+          `;
+        } else {
+          // البوابة مجمدة (الوضع الافتراضي)
+          card.classList.add("is-frozen");
+          iconBox.className = "portal-icon-large icon-bg-slate";
+          badgeCont.innerHTML = `
+            <div class="lock-badge-frozen">
+              <i class="fas fa-lock"></i> البوابة مجمدة حالياً من طرف الإدارة
+            </div>
+          `;
+          actionCont.innerHTML = `
+            <button class="btn-portal-entry btn-portal-disabled" disabled onclick="notifyPortalLocked()">
+              <i class="fas fa-lock"></i>
+              <span>البوابة مغلقة مؤقتاً</span>
+            </button>
+          `;
+        }
+      } catch (err) {
+        console.warn("فحص بوابة الدائمين:", err);
+      }
+    }
+
+    function grantPermanentAccess() {
+      // منح تصريح المرور لبوابة الدائمين والبطاقات دون طلب كلمة مرور ثانية
+      sessionStorage.setItem("secure_cards_access", "granted_from_main_page");
+      sessionStorage.setItem("permanent_access_granted", "true");
+    }
+
+    function notifyPortalLocked() {
+      Swal.fire({
+        icon: 'info',
+        title: 'البوابة مجمدة',
+        text: 'بوابة الموظفين الدائمين مغلقة حالياً من طرف إدارة مصلحة الرواتب.',
+        confirmButtonColor: '#2563eb'
+      });
+    }
+  </script>
+
+</body>
+</html>

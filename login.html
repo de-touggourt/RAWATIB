@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>تسجيل الدخول - مصلحة نفقات المستخدمين توقرت</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- الخطوط والأيقونات -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- المكتبات الأساسية -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <!-- ملفات المنظومة -->
+  <link rel="stylesheet" href="css/main.css">
+  <script src="js/firebase-init.js"></script>
+  <script src="js/app-core.js"></script>
+  <script src="js/auth-check.js"></script>
+
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #1e40af 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      font-family: 'Cairo', sans-serif !important;
+      margin: 0;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.2) 0%, transparent 40%),
+                  radial-gradient(circle at 90% 80%, rgba(245, 158, 11, 0.15) 0%, transparent 40%);
+      pointer-events: none;
+    }
+
+    .login-container-card {
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(16px);
+      border-radius: 24px;
+      padding: 40px 35px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      position: relative;
+      z-index: 10;
+      animation: fadeInScale 0.4s ease-out;
+    }
+
+    @keyframes fadeInScale {
+      from { opacity: 0; transform: scale(0.95) translateY(15px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .login-header-section {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .login-logo-circle {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      border: 3px solid #2563eb;
+      object-fit: cover;
+      margin: 0 auto 14px auto;
+      display: block;
+      box-shadow: 0 4px 15px rgba(37,99,235,0.25);
+    }
+
+    .login-header-section h2 {
+      font-size: 22px;
+      font-weight: 900;
+      color: #0f172a;
+      margin: 0 0 6px 0;
+    }
+
+    .login-header-section p {
+      font-size: 13px;
+      color: #64748b;
+      margin: 0;
+      font-weight: 600;
+    }
+
+    .form-group-custom {
+      margin-bottom: 18px;
+      text-align: right;
+    }
+
+    .form-group-custom label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .input-wrapper-icon {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrapper-icon i.field-icon {
+      position: absolute;
+      right: 14px;
+      color: #94a3b8;
+      font-size: 15px;
+      pointer-events: none;
+    }
+
+    .custom-input {
+      width: 100%;
+      height: 48px;
+      padding: 10px 42px 10px 42px;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      font-size: 14.5px;
+      font-weight: 600;
+      color: #1e293b;
+      background: #f8fafc;
+      transition: all 0.25s ease;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    .custom-input:focus {
+      background: #ffffff;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+
+    .toggle-password-btn {
+      position: absolute;
+      left: 14px;
+      background: none;
+      border: none;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 16px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.2s;
+    }
+
+    .toggle-password-btn:hover {
+      color: #2563eb;
+    }
+
+    .login-options {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      font-size: 12.5px;
+    }
+
+    .forgot-link {
+      color: #2563eb;
+      text-decoration: none;
+      font-weight: 700;
+      transition: color 0.2s;
+      cursor: pointer;
+    }
+
+    .forgot-link:hover {
+      text-decoration: underline;
+      color: #1d4ed8;
+    }
+
+    .btn-submit-login {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: white;
+      border: none;
+      width: 100%;
+      height: 50px;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-submit-login:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(37, 99, 235, 0.45);
+    }
+
+    .btn-submit-login:active {
+      transform: scale(0.98);
+    }
+
+    .divider-text {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 22px 0;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .divider-text::before, .divider-text::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .divider-text span {
+      padding: 0 10px;
+    }
+
+    .btn-register-link {
+      background: #f1f5f9;
+      color: #1e293b;
+      border: 1px solid #cbd5e1;
+      width: 100%;
+      height: 48px;
+      border-radius: 14px;
+      font-size: 14.5px;
+      font-weight: 800;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-sizing: border-box;
+    }
+
+    .btn-register-link:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
+    .back-to-home {
+      display: block;
+      text-align: center;
+      margin-top: 18px;
+      color: #64748b;
+      font-size: 13px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+
+    .back-to-home:hover {
+      color: #2563eb;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container-card">
+    
+    <div class="login-header-section">
+      <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" 
+           alt="شعار مديرية التربية لولاية توقرت" 
+           class="login-logo-circle">
+      <h2>تسجيل الدخول للمنظومة</h2>
+      <p>مصلحة نفقات المستخدمين - مديرية التربية لولاية توقرت</p>
+    </div>
+
+    <form id="loginForm" onsubmit="event.preventDefault(); handleSystemLogin();">
+      
+      <!-- اسم المستخدم -->
+      <div class="form-group-custom">
+        <label for="usernameInput">اسم المستخدم أو رقم الحساب الجاري:</label>
+        <div class="input-wrapper-icon">
+          <i class="fas fa-user field-icon"></i>
+          <input type="text" id="usernameInput" class="custom-input" 
+                 placeholder="أدخل اسم المستخدم أو CCP" required autofocus>
+        </div>
+      </div>
+
+      <!-- كلمة المرور -->
+      <div class="form-group-custom">
+        <label for="passwordInput">كلمة المرور:</label>
+        <div class="input-wrapper-icon">
+          <i class="fas fa-lock field-icon"></i>
+          <input type="password" id="passwordInput" class="custom-input" 
+                 placeholder="••••••••" required>
+          <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibility()" title="إظهار / إخفاء">
+            <i class="fas fa-eye" id="passwordToggleIcon"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="login-options">
+        <span class="forgot-link" onclick="handleForgotPassword()">نسيت كلمة السر؟</span>
+      </div>
+
+      <button type="submit" class="btn-submit-login" id="btnLoginSubmit">
+        <i class="fas fa-arrow-left"></i>
+        <span>تسجيل الدخول</span>
+      </button>
+
+      <div class="divider-text">
+        <span>ليس لديك حساب؟</span>
+      </div>
+
+      <a href="register.html" class="btn-register-link">
+        <i class="fas fa-user-plus"></i>
+        <span>إنشاء حساب جديد</span>
+      </a>
+
+      <a href="index.html" class="back-to-home">
+        <i class="fas fa-home"></i> العودة للواجهة التعريفية
+      </a>
+
+    </form>
+
+  </div>
+
+  <script>
+    // إظهار وإخفاء كلمة المرور
+    function togglePasswordVisibility() {
+      const passInp = document.getElementById("passwordInput");
+      const icon = document.getElementById("passwordToggleIcon");
+      if (passInp.type === "password") {
+        passInp.type = "text";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+      } else {
+        passInp.type = "password";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+      }
+    }
+
+    // معالجة تسجيل الدخول الآمن
+    async function handleSystemLogin() {
+      const username = document.getElementById("usernameInput").value.trim();
+      const password = document.getElementById("passwordInput").value.trim();
+
+      if (!username || !password) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'تنبيه',
+          text: 'يرجى إدخال اسم المستخدم وكلمة المرور.',
+          confirmButtonColor: '#2563eb'
+        });
+        return;
+      }
+
+      Swal.fire({
+        title: 'جاري التحقق من الحساب...',
+        text: 'يتم فحص الصلاحيات وكلمات المرور',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
+        // ------------------------------------------------------------
+        // 1. الفحص أولاً في حسابات الإدارة والمكاتب من config/pass
+        // ------------------------------------------------------------
+        const adminCheck = await AppCore.ConfigAuth.verifyAdminLogin(username, password);
+
+        if (adminCheck.success) {
+          Swal.close();
+          AuthGuard.setAdminSession(true, adminCheck);
+
+          // توجيه بحسب الرتبة الإدارية
+          if (adminCheck.role === "office_primary" || adminCheck.role === "office_middle" || adminCheck.role === "office_secondary") {
+            AuthGuard.setOfficeSession({
+              officeType: adminCheck.role.replace("office_", ""),
+              roleTitle: adminCheck.title,
+              username: adminCheck.username
+            });
+            Swal.fire({
+              icon: 'success',
+              title: 'مرحباً بك',
+              text: adminCheck.title,
+              timer: 1400,
+              showConfirmButton: false
+            }).then(() => {
+              window.location.href = "office-portal/office-dashboard.html";
+            });
+            return;
+          } else if (adminCheck.role === "office_payroll" || adminCheck.isSuperAdmin) {
+            Swal.fire({
+              icon: 'success',
+              title: 'مرحباً بك',
+              text: 'لوحة التحكم المركزية - مصلحة الرواتب',
+              timer: 1400,
+              showConfirmButton: false
+            }).then(() => {
+              window.location.href = "admin/dashboard.html";
+            });
+            return;
+          } else {
+            // مدير المؤسسة عبر كود الإدارة
+            AuthGuard.setDirectorSession({
+              directorName: adminCheck.username,
+              ccp: adminCheck.username
+            });
+            Swal.fire({
+              icon: 'success',
+              title: 'مرحباً بك',
+              text: adminCheck.title,
+              timer: 1400,
+              showConfirmButton: false
+            }).then(() => {
+              window.location.href = "portals.html";
+            });
+            return;
+          }
+        }
+
+        // ------------------------------------------------------------
+        // 2. الفحص في حسابات المستخدمين المنشأة (users_accounts)
+        // ------------------------------------------------------------
+        const userCheck = await AppCore.Users.verifyUserLogin(username, password);
+
+        if (userCheck.success) {
+          Swal.close();
+          const user = userCheck.user;
+          AuthGuard.setUserSession(user);
+
+          Swal.fire({
+            icon: 'success',
+            title: `مرحباً بك`,
+            html: `<b style="color: #2563eb; font-size: 17px;">${user.first_name || ''} ${user.last_name || ''}</b><br><span style="color:#64748b; font-size:13px;">${user.school_name || ''} (${user.grade_title || 'موظف'})</span>`,
+            timer: 1500,
+            showConfirmButton: false
+          }).then(() => {
+            window.location.href = "portals.html";
+          });
+          return;
+        }
+
+        // 3. فشل التحقق في كلا المسارين
+        Swal.close();
+        Swal.fire({
+          icon: 'error',
+          title: 'فشل تسجيل الدخول',
+          text: userCheck.message || 'اسم المستخدم أو كلمة المرور غير صحيحة.',
+          confirmButtonColor: '#2563eb'
+        });
+
+      } catch (err) {
+        Swal.close();
+        console.error("خطأ تسجيل الدخول:", err);
+        Swal.fire({
+          icon: 'error',
+          title: 'خطأ في الاتصال',
+          text: 'تعذر الاتصال بقاعدة البيانات، يرجى التحقق من اتصالك بالإنترنت.',
+          confirmButtonColor: '#2563eb'
+        });
+      }
+    }
+
+    // نافذة نسيت كلمة السر
+    function handleForgotPassword() {
+      Swal.fire({
+        title: 'استرجاع كلمة المرور',
+        html: `
+          <div style="direction: rtl; text-align: right; font-size: 13.5px; line-height: 1.8;">
+            <p style="color: #475569; margin-bottom: 12px;">
+              نظراً لخصوصية وأمان الحسابات الإدارية والمالية:
+            </p>
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px; border-radius: 10px; margin-bottom: 12px;">
+              <strong style="color: #1e40af;">للموظفين والمدراء:</strong><br>
+              يرجى التقدم بطلب إعادة تعيين كلمة المرور لدى <b>مصلحة تسيير نفقات المستخدمين</b> بمديرية التربية لولاية توقرت مرفوقاً ببطاقة الهوية أو رقم الحساب CCP.
+            </div>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 10px;">
+              <strong style="color: #334155;">لحسابات مسؤولي المكاتب:</strong><br>
+              يتم إعادة تعيين الرمز السري مباشرة من طرف <b>المشرف العام</b> عبر لوحة التحكم المركزية.
+            </div>
+          </div>
+        `,
+        confirmButtonText: 'حسناً، فهمت',
+        confirmButtonColor: '#2563eb'
+      });
+    }
+  </script>
+
+</body>
+</html>

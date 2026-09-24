@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>لوحة مسؤولي المكاتب والرواتب - مديرية التربية لولاية توقرت</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- الخطوط والأيقونات -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- المكتبات الأساسية ومكتبة Excel -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <!-- ملفات المنظومة -->
+  <link rel="stylesheet" href="../css/main.css">
+  <script src="../js/firebase-init.js"></script>
+  <script src="../js/geo-data.js"></script>
+  <script src="../js/workflow.js"></script>
+  <script src="../js/auth-check.js"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    
+    <!-- شريط التنقل العلوي -->
+    <div class="top-navbar">
+      <div class="brand-section">
+        <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" class="brand-logo">
+        <div class="brand-info">
+          <h1 id="navRoleTitle">لوحة رئيس المكتب</h1>
+          <p>مديرية التربية لولاية توقرت</p>
+        </div>
+      </div>
+
+      <div class="navbar-user-box">
+        <div class="user-badge" style="background:#fdf2f8; color:#be185d; border-color:#fbcfe8;">
+          <i class="fas fa-user-shield"></i>
+          <span id="navOfficeType">مكتب التعليم</span>
+        </div>
+        <div class="user-badge" style="background:#e6fffa; color:#0d9488; border-color:#99f6e4;">
+          <i class="fas fa-calendar"></i>
+          <span id="navYear">السنة: 2026-2027</span>
+        </div>
+        <button class="btn btn-danger btn-sm" onclick="AuthGuard.logout('login.html')">
+          <i class="fas fa-sign-out-alt"></i> خروج
+        </button>
+      </div>
+    </div>
+
+    <!-- شبكة الإحصائيات المفلترة حسب الطور -->
+    <div class="stats-grid">
+      <div class="stat-item stat-primary">
+        <div class="stat-info-text">
+          <p>إجمالي ملفات الطور</p>
+          <h3 id="stat_total">0</h3>
+        </div>
+        <div class="stat-icon"><i class="fas fa-folder"></i></div>
+      </div>
+
+      <div class="stat-item stat-warning">
+        <div class="stat-info-text">
+          <p>قيد دراسة ومطابقة المكتب</p>
+          <h3 id="stat_pending">0</h3>
+        </div>
+        <div class="stat-icon"><i class="fas fa-clock"></i></div>
+      </div>
+
+      <div class="stat-item stat-info">
+        <div class="stat-info-text">
+          <p>محال لمصلحة الرواتب</p>
+          <h3 id="stat_to_payroll">0</h3>
+        </div>
+        <div class="stat-icon"><i class="fas fa-file-export"></i></div>
+      </div>
+
+      <div class="stat-item stat-success">
+        <div class="stat-info-text">
+          <p>معتمد نهائياً للصرف</p>
+          <h3 id="stat_approved">0</h3>
+        </div>
+        <div class="stat-icon"><i class="fas fa-check-double"></i></div>
+      </div>
+
+      <div class="stat-item stat-danger">
+        <div class="stat-info-text">
+          <p>معاد للمؤسسة (غير مطابق)</p>
+          <h3 id="stat_rejected">0</h3>
+        </div>
+        <div class="stat-icon"><i class="fas fa-circle-exclamation"></i></div>
+      </div>
+    </div>
+
+    <!-- بطاقة البحث والفلترة الشاملة -->
+    <div class="portal-card" style="padding: 18px;">
+      <div style="font-weight: 800; font-size: 14px; margin-bottom: 12px; color: var(--dark-color);">
+        <i class="fas fa-filter" style="color: var(--primary-color);"></i> محرك البحث والتصفية المتقدم:
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: center;">
+        <input type="text" id="flt_search" placeholder="بحث بالاسم، اللقب، CCP أو الهاتف..." 
+               style="height: 40px; font-size: 13px;" oninput="applyOfficeFilters()">
+
+        <select id="flt_daaira" onchange="onFilterDaairaChange(); applyOfficeFilters();" style="height: 40px; font-size: 13px;">
+          <option value="">-- كل الدوائر --</option>
+        </select>
+
+        <select id="flt_baladiya" onchange="applyOfficeFilters()" style="height: 40px; font-size: 13px;">
+          <option value="">-- كل البلديات --</option>
+        </select>
+
+        <select id="flt_status" onchange="applyOfficeFilters()" style="height: 40px; font-size: 13px;">
+          <option value="">-- كل الوضعيات --</option>
+          <option value="pending_director">قيد الدراسة بالمؤسسة</option>
+          <option value="submitted_to_office">محال لمكتب الطور (جديد)</option>
+          <option value="office_approved">مطابق - محال للرواتب</option>
+          <option value="returned_to_director">معاد للمؤسسة للتعديل</option>
+          <option value="payroll_approved">معتمد نهائياً للصرف</option>
+          <option value="payroll_rejected">غير مطابق بمصلحة الرواتب</option>
+        </select>
+
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-success" style="height: 40px; flex: 1;" onclick="exportToExcel()">
+            <i class="fas fa-file-excel"></i> تصدير Excel
+          </button>
+          <button class="btn btn-secondary" style="height: 40px;" onclick="loadOfficeEmployees()" title="تحديث">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- جدول الموظفين المعروض -->
+    <div class="portal-card">
+      <div class="table-wrapper">
+        <div class="table-responsive">
+          <table class="custom-table" id="officeTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>رقم الحساب (CCP)</th>
+                <th>الاسم واللقب</th>
+                <th>الطور</th>
+                <th>المؤسسة</th>
+                <th>الرتبة المعتمدة</th>
+                <th>المدة والفترة</th>
+                <th>رقم الهاتف</th>
+                <th>وضعية الملف</th>
+                <th style="text-align: center;">دراسة الملف والإجراءات</th>
+              </tr>
+            </thead>
+            <tbody id="officeTableBody">
+              <tr>
+                <td colspan="10" style="text-align: center; padding: 30px; color: #718096;">
+                  <i class="fas fa-spinner fa-spin fa-2x"></i><br>جاري تحميل البيانات...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let currentOffice = null;
+    let allOfficeRecords = [];
+    let filteredRecords = [];
+    let activeYear = "2026-2027";
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      // 1. فحص الحماية
+      currentOffice = AuthGuard.requireOffice();
+      if (!currentOffice) return;
+
+      document.getElementById("navRoleTitle").textContent = currentOffice.roleTitle;
+      document.getElementById("navOfficeType").textContent = currentOffice.filterLevel === "all" ? "مصلحة الرواتب" : `طور: ${currentOffice.filterLevel}`;
+
+      // 2. إعداد فلاتر الدوائر
+      initFilterDaairas();
+
+      // 3. جلب إعدادات السنة
+      const sys = await getSystemSettings();
+      if (sys && sys.active_academic_year) {
+        activeYear = sys.active_academic_year;
+        document.getElementById("navYear").textContent = `السنة: ${activeYear}`;
+      }
+
+      // 4. تحميل السجلات
+      await loadOfficeEmployees();
+    });
+
+    function initFilterDaairas() {
+      const sel = document.getElementById("flt_daaira");
+      for (const d in baladiyaMap) {
+        sel.innerHTML += `<option value="${d}">${d}</option>`;
+      }
+    }
+
+    function onFilterDaairaChange() {
+      const d = document.getElementById("flt_daaira").value;
+      const bSel = document.getElementById("flt_baladiya");
+      bSel.innerHTML = '<option value="">-- كل البلديات --</option>';
+      if (d && baladiyaMap[d]) {
+        baladiyaMap[d].forEach(b => {
+          bSel.innerHTML += `<option value="${b}">${b}</option>`;
+        });
+      }
+    }
+
+    async function loadOfficeEmployees() {
+      const tbody = document.getElementById("officeTableBody");
+      tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin fa-2x"></i><br>جاري تحميل البيانات...</td></tr>`;
+
+      try {
+        let q = window.db.collection("contract_registrations").where("academic_year", "==", activeYear);
+
+        // إذا كان رئيس مكتب محدد، يرى فقط طوره
+        if (currentOffice.filterLevel && currentOffice.filterLevel !== "all") {
+          q = q.where("level", "==", currentOffice.filterLevel);
+        }
+
+        const snap = await q.get();
+        allOfficeRecords = [];
+
+        snap.forEach(doc => {
+          allOfficeRecords.push({ id: doc.id, ...doc.data() });
+        });
+
+        // ترتيب الأحدث أولاً
+        allOfficeRecords.sort((a,b) => (b.last_updated || b.created_at || '').localeCompare(a.last_updated || a.created_at || ''));
+
+        updateOfficeStats(allOfficeRecords);
+        applyOfficeFilters();
+
+      } catch (err) {
+        console.error("خطأ جلب سجلات المكتب:", err);
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:#dc3545; padding:20px;">حدث خطأ في تحميل السجلات</td></tr>`;
+      }
+    }
+
+    function updateOfficeStats(list) {
+      document.getElementById("stat_total").textContent = list.length;
+      document.getElementById("stat_pending").textContent = list.filter(e => e.workflow_status === "submitted_to_office").length;
+      document.getElementById("stat_to_payroll").textContent = list.filter(e => e.workflow_status === "office_approved").length;
+      document.getElementById("stat_approved").textContent = list.filter(e => e.workflow_status === "payroll_approved").length;
+      document.getElementById("stat_rejected").textContent = list.filter(e => e.workflow_status === "returned_to_director" || e.workflow_status === "payroll_rejected").length;
+    }
+
+    function applyOfficeFilters() {
+      const searchTxt = document.getElementById("flt_search").value.trim().toLowerCase();
+      const daairaVal = document.getElementById("flt_daaira").value;
+      const baladiyaVal = document.getElementById("flt_baladiya").value;
+      const statusVal = document.getElementById("flt_status").value;
+
+      filteredRecords = allOfficeRecords.filter(e => {
+        if (daairaVal && e.daaira !== daairaVal) return false;
+        if (baladiyaVal && e.baladiya !== baladiyaVal) return false;
+        if (statusVal && e.workflow_status !== statusVal) return false;
+
+        if (searchTxt) {
+          const combo = `${e.fmn_ar || ''} ${e.frn_ar || ''} ${e.ccp || ''} ${e.school_name || ''} ${e.phone || ''} ${e.nin || ''}`.toLowerCase();
+          if (!combo.includes(searchTxt)) return false;
+        }
+        return true;
+      });
+
+      renderOfficeTable(filteredRecords);
+    }
+
+    function renderOfficeTable(list) {
+      const tbody = document.getElementById("officeTableBody");
+      tbody.innerHTML = "";
+
+      if (list.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:30px; color:#718096;">لا توجد أي نتائج مطابقة للتصفية المحددة.</td></tr>`;
+        return;
+      }
+
+      list.forEach((emp, idx) => {
+        const tr = document.createElement("tr");
+        const statusBadge = getStatusBadge(emp.workflow_status);
+        const nameAr = `${emp.fmn_ar || ''} ${emp.frn_ar || ''}`.trim();
+        const duration = `${emp.duration_days || 0} يوم (${emp.start_date || ''} إلى ${emp.end_date || ''})`;
+
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td><b style="color:var(--primary-color);">${emp.ccp}</b></td>
+          <td>
+            <strong>${nameAr}</strong>
+            <small style="display:block; color:#718096; font-size:11px;">${emp.fmn_en || ''} ${emp.frn_en || ''}</small>
+          </td>
+          <td><span class="badge" style="background:#f1f5f9; color:#334155;">${emp.level || '---'}</span></td>
+          <td><span style="font-weight:700;">${emp.school_name || '---'}</span><br><small style="color:#718096;">${emp.baladiya || ''}</small></td>
+          <td><span style="font-size:12px; font-weight:700;">${emp.rank || '---'}</span></td>
+          <td style="font-size:11px; direction:ltr; text-align:right;">${duration}</td>
+          <td dir="ltr" style="text-align:right; font-weight:bold;">${emp.phone || '---'}</td>
+          <td>${statusBadge}</td>
+          <td style="text-align: center;">
+            <div class="action-btns" style="justify-content:center;">
+              
+              <!-- زر دراسة ومطابقة الملف -->
+              <button class="btn btn-sm btn-main" onclick="openReviewModal('${emp.id}')" title="دراسة ومطابقة الملف">
+                <i class="fas fa-clipboard-check"></i> دراسة الملف
+              </button>
+
+              <!-- طباعة الاستمارة -->
+              <a href="../contract-portal/print-sheet.html?id=${emp.id}&type=sheet" target="_blank" class="btn-icon" style="background:#6a11cb;" title="طباعة الاستمارة A4">
+                <i class="fas fa-print"></i>
+              </a>
+
+              <!-- طباعة المقرر -->
+              <a href="../contract-portal/print-sheet.html?id=${emp.id}&type=decision" target="_blank" class="btn-icon" style="background:var(--success-color);" title="مقرر الاستخلاف">
+                <i class="fas fa-certificate"></i>
+              </a>
+
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // نافذة دراسة الملف واتخاذ القرار (مطابق / غير مطابق مع التعليل)
+    function openReviewModal(empId) {
+      const emp = allOfficeRecords.find(e => e.id === empId);
+      if (!emp) return;
+
+      const isPayroll = currentOffice.officeType === "payroll";
+      const stepperHtml = renderWorkflowStepper(emp.workflow_status, emp.rejection_reason);
+
+      Swal.fire({
+        title: `دراسة ومطابقة ملف: ${emp.fmn_ar || ''} ${emp.frn_ar || ''}`,
+        html: `
+          <div style="direction: rtl; text-align: right; font-size: 13px;">
+            ${stepperHtml}
+
+            <table class="custom-table" style="margin: 12px 0; border: 1px solid #e2e8f0;">
+              <tr><th>رقم الحساب:</th><td><b>${emp.ccp}</b></td><th>الضمان الاجتماعي:</th><td><b>${emp.nss}</b></td></tr>
+              <tr><th>الرقم البيومتري NIN:</th><td colspan="3">${emp.nin}</td></tr>
+              <tr><th>المؤسسة والطور:</th><td>${emp.school_name} (${emp.level})</td><th>الدائرة والبلدية:</th><td>${emp.daaira} - ${emp.baladiya}</td></tr>
+              <tr><th>الرتبة والشهادة:</th><td><b>${emp.rank}</b></td><th>الصفة:</th><td>${emp.status_type} (${emp.diploma})</td></tr>
+              <tr><th>الفترة والمدة:</th><td>من ${emp.start_date} إلى ${emp.end_date}</td><th>عدد الأيام:</th><td><b>${emp.duration_days} يوم</b></td></tr>
+              <tr><th>الهاتف:</th><td dir="ltr" style="text-align:right;">${emp.phone}</td><th>المدير المعني:</th><td>${emp.director_name || '---'}</td></tr>
+            </table>
+
+            <div class="form-group" style="margin-top: 15px;">
+              <label><b>ملاحظات أو أسباب عدم المطابقة / طلب التعديل:</b></label>
+              <textarea id="modal_review_note" class="form-control" placeholder="اكتب الملاحظة هنا (إلزامية في حالة الرفض أو الإرجاع للتعديل)..." style="width:100%; height:70px;"></textarea>
+            </div>
+          </div>
+        `,
+        width: '720px',
+        showDenyButton: true,
+        showCancelButton: true,
+        confirmButtonText: isPayroll ? '✅ اعتماد نهائي للصرف والرواتب' : '✅ مطابق (إحالة لمصلحة الرواتب)',
+        denyButtonText: '❌ غير مطابق / إرجاع للمؤسسة',
+        cancelButtonText: 'إغلاق',
+        confirmButtonColor: '#28a745',
+        denyButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d'
+      }).then(async (result) => {
+        const note = document.getElementById("modal_review_note")?.value.trim() || "";
+
+        if (result.isConfirmed) {
+          // قرار المطابقة والاعتماد
+          const targetStatus = isPayroll ? "payroll_approved" : "office_approved";
+          const defaultNote = isPayroll ? "تم الاعتماد النهائي للصرف والرواتب" : "مطابق قانونياً ومحال لمصلحة الرواتب";
+
+          Swal.fire({ title: 'جاري الاعتماد...', didOpen: () => Swal.showLoading() });
+          try {
+            await updateFileStatus(emp.id, targetStatus, currentOffice.username, currentOffice.roleTitle, note || defaultNote);
+            Swal.fire('تم بنجاح', 'تم تحديث حالة الملف وإحالته للخطوة الموالية بنجاح.', 'success');
+            await loadOfficeEmployees();
+          } catch(e) {
+            Swal.fire('خطأ', 'فشل تحديث حالة الملف', 'error');
+          }
+
+        } else if (result.isDenied) {
+          // قرار عدم المطابقة والإرجاع
+          if (!note) {
+            return Swal.fire("تنبيه", "كتابة سبب الرفض أو عدم المطابقة إجبارية ليتمكن المدير من التصحيح.", "warning");
+          }
+
+          const targetStatus = isPayroll ? "payroll_rejected" : "returned_to_director";
+
+          Swal.fire({ title: 'جاري إرجاع الملف...', didOpen: () => Swal.showLoading() });
+          try {
+            await updateFileStatus(emp.id, targetStatus, currentOffice.username, currentOffice.roleTitle, note);
+            Swal.fire('تم الإرجاع', 'تم إرجاع الملف إلى المؤسسة مع إرفاق الملاحظة والتوضيح.', 'info');
+            await loadOfficeEmployees();
+          } catch(e) {
+            Swal.fire('خطأ', 'فشل تحديث حالة الملف', 'error');
+          }
+        }
+      });
+    }
+
+    // تصدير البيانات إلى ملف Excel
+    function exportToExcel() {
+      if (filteredRecords.length === 0) {
+        Swal.fire("تنبيه", "لا توجد بيانات لتصديرها", "warning");
+        return;
+      }
+
+      const rows = filteredRecords.map((e, i) => ({
+        "الرقم": i + 1,
+        "رقم الحساب CCP": e.ccp,
+        "الضمان الاجتماعي NSS": e.nss,
+        "رقم التعريف NIN": e.nin,
+        "اللقب بالعربية": e.fmn_ar,
+        "الاسم بالعربية": e.frn_ar,
+        "اللقب بالإنجليزية": e.fmn_en,
+        "الاسم بالإنجليزية": e.frn_en,
+        "الطور": e.level,
+        "الصفة": e.status_type,
+        "الشهادة": e.diploma,
+        "الرتبة": e.rank,
+        "المؤسسة": e.school_name,
+        "الدائرة": e.daaira,
+        "البلدية": e.baladiya,
+        "تاريخ البداية": e.start_date,
+        "تاريخ النهاية": e.end_date,
+        "الأيام": e.duration_days,
+        "الهاتف": e.phone,
+        "حالة الملف": e.workflow_status,
+        "ملاحظات": e.rejection_reason || ""
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "المستخلفين");
+
+      const fileName = `قائمة_المستخلفين_${currentOffice.officeType}_${new Date().toISOString().slice(0,10)}.xlsx`;
+      XLSX.writeFile(wb, fileName);
+    }
+  </script>
+</body>
+</html>

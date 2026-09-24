@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head> 
+  <meta charset="UTF-8"> 
+  <title>المنصة الرقمية لمديرية التربية لولاية توقرت</title>  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google-site-verification" content="LUuCYPIxXuHpRRt8Rpvs6bWeOve2JusONPhRrgsttcc" />
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> 
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-init.js"></script>
+  <script src="js/app-core.js"></script>
+  <script src="js/auth-check.js"></script>
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary-color: #2575fc;
+      --secondary-color: #6a11cb;
+      --bg-light: #f8f9fa;
+      --text-dark: #333;
+      --input-height: 52px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* إجبار الخط Cairo */
+    body, button, input, select, textarea, .btn, 
+    .swal2-popup, .swal2-title, .swal2-content, .swal2-input, .swal2-html-container, 
+    #printContainer, #printContainer * {
+      font-family: 'Cairo', sans-serif !important;
+    }
+
+    body {
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+
+    /* ====== تصميم الواجهة ====== */
+    .container {
+      position: relative;
+      background: white;
+      padding: 35px 40px;
+      border-radius: 20px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+      text-align: center;
+      width: 100%;
+      max-width: 500px; 
+      margin: 0 auto;
+      transition: max-width 0.5s cubic-bezier(0.25, 1, 0.5, 1), padding 0.3s ease;
+      display: none; /* مخفي افتراضياً للأمان */
+    }
+
+    .container.show-content {
+        display: block; /* يظهر فقط عند الحقن */
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .container.expanded-mode {
+        max-width: 700px !important;
+    }
+
+    .page-header { text-align: center; margin-bottom: 25px; transition: opacity 0.3s ease; }
+    
+    .header-text { font-size: 18px; font-weight: 700; line-height: 1.5; color: #555; margin-bottom: 15px; }
+
+    .logo-wrapper {
+      --frame-size: 170px;  
+      --logo-size:  165px;  
+      position: relative;
+      width: var(--frame-size);
+      height: var(--frame-size);
+      margin: 0 auto 20px auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .logo-wrapper::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      border-radius: 50%;
+      border: 2px dashed #2575fc; 
+      border-top-color: #6a11cb;
+      border-right-color: #ff00cc;
+      z-index: 10; 
+      animation: spinBorder 12s linear infinite;
+      pointer-events: none;
+    }
+
+    .header-logo {
+      width: var(--logo-size);
+      height: var(--logo-size);
+      object-fit: cover;
+      border-radius: 50%;
+      position: relative;
+      z-index: 1; 
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    @keyframes spinBorder {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .gradient-title {
+      font-size: 22px; 
+      font-weight: 800;
+      margin: 0 0 10px 0; 
+      display: block;
+      background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .highlight-text {
+      display: block;
+      margin-top: 5px;
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      background: linear-gradient(to right, #2575fc, #ff00cc, #6a11cb, #2575fc);
+      background-size: 300% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: gradientFlow 4s ease infinite, smoothPulse 3s ease-in-out infinite;
+      filter: drop-shadow(0px 2px 4px rgba(106, 17, 203, 0.2));
+    }
+
+    @keyframes gradientFlow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes smoothPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    input, select {
+      width: 100%; padding: 12px 14px; margin-bottom: 12px;
+      border-radius: 12px; border: 2px solid #e0e0e0;
+      font-size: 16px; text-align: center; font-weight: 600;
+      height: var(--input-height); background-color: #fff; transition: all 0.3s ease;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);
+    }
+    input:focus, select:focus {
+      outline: none; border-color: #2575fc; 
+      box-shadow: 0 0 0 4px rgba(37, 117, 252, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .btn-main {
+      background: linear-gradient(45deg, #6a11cb, #2575fc); color: white; 
+      border: none; padding: 14px 0; border-radius: 12px; font-size: 16px; 
+      cursor: pointer; font-weight: 700; width: 100%; height: auto;
+      box-shadow: 0 8px 20px rgba(37, 117, 252, 0.35); transition: all 0.3s ease; margin-top: 15px;
+    }
+    .btn-main:hover {
+      box-shadow: 0 10px 25px rgba(37, 117, 252, 0.5);
+      transform: translateY(-2px);
+    }
+    .btn-main:active { transform: scale(0.98); }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; text-align: right; }
+    .outer-group { margin-bottom: 5px; }
+    label { display: block; margin-bottom: 5px; font-size: 13px; font-weight: 700; color: #555; }
+    .readonly-field { background-color: #f5f5f5; color: #6c757d; border-color: #e0e0e0; pointer-events: none; }
+    .editable-field { background-color: #fff; border-color: #2575fc; }
+    .section-divider { display: flex; align-items: center; justify-content: center; margin: 25px 0 15px 0; position: relative; }
+    .section-divider::before { content: ""; position: absolute; width: 100%; height: 1px; background: #e0e0e0; z-index: 1; }
+    .section-title { background: #fff; padding: 0 15px; color: var(--primary-color); font-weight: 700; font-size: 15px; z-index: 2; }
+    .input-error { border-color: #dc3545 !important; background-color: #fff8f8 !important; }
+    
+    @media (max-width: 600px) {
+      .container { padding: 25px 20px 15px; }
+      .info-grid { grid-template-columns: 1fr; gap: 10px; }
+    }
+
+    /* ==================== تنسيقات شاشة القفل والترحيب ==================== */
+    .login-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(20, 20, 20, 0.65); /* خلفية داكنة شفافة */
+      backdrop-filter: blur(15px); /* تأثير الضباب الزجاجي */
+      /* z-index أقل من swal */
+      z-index: 99999; 
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      transition: opacity 0.5s ease;
+    }
+    
+    /* رفع طبقة التنبيهات فوق الخلفية الزجاجية */
+    .swal2-container {
+      z-index: 200000 !important;
+    }
+
+    .welcome-card {
+      background: rgba(255, 255, 255, 0.85);
+      padding: 40px;
+      border-radius: 25px;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      width: 90%;
+      max-width: 450px;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      animation: popIn 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.8); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .welcome-icon {
+      font-size: 50px;
+      background: linear-gradient(135deg, #6a11cb, #2575fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 15px;
+    }
+
+    .welcome-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .welcome-subtitle {
+      font-size: 16px;
+      color: #666;
+      margin-bottom: 30px;
+      font-weight: 600;
+    }
+
+    .pass-input-group {
+      position: relative;
+      margin-bottom: 20px;
+    }
+
+    .pass-input {
+      width: 100%;
+      padding: 15px;
+      border-radius: 50px;
+      border: 2px solid #ddd;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      transition: 0.3s;
+      outline: none;
+    }
+
+    .pass-input:focus {
+      border-color: #2575fc;
+      box-shadow: 0 0 15px rgba(37, 117, 252, 0.2);
+    }
+
+    .btn-login-system {
+      background: linear-gradient(90deg, #2575fc, #6a11cb);
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      border-radius: 50px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      box-shadow: 0 10px 20px rgba(106, 17, 203, 0.3);
+      transition: transform 0.2s;
+    }
+
+    .btn-login-system:hover {
+      transform: scale(1.03);
+    }
+
+    /* ==================== تنسيقات الطباعة ==================== */
+    #printContainer {
+      display: none;
+      width: 210mm; min-height: 297mm;
+      background: white; margin: 0 auto; 
+      padding: 10mm 15mm; 
+      direction: rtl; position: absolute; top: 0; left: 0; z-index: 9999;
+      color: #000;
+    }
+
+    .print-official-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 5px; padding-bottom: 10px; border-bottom: 3px double #000;
+    }
+    .print-logo-img { width: 160px; height: auto; object-fit: contain; }
+    .print-titles-official { text-align: center; flex-grow: 1; }
+    .print-titles-official h3 { margin: 3px 0; font-size: 16px; font-weight: 700; color: #000; }
+    
+    .print-form-title-box {
+      border: 2px solid #000; border-radius: 6px; padding: 8px;
+      margin: 15px 0 20px 0; text-align: center; background-color: #f9f9f9 !important;
+      -webkit-print-color-adjust: exact;
+    }
+    .print-main-title {
+      margin: 0; font-size: 20px; font-weight: 800; color: #000;
+      text-decoration: underline; text-underline-offset: 4px;
+    }
+    .print-date { margin-top: 5px; font-size: 13px; font-weight: 600; }
+
+    .data-table { 
+      width: 100%; border-collapse: collapse; margin: 10px 0; 
+      font-size: 14px; border: 2px solid #000;
+    }
+    .data-table th { 
+      background-color: #eee !important; -webkit-print-color-adjust: exact;
+      padding: 7px 10px; border: 1px solid #000; width: 35%; text-align: right; font-weight: 800;
+    }
+    .data-table td { 
+      padding: 7px 10px; border: 1px solid #000; font-weight: 600; color: #000; text-align: right; 
+    }
+
+    .auth-box {
+        border: 2px solid #000; padding: 10px; margin: 20px 0;
+        background-color: #fff !important; font-size: 14px; text-align: center;
+    }
+    .auth-title { display: block; font-weight: 800; margin-bottom: 8px; font-size: 15px; }
+    .auth-details { display: flex; justify-content: center; gap: 20px; }
+
+    .signature-section {
+      margin-top: 40px; display: flex; justify-content: space-between; padding: 0 20px;
+    }
+    .signature-box {
+      text-align: center; border: 1px dashed #000; padding: 15px 10px; 
+      width: 220px; height: 140px; position: relative;
+    }
+    .signature-box strong {
+        display: block; margin-bottom: 4px; padding-bottom: 0;
+        border-bottom: none; font-size: 14px; font-weight: 800;
+    }
+    .signature-box small { display: block; font-size: 12px; font-weight: 600; }
+
+    @media print {
+      @page { margin: 0; size: A4; }
+      body { background: white; margin: 0; padding: 0; display: block; }
+      
+      .container, .swal2-container, .page-header, .header-text, .logo-wrapper, .gradient-title, #loginSection, .login-overlay { 
+        display: none !important; 
+      }
+      
+      #printContainer { display: block !important; position: static; width: 100%; margin: 0; height: 100vh; }
+      * { font-family: 'Cairo', sans-serif !important; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-overlay" id="systemLoginOverlay">
+    <div class="welcome-card">
+      <div class="welcome-icon">
+        <i class="fas fa-user-shield"></i>
+      </div>
+      <h2 class="welcome-title">مرحباً بك عزيزي المدير</h2>
+      <p class="welcome-subtitle">في المنصة الرقمية لمديرية التربية لولاية توقرت</p>
+      
+      <div class="pass-input-group">
+        <input type="password" id="systemPassInput" class="pass-input" placeholder="أدخل كلمة المرور للمتابعة">
+      </div>
+      
+      <button class="btn-login-system" onclick="verifySystemLogin()">دخول</button>
+    </div>
+  </div>
+
+  <div class="container" id="interfaceCard">
+      </div>
+
+  <div id="printContainer">
+    <div class="print-official-header">
+      <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" class="print-logo-img">
+      <div class="print-titles-official">
+        <h3>الجمهورية الجزائرية الديمقراطية الشعبية</h3>
+        <h3>وزارة التربية الوطنية</h3>
+        <h3>مديرية التربية لولاية توقرت</h3>
+        <h3>مصلحة تسيير نفقات المستخدمين</h3>
+      </div>
+      <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" class="print-logo-img">
+    </div>
+
+    <div class="print-form-title-box">
+      <h2 class="print-main-title">استمارة معلومات الموظف</h2>
+      <div class="print-date">تاريخ الاستخراج: <span id="p_date"></span></div>
+    </div>
+
+    <table class="data-table" id="printTable"></table>
+
+    <div class="auth-box">
+      <div class="auth-title">✅ مصادقة المعلومات:</div>
+      <div class="auth-details">
+        <span>اسم المؤكد: <span id="p_confirmer" style="font-weight:bold;"></span></span>
+        <span style="border-left: 2px solid #ccc; margin: 0 10px;"></span>
+        <span>رقم الهاتف: <span id="p_confirmer_phone" dir="ltr" style="font-weight:bold;"></span></span>
+      </div>
+    </div>
+
+    <div class="signature-section">
+      <div class="signature-box">
+        <strong>إمضاء المعني</strong>
+        <small>أصرح بصحة المعلومات</small>
+      </div>
+      <div class="signature-box">
+        <strong>إمضاء وختم الإدارة</strong>
+        <small>مصادق عليه</small>
+      </div>
+    </div>
+  </div>
+
+  <script src="injava.js"></script>
+
+</body>
+</html>
+
+
+
+
+
+

@@ -1,0 +1,2050 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة البطاقات المهنية</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  
+ 
+  <script>
+document.addEventListener("DOMContentLoaded", () => {
+    // جلب تصريح الدخول من الجلسة
+    const accessGranted = sessionStorage.getItem("secure_cards_access");
+
+    // التحقق: إذا لم يكن هناك تصريح، يتم إرجاعه للصفحة الرئيسية فوراً
+    if (accessGranted !== "granted_from_main_page") {
+        // قم بتغيير index.html إلى اسم صفحتك الرئيسية
+        window.location.replace("index.html"); 
+    } else {
+        // يمكنك إزالة التصريح هنا إذا أردت أن الصفحة لا تعمل إذا قام المستخدم بتحديثها (F5)
+        // sessionStorage.removeItem("secure_cards_access");
+        
+        console.log("تم التحقق بنجاح: الدخول مصرح به.");
+    }
+});
+</script>
+    
+
+
+
+    <style>
+
+
+@font-face {
+    font-family: 'Sakkal Majalla';
+    src: local('Sakkal Majalla'), url('fonts/majalla.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Sakkal Majalla';
+    src: local('Sakkal Majalla Bold'), url('fonts/majallab.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+:root {
+    /* ألوان الطباعة الأصلية */
+    --primary-green: #006233;
+    --primary-red: #D22B2B;
+    
+    /* ألوان الواجهة العصرية */
+    --ui-primary: #059669;
+    --ui-secondary: #0f172a;
+    --ui-bg: #f1f5f9;
+    --ui-surface: #ffffff;
+    --ui-border: #e2e8f0;
+    --ui-text: #1e293b;
+    --ui-text-muted: #64748b;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --radius: 12px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Cairo', 'Sakkal Majalla', serif;
+    background-color: var(--ui-bg);
+    color: var(--ui-text);
+    padding: 40px 20px;
+    display: flex;
+    justify-content: center;
+    flex-direction: column; 
+    align-items: center; 
+    gap: 30px;
+}
+
+/* --- تنسيقات لوحة التحكم --- */
+#control-panel {
+    width: 100%; 
+    max-width: 1450px; 
+    background: var(--ui-surface); 
+    padding: 30px; 
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg); 
+    font-family: 'Cairo', sans-serif;
+    border: 1px solid var(--ui-border);
+}
+
+.panel-header { 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center; 
+    align-items: center; 
+    margin-bottom: 30px; 
+    border-bottom: 2px solid var(--ui-border); 
+    padding-bottom: 20px; 
+    gap: 20px;
+}
+
+.panel-header h2 {
+    color: var(--ui-secondary);
+    font-size: 26px;
+    font-weight: 800;
+}
+
+.panel-header div {
+    display: flex; 
+    gap: 12px; 
+    align-items: center; 
+    flex-wrap: nowrap; 
+    justify-content: center; 
+    width: 100%;
+}
+
+.selectors { 
+    display: grid; 
+    grid-template-columns: 1fr 1fr 1fr 2.5fr; 
+    gap: 20px; 
+    margin-bottom: 25px; 
+    background: #f8fafc;
+    padding: 20px;
+    border-radius: var(--radius);
+    border: 1px solid var(--ui-border);
+}
+
+.form-group { display: flex; flex-direction: column; gap: 8px;}
+
+.form-group label { 
+    font-size: 14px; 
+    font-weight: 700; 
+    color: var(--ui-text); 
+}
+
+.form-group select, .form-group input { 
+    padding: 10px 14px; 
+    border: 1px solid #cbd5e1; 
+    border-radius: 8px; 
+    font-family: inherit; 
+    font-size: 14px;
+    background-color: #fff;
+    color: var(--ui-text);
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.form-group select:focus, .form-group input:focus {
+    outline: none;
+    border-color: var(--ui-primary);
+    box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+}
+
+.form-group[style*="margin-bottom: 20px;"] {
+    background: #f8fafc;
+    padding: 20px;
+    border-radius: var(--radius);
+    border: 2px dashed #cbd5e1;
+    align-items: flex-start;
+}
+
+.table-container { 
+    max-height: 450px; 
+    overflow-y: auto; 
+    border: 1px solid var(--ui-border); 
+    border-radius: var(--radius); 
+    margin-bottom: 20px; 
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+}
+
+table { 
+    width: 100%; 
+    border-collapse: separate; 
+    border-spacing: 0;
+    text-align: right; 
+}
+
+th, td { 
+    padding: 14px; 
+    border-bottom: 1px solid var(--ui-border); 
+    font-size: 12px; 
+}
+
+th { 
+    background: #f8fafc; 
+    position: sticky; 
+    top: 0; 
+    z-index: 10; 
+    font-weight: 700;
+    color: var(--ui-text-muted);
+    box-shadow: 0 1px 0 var(--ui-border);
+}
+
+tbody tr { transition: background-color 0.15s ease; }
+tbody tr:hover { background-color: #f1f5f9; }
+
+.btn { 
+    padding: 10px 18px; 
+    border: none; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    font-family: inherit; 
+    font-weight: 700; 
+    font-size: 14px;
+    transition: all 0.2s ease; 
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn:active { transform: translateY(0); }
+
+.btn-primary { background: var(--ui-primary); color: white; }
+.btn-primary:hover { background: #047857; }
+
+.btn-danger { background: #ef4444; color: white; }
+.btn-danger:hover { background: #dc2626; }
+
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+
+/* تعديلات قسرية للأزرار */
+button[style*="background-color: #34495e"] { background-color: #334155 !important; }
+button[style*="background-color: #34495e"]:hover { background-color: #1e293b !important; }
+button[style*="background-color: #2980b9"] { background-color: #2563eb !important; }
+button[style*="background-color: #2980b9"]:hover { background-color: #1d4ed8 !important; }
+button[style*="background-color: #8e44ad"] { background-color: #7c3aed !important; }
+button[style*="background-color: #8e44ad"]:hover { background-color: #6d28d9 !important; }
+button[style*="background: #6c757d"] { background: #475569 !important; margin: 0 !important; box-shadow: none !important;}
+button[style*="background: #6c757d"]:hover { background: #334155 !important; }
+
+/* نافذة قص الصورة */
+#cropper-modal {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); z-index: 9999; justify-content: center; align-items: center;
+}
+.modal-content { 
+    background: #fff; 
+    padding: 30px; 
+    border-radius: 16px; 
+    width: 90%; 
+    max-width: 600px; 
+    text-align: center; 
+    box-shadow: var(--shadow-lg);
+}
+.modal-content h3 { margin-bottom: 15px; color: var(--ui-secondary); }
+.img-container { max-height: 60vh; margin: 20px 0; border-radius: 8px; overflow: hidden; background: #000; }
+.img-container img { max-width: 100%; }
+
+/* --- تنسيق صفحة A4 (توسيط رياضي دقيق لـ 6 بطاقات) --- */
+.page-a4 {
+    width: 210mm;
+    height: 297mm; /* ارتفاع ثابت لورقة A4 */
+    background: white;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(2, 85.6mm); 
+    grid-template-rows: repeat(3, 54mm); 
+    column-gap: 15mm; 
+    row-gap: 20mm;    
+    
+    justify-content: center; /* إبقاء التوسيط الأفقي (يمين ويسار) كما هو */
+    
+    /* --- التعديلات الجديدة لرفع البطاقات للأعلى --- */
+    align-content: start; /* هذه الخاصية تدفع شبكة البطاقات للأعلى */
+    padding-top: 15mm;    /* ترك مسافة 1.5 سم من أعلى الورقة كمنطقة آمنة للطابعة */
+    
+    box-sizing: border-box;
+    overflow: hidden; 
+}
+.card-wrapper {
+    width: 85.6mm !important;
+    height: 54mm !important;
+    position: relative;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    box-sizing: border-box;
+    page-break-inside: avoid !important; 
+}
+
+.card {
+    width: 750px;
+    height: 474px;
+    background-color: #fff;
+    position: absolute;
+    top: 0;
+    right: 0;
+    transform: scale(0.431); 
+    transform-origin: top right;
+    display: flex;
+    flex-direction: column;
+    background-image: linear-gradient(135deg, #ffffff 0%, #f4f8f6 100%);
+}
+
+.watermark {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px; height: 300px;
+    background-image: url('https://lh3.googleusercontent.com/d/1O9TZQrn9q4iRnI1NldJNxfq0bKuc8S-u');
+    background-size: contain; background-repeat: no-repeat;
+    opacity: 0.1; z-index: 0;
+}
+
+.top-deco-bar { width: 100%; height: 8px; display: flex; z-index: 10; }
+.bar-green { flex: 2; background-color: var(--primary-green); }
+.bar-red { flex: 1; background-color: var(--primary-red); }
+
+.header { position: relative; z-index: 2; padding: 10px 15px 0 15px; display: flex; justify-content: space-between; align-items: center; height: 100px; }
+.main-title { font-family: 'Cairo', sans-serif; font-size: 20px; font-weight: 700; color: #000; margin-top: -30px; }
+.logo-box { display: flex; flex-direction: column; align-items: center; min-width: 100px; }
+.header-logo { width: 70px; height: 70px; object-fit: contain; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1)); }
+.logo-text { font-family: 'Cairo', sans-serif;font-size: 15px; font-weight: 900; margin-top: 4px; white-space: nowrap; }
+
+.card-body { position: relative; z-index: 2; display: flex; flex-grow: 1; padding: 5px 25px 0 25px; }
+.info-section { flex: 1.8; display: flex; flex-direction: column; justify-content: center; }
+.card-name-title { font-family: 'Cairo', sans-serif; font-size: 28px; font-weight: 700; color: var(--primary-green); border-bottom: 2px solid var(--primary-red); margin-bottom: 10px; width: fit-content; }
+.info-row { display: flex; align-items: baseline; margin-bottom: 5px; font-size: 20px; }
+.label { font-family: 'Cairo', sans-serif;font-weight: 700; color: #000; min-width: 135px; font-family: 'Cairo', sans-serif; font-size: 15px; }
+.value {font-family: 'Cairo', sans-serif; font-weight: 700; color: #000; margin-right: 5px; font-size: 14px; }
+
+.photo-section {font-family: 'Cairo', sans-serif; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 40px; gap: 0; }
+.serial-number { font-family: 'Cairo', sans-serif; font-weight: 700; font-size: 16px; color: var(--primary-red); background: rgba(210, 43, 43, 0.05); padding: 2px 8px; border-radius: 8px; width: 180px; display: flex; justify-content: space-between; margin-top: -30px; margin-bottom: 20px; }
+.photo-frame { width: 130px; height: 170px; background-color: #fafafa; border: 2px solid #fff; box-shadow: 0 4px 8px rgba(0,0,0,0.15); border-radius: 6px; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; overflow: hidden; }
+.signature-title { font-family: 'Cairo', sans-serif;font-weight: 700; font-size: 14px; color: #000; border-top: 1px solid #ddd; width: 80%; text-align: center; padding-top: 5px; }
+
+.barcode-container { width: 100%; display: flex; justify-content: center; align-items: center; margin-top: auto; margin-bottom: 12px; z-index: 5; }
+.barcode-container svg { height: 30px; width: auto; }
+
+.footer { background-color: var(--primary-green); color: white; display: flex; justify-content: center; align-items: center; width: 100%; padding: 6px 0; font-family: 'Cairo', sans-serif; font-size: 15px; font-weight: 600; position: relative; z-index: 10; }
+
+/* --- إعدادات الطباعة الصارمة --- */
+@media print {
+    /* إجبار المتصفح على أعلى جودة لتصيير النصوص والأشكال */
+    * {
+        text-rendering: geometricPrecision !important;
+        shape-rendering: geometricPrecision !important;
+    }
+
+    img { 
+        image-rendering: high-quality !important; 
+        -webkit-user-drag: none;
+    }
+
+    /* إلغاء أي هوامش افتراضية من المتصفح */
+    @page { 
+        size: A4 portrait;
+        margin: 0mm !important; 
+    }
+
+    body { 
+        background: white; 
+        padding: 0 !important; 
+        margin: 0 !important; 
+        -webkit-print-color-adjust: exact; 
+        print-color-adjust: exact; 
+        display: block !important; 
+    }
+    
+    .no-print { display: none !important; }
+
+    /* الإعداد الصارم لورقة A4 */
+    .page-a4 { 
+        width: 210mm !important; 
+        height: 297mm !important; 
+        min-height: 297mm !important;
+        max-height: 297mm !important;
+        margin: 0 !important; 
+        border: none !important; 
+        box-shadow: none !important;
+        
+        /* الأوامر الأهم لفصل الصفحات ومنع تداخلها */
+        page-break-after: always !important; 
+        break-after: page !important; 
+        page-break-inside: avoid !important;
+        
+        /* إعدادات الشبكة والتوسيط */
+        display: grid !important;
+        grid-template-columns: repeat(2, 85.6mm) !important; 
+        grid-template-rows: repeat(3, 54mm) !important; 
+        column-gap: 15mm !important; 
+        row-gap: 20mm !important;    
+        justify-content: center !important;
+        align-content: start !important; 
+        padding-top: 15mm !important;
+        padding-bottom: 0 !important;
+        
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+        page-break-after: always; /* يضمن قطع الـ PDF عند نهاية كل ورقة A4 */
+    }
+
+    .card-wrapper {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important; 
+    }
+
+    .page-a4:last-of-type {
+        page-break-after: auto !important;
+        break-after: auto !important;
+    }
+
+    .page-a4:empty {
+        display: none !important;
+    }
+
+    .header-logo { filter: none !important; }
+    img { image-rendering: -webkit-optimize-contrast; object-fit: cover; }
+    .barcode-container svg { shape-rendering: crispEdges; }
+}
+
+/* --- تنسيقات النموذج الثاني (Theme 2) --- */
+#card-container.theme-2 .card {
+    background-image: none;
+    background-color: #ffffff;
+    font-family: 'Sakkal Majalla', serif !important;
+}
+
+#card-container.theme-2 .card * {
+    font-family: 'Sakkal Majalla', serif !important;
+}
+
+.corner-ribbon-container { position: absolute; top: 0; right: 0; width: 110px; height: 110px; overflow: hidden; z-index: 20; }
+.corner-ribbon-content { position: absolute; top: 0; right: 0; transform: translate(30%, -30%) rotate(45deg); transform-origin: center; width: 200px; display: flex; flex-direction: column; justify-content: center; margin-top: 35px; margin-right: -20px; }
+.stripe { width: 100%; height: 20px; }
+.stripe.green { background-color: var(--primary-red); margin-bottom: 8px; } 
+.stripe.red { background-color: var(--primary-green); }
+
+#card-container.theme-2 .header { text-align: center; padding: 5px 10px; border-bottom: 2px solid #333; height: 130px; display: flex; flex-direction: row; justify-content: center; align-items: center; }
+
+#card-container.theme-2 .main-title { 
+    font-size: 34px; 
+    font-weight: 700; 
+    width: 100%; 
+    margin-top: -30px; 
+    margin-left: 30px; 
+    color: #000; 
+}
+
+#card-container.theme-2 .side-group { 
+    position: absolute; 
+    top: 10px; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    text-align: center; 
+    width: 200px; 
+}
+
+#card-container.theme-2 .side-group.right { right: 15px; top: 90px; } 
+#card-container.theme-2 .side-group.left { left: 40px; top: 3px; }
+
+#card-container.theme-2 .header-logo { 
+    width: 85px !important; 
+    height: 85px !important; 
+    min-width: 85px !important; 
+    min-height: 85px !important; 
+    border-radius: 50% !important; 
+    object-fit: contain !important; /* استخدام contain يحافظ على الأبعاد الحقيقية للصورة بدون تشويه */
+    background-color: transparent; /* جعل الخلفية شفافة أفضل لتداخل الألوان */
+    
+    /* --- الإزاحة لليسار هنا --- */
+    position: relative;
+    left: -40px;
+}
+
+#card-container.theme-2 .side-text { font-size: 30px; font-weight: 700; margin-top: 2px; white-space: nowrap;color: #000000;}
+
+#card-container.theme-2 .card-body { padding: 0; display: flex; flex-direction: row; }
+
+#card-container.theme-2 .right-section { 
+    flex: 0 0 480px !important; /* ثابت تماماً */
+    width: 480px !important;
+    max-width: 480px !important;
+    padding: 10px 20px 5px 20px; 
+    border-left: 2px solid #333; /* تقوية الخط العمودي */
+    overflow: hidden; 
+}
+
+.shrink-target {
+    white-space: nowrap; 
+    display: inline-block;
+    /* تأكد من إزالة max-width إذا كانت موجودة */
+    max-width: none !important; 
+    overflow: visible !important; /* السماح للنص بالظهور كاملاً أثناء عملية الحساب */
+    flex: 1;
+}
+
+#card-container.theme-2 .card-type-title { 
+    align-self: center; 
+    font-size: 30px; 
+    font-weight: 700; 
+    margin-bottom: 8px; 
+    color: #000; 
+    border-bottom: 2.5px solid #000; /* السطر أسفل النص مباشرة */
+    padding-bottom: 2px;
+    width: fit-content; /* هذا هو السر ليكون السطر بطول الكلمة فقط */
+    margin-right: auto;
+    margin-left: auto;
+}
+
+
+
+#card-container.theme-2 .info-row { 
+    font-size: 25px; 
+    font-weight: 700; 
+    display: flex; 
+    align-items: center; 
+    margin-bottom: 3px; 
+    color: #000; 
+    gap: 8px; 
+    white-space: nowrap;
+}
+#card-container.theme-2 .info-label { min-width: auto; }
+
+#card-container.theme-2 .left-section { flex: 1; padding: 10px; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; gap: 5px; }
+
+#card-container.theme-2 .number-row { 
+    width: 100%; 
+    display: flex; 
+    justify-content: flex-start; 
+    gap: 60px; 
+    font-weight: 700; 
+    font-size: 26px; 
+    color: #000;
+    padding-right: 45px; 
+}
+
+#card-container.theme-2 .photo-area { width: 140px; height: 180px; border: 1px dashed #ccc; background-color: #fafafa; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+#card-container.theme-2 .signature { text-align: center; font-weight: 700; font-size: 26px; border: none; width: auto; color: #000; padding: 0;}
+
+#card-container.theme-2 .footer { background-color: var(--primary-green); color: #ffffff; text-align: center; padding: 6px 0; height: 40px; font-size: 20px; font-weight: 700; width: 100%; border-top: 1px solid white; display: flex; align-items: center; justify-content: center; position: absolute; bottom: 0; left: 0;}
+
+#card-container.theme-2 .card-wrapper { border: 1px solid #ddd; border-radius: 4px; }
+#card-container.theme-2 .card { border-radius: 0; }
+
+#card-container.theme-2 .qr-container-theme2 { position: absolute; left: 30px; bottom: 30px; z-index: 10; }
+#card-container.theme-2 .qr-container-theme2 img { width: 100px; height: 100px; background-color: #ffffff; padding: 0px; border: 1px solid #000; border-radius: 4px; }
+
+/* --- تنسيقات الجهة الخلفية للبطاقة (خلفية النموذج 2 - Theme 3) --- */
+#card-container.theme-3 .card { 
+    background-color: #ffffff; 
+    background-image: none !important; /* لإلغاء التدرج إذا كنت أضفته في الخطوة السابقة */
+    font-family: 'Cairo', sans-serif !important; 
+    justify-content: center; 
+    align-items: center; 
+    overflow: hidden; 
+}
+
+/* استخدام الارتفاع 100% لمنع خطأ الإزاحة (Offset Bug) عند التحويل لـ PDF */
+#card-container.theme-3 .card::before, 
+#card-container.theme-3 .card::after { 
+    content: ''; 
+    position: absolute; 
+    width: 200px;  /* السماكة الإجمالية للشكل */
+    height: 100%;  /* يطابق ارتفاع البطاقة تماماً لمنع الخروج عن الإطار */
+    top: 0;        /* يبدأ من الأعلى تماماً بدون قيم سلبية */
+    border-radius: 50%; 
+    z-index: 1; 
+}
+
+#card-container.theme-3 .card::before { 
+    left: -100px; /* إخفاء النصف للخارج لعمل الانحناء الجانبي المثالي */
+    background-color: #007c3e; 
+}
+
+#card-container.theme-3 .card::after { 
+    right: -100px; /* إخفاء النصف للخارج */
+    background-color: var(--primary-red); 
+}
+
+
+.back-content { position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; width: 100%; padding: 20px; }
+.back-graphics { width: 100%; display: flex; flex-direction: column; align-items: center; position: relative; margin-top: -30px;}
+
+.ministry-logo-back {
+    width: 180px;       /* عرض الشعار */
+    height: 180px;      /* طول الشعار */
+    object-fit: contain;
+    margin-bottom: -20px; /* المسافة بين الشعار والنص */
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); /* ظل خفيف لإبراز الشعار */
+}
+
+.flag-img { position: absolute; top: -20px; right: 20px; width: 100px; }
+.teacher-img { width: 200px; height: auto; margin-bottom: 10px; }
+.ministry-title-back { font-size: 55px; font-weight: 900; color: #000; margin-bottom: 30px; letter-spacing: 2px; }
+.rules-container { position: relative; width: 85%; display: flex; flex-direction: column; justify-content: center; }
+.stamp-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 250px; opacity: 0.15; z-index: -1; }
+.rules-list { list-style: none; padding: 0; margin: 0; }
+.rules-list li { font-size: 21px; font-weight: 800; color: #000; margin-bottom: 15px; line-height: 1.4; position: relative; padding-right: 25px; margin-right: 30px; }
+.rules-list li::before { content: '■'; position: absolute; right: 0; top: 0; font-size: 20px; }
+
+
+
+
+/* --- تنسيقات الجهة الخلفية (التصميم الرسمي والحديث) - Theme 4 --- */
+#card-container.theme-4 .card { background: linear-gradient(135deg, #ffffff 0%, #f4f8f6 100%); font-family: 'Cairo', sans-serif !important; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; border: 1px solid #ccc; }
+#card-container.theme-4 .back-header { background-color: var(--primary-green); color: white; text-align: center; padding: 15px 10px; position: relative; border-bottom: 5px solid var(--primary-red); }
+#card-container.theme-4 .back-header h3 { margin: 0; font-size: 16px; font-weight: 600; color: #e0e0e0; margin-bottom: 2px; }
+#card-container.theme-4 .back-header h2 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: 1px; }
+#card-container.theme-4 .back-body { padding: 20px 30px; flex-grow: 1; position: relative; z-index: 2; display: flex; flex-direction: column; justify-content: center; }
+#card-container.theme-4 .watermark-logo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 250px; height: 250px; background-image: url('https://lh3.googleusercontent.com/d/1O9TZQrn9q4iRnI1NldJNxfq0bKuc8S-u'); background-size: contain; background-repeat: no-repeat; opacity: 0.06; z-index: -1; }
+#card-container.theme-4 .instructions-title { font-size: 26px; font-weight: 700; color: var(--primary-green); margin-bottom: 15px; border-right: 4px solid var(--primary-red); padding-right: 12px; }
+#card-container.theme-4 .rules-list-modern { list-style: none; padding: 0; margin: 0; }
+#card-container.theme-4 .rules-list-modern li { font-size: 22px; font-weight: 700; color: #2c3e50; margin-bottom: 18px; line-height: 1.4; position: relative; padding-right: 35px; }
+#card-container.theme-4 .rules-list-modern li::before { content: '✔'; position: absolute; right: 0; top: 0; color: var(--primary-green); font-size: 24px; }
+#card-container.theme-4 .back-footer { background-color: #2c3e50; color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; border-top: 2px solid #1a252f; }
+#card-container.theme-4 .return-text { font-size: 16px; font-weight: 600; max-width: 80%; line-height: 1.5; }
+#card-container.theme-4 .qr-box { width: 65px; height: 65px; background-color: white; padding: 4px; border-radius: 6px; display: flex; align-items: center; justify-content: center; position: relative; top: -6px; }
+
+@media (max-width: 1200px) {
+    .selectors { grid-template-columns: 1fr 1fr; }
+    .selectors .form-group:nth-child(4) { grid-column: span 2; }
+    .panel-header div { flex-wrap: wrap; }
+}
+
+@media screen and (max-width: 768px) {
+    body { padding: 15px 10px; }
+    #control-panel { padding: 15px; }
+    .panel-header h2 { font-size: 22px; text-align: center; }
+    .panel-header div { flex-direction: column; width: 100%; }
+    .panel-header div button { width: 100% !important; margin: 5px 0 !important; }
+    .selectors { grid-template-columns: 1fr !important; padding: 20px 30px !important; gap: 15px; }
+    .selectors .form-group:nth-child(4) { grid-column: span 1 !important; }
+    .form-group { max-width: 350px; width: 100%; margin: 0 auto; }
+    .form-group select, .form-group input { padding: 8px 12px; font-size: 13px; }
+    .form-group[style*="margin-bottom: 20px;"] > div { flex-direction: column; align-items: stretch !important; width: 100%; }
+    .form-group[style*="margin-bottom: 20px;"] input[type="file"] { width: 100%; margin-bottom: 10px; }
+    th, td { padding: 10px; font-size: 13px; white-space: nowrap; }
+    
+    /* جعل معاينة البطاقات تظهر في عمود واحد وتوسيطها على شاشات الهواتف (محدث) */
+    .page-a4 {
+        grid-template-columns: 1fr !important; 
+        grid-template-rows: auto !important;
+        width: 100% !important;
+        height: auto !important;
+        padding: 15px 0 !important;
+        gap: 15px !important; 
+        overflow-x: hidden;
+    }
+    
+    .card-wrapper { margin: 0 auto; }
+    .modal-content { width: 95%; padding: 15px; }
+}
+
+
+/* --- نافذة إضافة وتعديل الموظفين --- */
+#employee-modal {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); z-index: 9999; justify-content: center; align-items: center;
+}
+.emp-modal-content {
+    background: #fff; padding: 30px; border-radius: 16px; width: 90%; max-width: 450px;
+    box-shadow: var(--shadow-lg); font-family: 'Cairo', sans-serif;
+}
+.emp-modal-content h3 { margin-bottom: 20px; color: var(--ui-secondary); text-align: center; font-weight: 800;}
+.emp-form-group { margin-bottom: 15px; display: flex; flex-direction: column; gap: 6px; }
+.emp-form-group label { font-size: 14px; font-weight: 700; color: var(--ui-text); text-align: right;}
+.emp-form-group input { 
+    padding: 10px 14px; border: 1px solid var(--ui-border); border-radius: 8px; 
+    font-family: inherit; font-size: 14px; transition: all 0.2s ease;
+}
+.emp-form-group input:focus { outline: none; border-color: var(--ui-primary); box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15); }
+.modal-actions { display: flex; justify-content: space-between; gap: 15px; margin-top: 25px; }
+.modal-actions button { flex: 1; }
+
+/* أزرار الإجراءات في الجدول */
+.btn-warning { background: #f59e0b; color: white; }
+.btn-warning:hover { background: #d97706; }
+.action-buttons { display: flex; gap: 5px; justify-content: flex-start; }
+
+
+/* --- تنسيقات الحجم الكبير (4 بطاقات أفقية) --- */
+/* --- تنسيقات الحجم الكبير (رفع البطاقات للأعلى) --- */
+.page-a4-large {
+    width: 297mm;
+    height: 210mm;
+    background: white;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(2, 100mm);
+    grid-template-rows: repeat(2, 67mm);
+    
+    column-gap: 15mm;
+    row-gap: 4mm;      /* تقليل الفجوة بين الصفين لرفع البطاقات السفلية أكثر */
+    
+    justify-content: center; 
+    align-content: start;    /* هذا الأمر يرفع كل المحتوى للأعلى */
+    padding-top: 10mm;       /* مسافة أمان صغيرة جداً من حافة الورقة العلوية */
+    
+    box-sizing: border-box;
+    overflow: hidden;
+    page-break-after: always;
+}
+
+@media print {
+    @page { 
+        size: A4 landscape; 
+        margin: 0mm !important; 
+    }
+    
+    .page-a4-large {
+        width: 297mm !important;
+        height: 210mm !important;
+        padding-top: 10mm !important; /* التأكيد على الرفع للأعلى في الطباعة */
+        align-content: start !important;
+        display: grid !important;
+    }
+
+}
+
+
+.card-wrapper-large {
+    width: 100mm !important;
+    height: 67mm !important;
+    position: relative;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow: hidden;
+    box-sizing: border-box;
+    page-break-inside: avoid !important; 
+}
+
+/* تعديل المقياس (Scale) رياضياً ليتمدد التصميم الداخلي ويملأ 100x67 ملم بدقة */
+.card-wrapper-large .card {
+    width: 750px !important;
+    height: 474px !important;
+    min-height: 474px !important;
+    max-height: 474px !important;
+    transform: scale(0.5039, 0.5342) !important; /* دقة حسابية أعلى */
+    transform-origin: top right !important;
+    position: absolute !important;
+    top: 0 !important;
+    right: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+
+
+    </style>
+</head>
+<body>
+
+    <div id="control-panel" class="no-print">
+        <div class="panel-header">
+            <h1> نظام إدارة البطاقات المهنية - فضاء المدير</h1>
+
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+
+                <button class="btn" style="background-color: #f59e0b; color: white;" onclick="window.open('https://www.youtube.com', '_blank')">
+                🎥 فيديو توضيحي
+                </button>
+
+                <button class="btn btn-primary" style="background-color: #10b981;" onclick="openEmployeeModal()">➕ إضافة موظف</button>
+                <button class="btn btn-danger" onclick="clearData()">مسح البيانات</button>
+               
+                <button class="btn btn-primary" style="background-color: #2980b9;" onclick="printTemplate(2)">🖨️ طباعة وجه النموذج</button>
+                <button class="btn btn-primary" style="background-color: #8e44ad;" onclick="printTemplate(3)">🖨️ طباعة خلفية النموذج</button>
+                
+                <button onclick="goBackToMain()" 
+                        style="background: #6c757d; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-family: 'Cairo', sans-serif; font-size: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 15px;">
+                    <i class="fas fa-arrow-right"></i> رجوع للواجهة الرئيسية
+                </button>
+                
+
+<div style="display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #cbd5e1; width: 100%;">
+                
+                <label style="font-weight: bold; font-size: 14px; color: var(--ui-secondary);">اختر النموذج للتصدير:</label>
+                <select id="pdf-template-select" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: 'Cairo', sans-serif; cursor: pointer; outline: none;">
+                    
+                    <option value="2">الوجه الأمامي للبطاقة</option>
+                    <option value="3">الوجه الخلفي للبطاقة</option>
+                </select>
+                
+                <button class="btn btn-primary" style="background-color: #b91c1c; box-shadow: 0 4px 6px rgba(185, 28, 28, 0.2);" onclick="downloadLargePDF()">
+                    📄 حفظ PDF
+                </button>
+
+            </div>
+
+
+            </div>
+        </div>
+
+
+        <div class="selectors">
+            <div class="form-group">
+                <label>الطور التعليمي</label>
+                <select id="sel-stage" onchange="updateInstitutions()">
+                    <option value="ابتدائي">ابتدائي</option>
+                    <option value="متوسط">متوسط</option>
+                    <option value="ثانوي">ثانوي</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>الدائرة</label>
+                <select id="sel-daaira" onchange="updateMunicipalities()">
+                    </select>
+            </div>
+            <div class="form-group">
+                <label>البلدية</label>
+                <select id="sel-municipality" onchange="updateInstitutions()">
+                    </select>
+            </div>
+            <div class="form-group">
+                <label>المؤسسة</label>
+                <select id="sel-institution" onchange="updateCardsWorkplace()">
+                    <option value="">اختر المؤسسة...</option>
+                </select>
+            </div>
+        </div>
+
+     <div class="form-group" style="margin-bottom: 20px;">
+            <label>رفع قائمة الموظفين (Excel - الملف المحمل من الرقمنة)</label>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="file" id="file-upload" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel, text/csv, .xlsx, .xls, .csv, .xlsm, .xlsb">
+                
+                <button type="button" class="btn btn-primary" onclick="loadEmployeeData()">تحميل وعرض القائمة</button>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table id="employee-table">
+                <thead>
+    <tr>
+        <th>الاسم واللقب</th>
+        <th>تاريخ الازدياد</th>
+        <th>الرتبة</th>
+        <th>مكان العمل</th>
+        <th>رقم التعريف الوظيفي</th>
+        <th>الصورة</th>
+        <th>الإجراءات</th> </tr>
+</thead>
+                <tbody id="table-body">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="page-a4" id="card-container"></div>
+
+    <div id="cropper-modal">
+        <div class="modal-content">
+            <h3>قص وضبط الصورة</h3>
+            <div class="img-container">
+                <img id="cropper-image" src="">
+            </div>
+            <button class="btn btn-danger" onclick="closeCropper()">إلغاء</button>
+            <button class="btn btn-primary" onclick="saveCrop()">حفظ الصورة</button>
+        </div>
+    </div>
+
+<div id="employee-modal">
+    <div class="emp-modal-content">
+        <h3 id="emp-modal-title">إضافة موظف جديد</h3>
+        <input type="hidden" id="emp-id">
+        <div class="emp-form-group">
+            <label>الاسم واللقب</label>
+            <input type="text" id="emp-name" placeholder="أدخل الاسم واللقب">
+        </div>
+        <div class="emp-form-group">
+            <label>تاريخ الازدياد</label>
+            <input type="text" id="emp-dob" placeholder="مثال: 1990-01-01 أو 01/01/1990">
+        </div>
+        <div class="emp-form-group">
+            <label>الرتبة</label>
+            <input type="text" id="emp-rank" placeholder="أدخل الرتبة">
+        </div>
+        <div class="emp-form-group">
+            <label>الرمز الوظيفي</label>
+            <input type="text" id="emp-jobid" placeholder="أدخل الرمز الوظيفي">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-danger" onclick="closeEmployeeModal()">إلغاء</button>
+            <button class="btn btn-primary" onclick="saveEmployee()">حفظ البيانات</button>
+        </div>
+    </div>
+</div>
+    <script>
+        // --- 1. خرائط البيانات (Data Maps) ---
+        const baladiyaMap = { 
+            "توقرت": ["توقرت", "النزلة", "تبسبست", "الزاوية العابدية"], 
+            "تماسين": ["تماسين", "بلدة عمر"], 
+            "المقارين": ["المقارين", "سيدي سليمان"], 
+            "الحجيرة": ["الحجيرة", "العالية"], 
+            "الطيبات": ["الطيبات", "المنقر", "ابن ناصر"] 
+        };
+
+        const primarySchoolsByBaladiya = {
+            "ابن ناصر": [{ name: "إبتدائية عبد الحميد بن باديس - إبن ناصر" }, { name: "إبتدائية العربي التبسي - إبن ناصر" }, { name: "إبتدائية البشير الابراهيمي - إبن ناصر" }, { name: "إبتدائية هواري بومدين - إبن ناصر" }, { name: "إبتدائية المجاهد الصادق خلفاوي - إبن ناصر" }, { name: "إبتدائية المجاهد سراي مسعود ( المر) - إبن ناصر" }, { name: "إبتدائية المجاهد اليمان الطيب - إبن ناصر" }, { name: "إبتدائية المجاهد العقون خليفة - إبن ناصر" }, { name: "إبتدائية المجاهد قحمص محمد بن العيد - إبن ناصر" }, { name: "إبتدائية 13 مارس 1962 - إبن ناصر" }, { name: "إبتدائية اللأمير عبد القادر - إبن ناصر" }, { name: "إبتدائية العقبي الطيب - إبن ناصر" }],
+            "الحجيرة": [{ name: "إبتدائية ابن باديس - الحجيرة" }, { name: "إبتدائية ديدوش مراد - الحجيرة" }, { name: "إبتدائية نعام سليمان - الحجيرة" }, { name: "إبتدائية محمد العيد آل خليفة - الحجيرة" }, { name: "إبتدائية العيد بن الشيخ - الحجيرة" }, { name: "إبتدائية البشير الابراهيمي - الحجيرة" }, { name: "إبتدائية مصطفى بن بولعيد - الحجيرة" }, { name: "إبتدائية الشهيد الكاس - الحجيرة" }, { name: "إبتدائية صلاح الدين الأيوبي - الحجيرة" }, { name: "إبتدائية ابن خلدون - الحجيرة" }, { name: "إبتدائية علي عمار - الحجيرة" }, { name: "إبتدائية دومة أحمد - الحجيرة" }, { name: "إبتدائية عمار ياسف - الحجيرة" }, { name: "إبتدائية المجاهد كحول احمد - الحجيرة" }, { name: "إبتدائية كريبع مسعود - الحجيرة - - الحجيرة" }, { name: "إبتدائية المجاهد بالأعور العلمي ( لقراف الجديدة 2) - الحجيرة" }, { name: "إبتدائية مجمع مدرسي حي المير - الحجيرة" }, { name: "إبتدائية خنفر محمد لحسن - الحجيرة" }, { name: "إبتدائية حي بوضياف محمد لقراف - الحجيرة" }, { name: "إبتدائية محدادي العيد - الحجيرة" }],
+            "الزاوية العابدية": [{ name: "إبتدائية البحري بن المنور القديمة - الزاوية العابدية" }, { name: "إبتدائية مصطفى بن بولعيد - الزاوية العابدية" }, { name: "إبتدائية بوليفة محمد عمران - الزاوية العابدية" }, { name: "إبتدائية صولي عبد الرحمان ( 5 جويلية) - الزاوية العابدية" }, { name: "إبتدائية بشير كدة - الزاوية العابدية" }, { name: "إبتدائية عبد الرحمان بن نونة - الزاوية العابدية" }, { name: "إبتدائية عقبة بن نافع - الزاوية العابدية" }, { name: "إبتدائية المجاهد محمد الاخضر بن لمنور - الزاوية العابدية" }, { name: "إبتدائية غول محمد الصالح (حي السلام) - الزاوية العابدية" }, { name: "إبتدائية محمد مقداد - الزاوية العابدية" }, { name: "إبتدائية احمد بن لمنور - الزاوية العابدية" }],
+            "الطيبات": [{ name: "إبتدائية الاستاذ عمر بن عزة - الطيبات" }, { name: "إبتدائية المجاهد عماري معمر - الطيبات" }, { name: "إبتدائية الشهيد قحمص محمد - الطيبات" }, { name: "إبتدائية العلامة حمداوي محمد بن سليمان(القواشيش) - الطيبات" }, { name: "إبتدائية ميلود تريش(بكار القديمة) - الطيبات" }, { name: "إبتدائية المجاهد زقوني بشير - الطيبات" }, { name: "إبتدائية المجاهد مراد معمر( برحمون) - الطيبات" }, { name: "إبتدائية الشهيد محمد الشين - الطيبات" }, { name: "إبتدائية قعبي علي (بئر العسل) - الطيبات" }, { name: "إبتدائية الشهيد بالطاهر الطيب - الطيبات" }, { name: "إبتدائية المجاهد منصوري مبروك - الطيبات" }, { name: "إبتدائية الشهيد بن قلية عمر - الطيبات" }, { name: "إبتدائية المجاهد رواص أحمد - الطيبات" }, { name: "إبتدائية المجاهد دحدي مسعود - الطيبات" }, { name: "إبتدائية المجاهد خليفة خليفة - الطيبات" }, { name: "إبتدائية المجاهد براهمي براهيم - الطيبات" }, { name: "إبتدائية المجاهد بلخير السعيد - الطيبات" }, { name: "إبتدائية المجاهد لـيـتيم محمد (عثمان بن عفان) - الطيبات" }, { name: "إبتدائية المجاهد بالعجال معمر - الطيبات" }, { name: "إبتدائية المجاهد عماري التجاني الدليعي - الطيبات" }],
+            "العالية": [{ name: "إبتدائية الشهيد قوادري لخضر - العالية" }, { name: "إبتدائية قادري أحمد - العالية" }, { name: "إبتدائية الامام الغزالي بالعالية - العالية" }, { name: "إبتدائية الشهيد عبيدلي أحمد - العالية" }, { name: "إبتدائية سيدي عبد المالك - العالية" }, { name: "إبتدائية بن احمد احمد - العالية" }, { name: "إبتدائية طفحي مسعود ( العالية الجديدة ) - العالية" }, { name: "إبتدائية غبائشي بشير - العالية" }, { name: "إبتدائية المجاهد بساسي الطاهر - العالية" }, { name: "إبتدائية حمايمي ميلود - العالية" }, { name: "إبتدائية المجاهد حبي عمار - العالية" }, { name: "إبتدائية المجاهد ربروب محمد - العالية" }],
+            "المقارين": [{ name: "إبتدائية أسامة بن زيد - المقارين" }, { name: "إبتدائية بن موسى الطيب - المقارين" }, { name: "إبتدائية العقيد سي الحواس - المقارين" }, { name: "إبتدائية ابو عبيدة بن الجراح - المقارين" }, { name: "إبتدائية بشير خذران - المقارين" }, { name: "إبتدائية محمد شافو - المقارين" }, { name: "إبتدائية بركبية حسين - المقارين" }, { name: "إبتدائية الشهيد الشريف محمد بن عبد الله - المقارين" }, { name: "إبتدائية بابا سعيد حشاني ( المجمع المدرسي الجديد ) - المقارين" }, { name: "إبتدائية المجاهد بن الزاوي السعيد - المقارين" }, { name: "إبتدائية المجاهد جاوي محمد - المقارين" }],
+            "المنقر": [{ name: "إبتدائية محمد بوعسرية - المنقر" }, { name: "إبتدائية الشهيد مسماري الاخضر اللويبد - المنقر" }, { name: "إبتدائية الشهيد قبي بلقاسم - المنقر" }, { name: "إبتدائية العلامة بن الصديق علي - المنقر" }, { name: "إبتدائية الشهيد خورارة بشير - المنقر" }, { name: "إبتدائية شوية علي - المنقر" }, { name: "إبتدائية الشهيدبكاري السايح الشابي - المنقر" }, { name: "إبتدائية الشهيد محمد خيراني - المنقر" }, { name: "إبتدائية المجاهد احمد بن الصغير قويدري (البحري) - المنقر" }, { name: "إبتدائية الشلالقة( خورارة محمد) - المنقر" }, { name: "إبتدائية نواري محمد الزروق - المنقر" }, { name: "إبتدائية الشهيد دقعة محمد - المنقر" }, { name: "إبتدائية الشهيد محمد نواري( حي النخيل) - المنقر" }, { name: "إبتدائية محمد مايو - المنقر" }, { name: "إبتدائية غندير العايش - المنقر" }, { name: "إبتدائية الشهيد بله محمد الصغير - المنقر" }],
+            "النزلة": [{ name: "إبتدائية بن دلالي علي - النزلة" }, { name: "إبتدائية قادري أحمد سيدي ماضي - النزلة" }, { name: "إبتدائية بن عمر النوي - النزلة" }, { name: "إبتدائية بن طرية لمنور - النزلة" }, { name: "إبتدائية بوليفة محمد عمران - النزلة" }, { name: "إبتدائية تماسيني عبد الرحمن - النزلة" }, { name: "إبتدائية كدة بشير - النزلة" }, { name: "إبتدائية حركات العايش - النزلة" }, { name: "إبتدائية المجاهد طرية مخلوف - النزلة" }, { name: "إبتدائية المجاهد قمو محمد - النزلة" }, { name: "إبتدائية تمرني موسى - النزلة" }, { name: "إبتدائية المجاهد سلامي محمد - النزلة" }, { name: "إبتدائية نقودي محمد - النزلة" }, { name: "إبتدائية المجاهد العيفاوي التجاني - النزلة" }, { name: "إبتدائية المجاهد عقال عبد الحميد - النزلة" }, { name: "إبتدائية المجاهد عشاب محمد العيد - النزلة" }, { name: "إبتدائية المجاهد فرحي بحري - النزلة" }, { name: "إبتدائية الشيخ بوعمامة - النزلة" }, { name: "إبتدائية رحماني محمد بن محمد - النزلة" }, { name: "إبتدائية المجاهد كراش الأخضر - النزلة" }, { name: "إبتدائية المجاهد بن حميدة علي - النزلة" }, { name: "إبتدائية بن هدية جاب الله ( المستقبل2) - النزلة" }, { name: "إبتدائية المجاهد مشري غزال - النزلة" }, { name: "إبتدائية بن عاشور السبتي - النزلة" }, { name: "إبتدائية علوي حمزة - النزلة" }, { name: "إبتدائية المجاهد قمو محمود - النزلة" }],
+            "بلدة عمر": [{ name: "إبتدائية محمد البشير الإبراهيمي - بلدة اعمر" }, { name: "إبتدائية دحماني عبد الرحمان قوق - بلدة اعمر" }, { name: "إبتدائية بديار محمد - بلدة اعمر" }, { name: "إبتدائية المجاهد قادري موسى - بلدة اعمر" }, { name: "إبتدائية المجاهد الاخضري احمد - بلدة اعمر" }, { name: "إبتدائية المجاهد تمرني عمار(حي النهضة) - بلدة اعمر" }, { name: "إبتدائية المجاهد زروقي علي - بلدة اعمر" }, { name: "إبتدائية المجاهد حاجي عمر - بلدة اعمر" }, { name: "إبتدائية الشهيد مصطفى بن بولعيد قوق - بلدة اعمر" }, { name: "إبتدائية المجاهد شاشة محمد الصغير - بلدة اعمر" }],
+            "تبسبست": [{ name: "إبتدائية محمد عشبي - تبسبست" }, { name: "إبتدائية زنو عبد الحفيظ - تبسبست" }, { name: "إبتدائية جواد عمر (تبسبست الجنوبية ) - تبسبست" }, { name: "إبتدائية بن علي الاخضر (بني يسود القديمة) - تبسبست" }, { name: "إبتدائية جيلاني كينة - تبسبست" }, { name: "إبتدائية التجاني نصيري - تبسبست" }, { name: "إبتدائية بن دومة محمد الطاهر - تبسبست" }, { name: "إبتدائية جلابية عبد القادر - تبسبست" }, { name: "إبتدائية المجاهد أحمد شاوش - تبسبست" }, { name: "إبتدائية حي الصومام - تبسبست" }, { name: "إبتدائية المجاهد بوغرارة محمد الصالح - تبسبست" }, { name: "إبتدائية الفتح الجديدة (جرو بحري) - تبسبست" }, { name: "إبتدائية المجاهد العياط سعد - تبسبست" }, { name: "إبتدائية أول نوفمبر 1954 - تبسبست" }, { name: "إبتدائية المجاهد رمون جلول حي فرجمون - تبسبست" }],
+            "توقرت": [{ name: "إبتدائية بن خلدون - تقرت" }, { name: "إبتدائية الخنساء - تقرت" }, { name: "إبتدائية الشيخ الطاهر العبيدي - تقرت" }, { name: "إبتدائية عظامو محمد البحري - تقرت" }, { name: "إبتدائية الطالب بابا - تقرت" }, { name: "إبتدائية الإمام الشافعي - تقرت" }, { name: "إبتدائية الامام مالك - تقرت" }, { name: "إبتدائية عبيدلي أحمد - تقرت" }, { name: "إبتدائية عيادي علي - تقرت" }, { name: "إبتدائية ناصر بشير - تقرت" }, { name: "إبتدائية المجاهد موهوبي سليمان - تقرت" }, { name: "إبتدائية المجاهد احمد بورنان - تقرت" }, { name: "إبتدائية بن الصديق عبد الهادي (الرمال 1) - تقرت" }, { name: "إبتدائية الشهيد زابي عبد العالي - تقرت" }, { name: "إبتدائية الأمير عبد القادر الجديدة - تقرت" }, { name: "إبتدائية ميعادي محمد فخر الدين - تقرت" }, { name: "إبتدائية تاتاي محمد الصادق (الرمال 02) - تقرت" }, { name: "إبتدائية المجاهد كافي عبد الرحيم - تقرت" }, { name: "إبتدائية المجاهد عظامو محمد - تقرت" }, { name: "إبتدائية بولعراس ابراهيم - تقرت" }, { name: "إبتدائية حي النضال مجمع مدرسي حي 1190 مسكن - تقرت" }, { name: "إبتدائية عمان يوسف - تقرت" }, { name: "إبتدائية دباخ أحمد المستقبل الجنوبي 7 - تقرت" }, { name: "إبتدائية بالعيد مشري المستقبل الشمالي - تقرت" }, { name: "إبتدائية دباغ عمر المستقبل الجنوبي 09 - تقرت" }, { name: "إبتدائية تاتاي عبد القادر - تقرت" }, { name: "إبتدائية الشهيد بالطاهر علي المستقبل الشمالي - تقرت" }, { name: "إبتدائية المجاهد قادري علال حي 700 مسكن - تقرت" }],
+            "سيدي سليمان": [{ name: "إبتدائية بوسعادة بن دلالي - سيدي سليمان" }, { name: "إبتدائية العربي التبسي - سيدي سليمان" }, { name: "إبتدائية الطيب بوريالة - سيدي سليمان" }, { name: "إبتدائية بركبية محمد بكار - سيدي سليمان" }, { name: "إبتدائية الشهيد بن قطان السايح - سيدي سليمان" }, { name: "إبتدائية باسو السعيد - سيدي سليمان" }],
+            "تماسين": [{ name: "إبتدائية مولود فرعون - نماسين" }, { name: "إبتدائية الطالب السعدي بوخندق - نماسين" }, { name: "إبتدائية الشيخ الصغير التجاني - نماسين" }, { name: "إبتدائية الشيخ الصادق التجاني - نماسين" }, { name: "إبتدائية البشيرتاتي - نماسين" }, { name: "إبتدائية المجاهد بكوش محمد العيد - نماسين" }, { name: "إبتدائية المجاهد رزقان احمد - نماسين" }, { name: "إبتدائية المجاهد لبسيس إبراهيم - نماسين" }, { name: "إبتدائية بوبكري بشير - نماسين" }, { name: "إبتدائية بن قانة براهيم (البحور 2) - نماسين" }, { name: "إبتدائية المجاهد تجاني عبد الحق (حي الكودية ) - نماسين" }]
+        };
+
+        const institutionsByDaaira = {
+            "توقرت": {
+                "متوسط": [{ name: "متوسطة سعد بن أبي وقاص – توقرت" }, { name: "متوسطة الإمام علي – توقرت" }, { name: "متوسطة محمد الأمين العمودي – توقرت" }, { name: "متوسطة الشيخ المقراني – تبسبست" }, { name: "متوسطة بن هدية المدني – النزلة" }, { name: "متوسطة عبد الحميد بن باديس – توقرت" }, { name: "متوسطة حمزة بن عبد المطلب – الزاوية العابدية" }, { name: "متوسطة نصرات حشاني – تبسبست" }, { name: "متوسطة عيسات ايدير – البهجة تبسبست" }, { name: "متوسطة تجيني محمد – عين الصحراء النزلة" }, { name: "متوسطة ابن رشد – حي العرقوب توقرت" }, { name: "متوسطة رضا حوحو – الزاوية العابدية" }, { name: "متوسطة ميعادي فخر الدين – النزلة" }, { name: "متوسطة عطالي محمد الصغير – سيدي مهدي النزلة" }, { name: "متوسطة محمد عمران بوليفة – حي الرمال توقرت" }, { name: "متوسطة عبد المؤمن بن علي – النزلة" }, { name: "متوسطة بن الزاوي علي – تبسبست" }, { name: "متوسطة البشير الإبراهيمي – توقرت" }, { name: "متوسطة حي 5 جويلية – الزاوية العابدية" }, { name: "متوسطة بن حيزية عبد الله – عين الصحراء النزلة" }, { name: "متوسطة بن قلية محمد – الزاوية العابدية" }, { name: "متوسطة تمرني محمد – توقرت" }, { name: "متوسطة شاوش محمد – تبسبست" }, { name: "متوسطة المجاهد التجاني الصادق – النزلة" }, { name: "متوسطة خروبي محمد لخضر – النزلة" }, { name: "متوسطة المجاهد سبقاق العيد – توقرت" }, { name: "متوسطة دقعة الطاهر – تبسبست" }, { name: "متوسطة بدودة معمر بن علي – النزلة" }, { name: "متوسطة داشر الحاج – حي المستقبل توقرت" }, { name: "متوسطة المجاهد رواص محمد – حي المستقبل توقرت" }, { name: "متوسطة المجاهد بوليفة محمد العيد – حي المستقبل توقرت" }, { name: "متوسطة المجاهد عماري السايح – حي المستقبل توقرت" }],
+                "ثانوي": [{ name: "ثانوية الأمير عبد القادر – توقرت" }, { name: "ثانوية عبد الرحمان الكواكبي – تبسبست" }, { name: "ثانوية الحسن بن الهيثم – النزلة" }, { name: "ثانوية البشير الإبراهيمي – تبسبست" }, { name: "ثانوية هواري بومدين – الزاوية العابدية" }, { name: "ثانوية أبو بكر بلقايد – النزلة" }, { name: "ثانوية لزهاري تونسي – الزاوية العابدية" }, { name: "ثانوية بوخاري عبد المالك – النزلة" }, { name: "ثانوية عبودة علي – حي المستقبل توقرت" }, { name: "ثانوية مسغوني محمد الصالح – حي المستقبل" }]
+            },
+            "الحجيرة": {
+                "متوسط": [{ name: "متوسطة ابن سينا – الحجيرة" }, { name: "متوسطة لخضاري لخضر – العالية" }, { name: "متوسطة زوابري مسعود – لقراف الحجيرة" }, { name: "متوسطة السايح بن عيسى محمد السايح – العالية" }, { name: "متوسطة بن شويحة حمزة – الحجيرة" }, { name: "متوسطة شلغوم بشير – الشقة العالية" }, { name: "متوسطة المجاهد شعيب الأخضر – الحجيرة" }],
+                "ثانوي": [{ name: "ثانوية طارق بن زياد – الحجيرة" }, { name: "ثانوية بساسي محمد الصغير – العالية" }, { name: "ثانوية لحسيني محمد – الحجيرة" }, { name: "ثانوية بالضياف محمد – لقراف الحجيرة" }]
+            },
+            "الطيبات": {
+                "متوسط": [{ name: "متوسطة أحمد زبانة – الطيبات" }, { name: "متوسطة موسى بن نصير – المنقر" }, { name: "متوسطة طارق بن زياد – بن ناصر" }, { name: "متوسطة نتاري محمد الدليلعي – الطيبات" }, { name: "متوسطة العقون محمد الكبير – الطيبات" }, { name: "متوسطة معمري محمد – بن ناصر" }, { name: "متوسطة العيد زقرير – المنقر" }, { name: "متوسطة بلعجال أحمد – الخبنة الطيبات" }, { name: "متوسطة المجاهد الخذير أحمد – المنقر" }, { name: "متوسطة المجاهد رابحي العيد – المنقر" }, { name: "متوسطة المجاهد بكاري عبد القادر – الدليليعي الطيبات" }],
+                "ثانوي": [{ name: "ثانوية ابن رشيق القيرواني – الطيبات" }, { name: "ثانوية المنقر – دقعة علي المنقر" }, { name: "ثانوية عبيد أحمد – بن ناصر" }, { name: "ثانوية زقوني الصغير – الدليليعي الطيبات" }]
+            },
+            "المقارين": {
+                "متوسط": [{ name: "متوسطة الفرابي – المقارين" }, { name: "متوسطة طفحي مسعود – سيدي سليمان" }, { name: "متوسطة بلحارث محمد السايح – سيدي سليمان" }, { name: "متوسطة سوفي الهاشمي – الطيبات" }, { name: "متوسطة الشهيد عبد الرحمان قوتال – القصور المقارين" }, { name: "متوسطة الشهيد أحميدة بوحفص – المقارين" }, { name: "متوسطة بركبية عبد الرزاق – المقارين" }, { name: "متوسطة الشهيد تماسيني عبد الرحمان – لهريهيرة المقارين" }],
+                "ثانوي": [{ name: "ثانوية خالد بن الوليد – المقارين" }, { name: "ثانوية بن عمر النوي – سيدي سليمان" }, { name: "ثانوية عميش سعدون – المقارين" }]
+            },
+            "تماسين": {
+                "متوسط": [{ name: "متوسطة عمر بن الخطاب – تماسين" }, { name: "متوسطة مولاتي محمد السايح – بلدة عمر" }, { name: "متوسطة أبو بكر الرازي – البحور تماسين" }, { name: "متوسطة قوني محمد الطيب – سيدي عامر تماسين" }, { name: "متوسطة معركة قرداش – بلدة عمر" }, { name: "متوسطة محمد الصديق بن يحي – حي الكدية تماسين" }, { name: "متوسطة بركة عبد الرزاق – قوق بلدة عمر" }, { name: "متوسطة بدودة السايح – تملاحت تماسين" }, { name: "متوسطة علي بن باديس – قوق بلدة عمر" }],
+                "ثانوي": [{ name: "ثانوية مفدي زكريا – تماسين" }, { name: "ثانوية العيد بن الصحراوي – بلدة عمر" }, { name: "ثانوية قويدري محمد العيد – تماسين" }, { name: "ثانوية تجيني محمد لخضر – بلدة عمر" }, { name: "ثانوية مالك بن نبي – قوق" }]
+            }
+        };
+
+        // --- 2. إعداد القوائم المنسدلة (Dropdown Logic) ---
+        function initDropdowns() {
+            const daairaSelect = document.getElementById('sel-daaira');
+            daairaSelect.innerHTML = '';
+            for (let daaira in baladiyaMap) {
+                daairaSelect.innerHTML += `<option value="${daaira}">${daaira}</option>`;
+            }
+            updateMunicipalities();
+        }
+
+        function updateMunicipalities() {
+            const daaira = document.getElementById('sel-daaira').value;
+            const baladiyaSelect = document.getElementById('sel-municipality');
+            baladiyaSelect.innerHTML = '';
+            
+            if (baladiyaMap[daaira]) {
+                baladiyaMap[daaira].forEach(b => {
+                    baladiyaSelect.innerHTML += `<option value="${b}">${b}</option>`;
+                });
+            }
+            updateInstitutions();
+        }
+
+        function updateInstitutions() {
+            const stage = document.getElementById('sel-stage').value;
+            const daaira = document.getElementById('sel-daaira').value;
+            const baladiya = document.getElementById('sel-municipality').value;
+            const instSelect = document.getElementById('sel-institution');
+            
+            instSelect.innerHTML = '<option value="">اختر المؤسسة...</option>';
+
+            if (stage === 'ابتدائي') {
+                if (primarySchoolsByBaladiya[baladiya]) {
+                    primarySchoolsByBaladiya[baladiya].forEach(school => {
+                        instSelect.innerHTML += `<option value="${school.name}">${school.name}</option>`;
+                    });
+                }
+            } else {
+                if (institutionsByDaaira[daaira] && institutionsByDaaira[daaira][stage]) {
+                    institutionsByDaaira[daaira][stage].forEach(school => {
+                        instSelect.innerHTML += `<option value="${school.name}">${school.name}</option>`;
+                    });
+                }
+            }
+            updateCardsWorkplace();
+        }
+
+        function updateCardsWorkplace() {
+            // تحديث مكان العمل في مصفوفة الموظفين عند تغيير المؤسسة
+            const selectedInstitution = document.getElementById('sel-institution').value;
+            if(selectedInstitution && employees.length > 0) {
+                employees.forEach(emp => emp.workplace = selectedInstitution);
+                saveToStorage();
+                renderTable();
+            }
+        }
+
+        // --- 3. المتغيرات والتخزين المحلي ---
+        let employees = [];
+        let currentEditingId = null;
+        let cropper = null;
+
+        window.onload = async () => {
+            initDropdowns(); // تهيئة القوائم عند التحميل
+            const savedData = await localforage.getItem('employeeData');
+            if (savedData) {
+                employees = savedData;
+                renderTable();
+                renderCards();
+            }
+        };
+
+        function saveToStorage() {
+            localforage.setItem('employeeData', employees);
+            renderCards();
+        }
+
+        function clearData() {
+            if(confirm('هل أنت متأكد من مسح جميع البيانات والصور؟')) {
+                localforage.clear();
+                employees = [];
+                renderTable();
+                renderCards();
+                document.getElementById('file-upload').value = "";
+            }
+        }
+
+     // --- 4. رفع الملف وقراءة البيانات عبر الزر ---
+        function loadEmployeeData() {
+            const fileInput = document.getElementById('file-upload');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert("يرجى اختيار ملف الإكسل أولاً قبل الضغط على تحميل!");
+                return;
+            }
+
+            const selectedInstitution = document.getElementById('sel-institution').value;
+            if(!selectedInstitution) {
+                alert("تنبيه: لم تقم باختيار المؤسسة. سيتم ترك مكان العمل فارغاً في البطاقات حالياً.");
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    
+                    // 1. قراءة الملف أولاً كـ Array للبحث عن السطر الذي يحتوي على العناوين
+                    const rawArray = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
+                    
+                    let headerRowIndex = -1;
+                    for (let i = 0; i < Math.min(10, rawArray.length); i++) {
+                        const row = rawArray[i].map(c => String(c).trim());
+                        // إذا وجدنا كلمة الاسم أو اللقب، فهذا هو سطر العناوين
+                        if (row.includes("الاسم") || row.includes("اللقب")) {
+                            headerRowIndex = i;
+                            break;
+                        }
+                    }
+
+                    if (headerRowIndex === -1) {
+                        alert("خطأ: لم نتمكن من العثور على عناوين الأعمدة (الاسم، اللقب). يرجى التأكد من تطابق الملف مع النموذج.");
+                        return;
+                    }
+
+                    // 2. قراءة البيانات من السطر الصحيح الذي وجدناه
+                    const rawData = XLSX.utils.sheet_to_json(firstSheet, { range: headerRowIndex, defval: "" });
+                    
+                    const parsedEmployees = rawData.map((row, index) => {
+                        // 3. تنظيف أسماء الأعمدة من المسافات الزائدة المخفية (مثل "الاسم " تصبح "الاسم")
+                        const cleanRow = {};
+                        for (let key in row) {
+                            cleanRow[key.trim()] = row[key];
+                        }
+
+                        let rawJobId = cleanRow["الرمز الوظيفي"] || cleanRow["الرقم الوظيفي"] || "";
+                        let jobIdStr = rawJobId;
+                        
+                        if (typeof rawJobId === 'number') {
+                            jobIdStr = rawJobId.toLocaleString('fullwide', {useGrouping:false});
+                        } else if (typeof rawJobId === 'string' && rawJobId.toUpperCase().includes('E')) {
+                            jobIdStr = Number(rawJobId).toLocaleString('fullwide', {useGrouping:false});
+                        }
+
+                        const firstName = cleanRow["الاسم"] || "";
+                        const lastName = cleanRow["اللقب"] || "";
+                        const fullName = (firstName + " " + lastName).trim();
+
+                      let rawDob = cleanRow["تاريخ الازدياد"] || cleanRow["تاريخ الميلاد"] || "";
+                        let dobStr = "";
+
+                        if (rawDob) {
+                            if (typeof rawDob === 'number') {
+                                // 1. إذا كان التاريخ مخزناً كرقم تسلسلي في الإكسل
+                                let date = new Date(Math.round((rawDob - 25569) * 86400 * 1000));
+                                let day = String(date.getDate()).padStart(2, '0');
+                                let month = String(date.getMonth() + 1).padStart(2, '0');
+                                let year = date.getFullYear();
+                                dobStr = `${year}-${month}-${day}`;
+                            } else if (rawDob instanceof Date) {
+                                // 2. إذا تعرف عليه الإكسل ككائن تاريخ مباشر
+                                let day = String(rawDob.getDate()).padStart(2, '0');
+                                let month = String(rawDob.getMonth() + 1).padStart(2, '0');
+                                let year = rawDob.getFullYear();
+                                dobStr = `${year}-${month}-${day}`;
+                            } else {
+                                let tempStr = String(rawDob).trim();
+                                let parsedDate = new Date(tempStr);
+                                
+                                // 3. إذا كان نصاً طويلاً بالإنجليزية (مثل الذي ظهر لك: Sun Jun 26 1988...)
+                                if (!isNaN(parsedDate.getTime()) && tempStr.match(/[a-zA-Z]/) && tempStr.length > 12) {
+                                    let day = String(parsedDate.getDate()).padStart(2, '0');
+                                    let month = String(parsedDate.getMonth() + 1).padStart(2, '0');
+                                    let year = parsedDate.getFullYear();
+                                    dobStr = `${year}-${month}-${day}`;
+                                } else {
+                                    // 4. إذا كان نصاً قصيراً عادياً (مثل 1988-06-26 أو 26/06/1988)
+                                    let parts = tempStr.split(/[-/]/);
+                                    if (parts.length === 3) {
+                                        if (parts[0].length === 4) { 
+                                            dobStr = `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+                                        } else if (parts[2].length === 4) { 
+                                            dobStr = `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2]}`;
+                                        } else {
+                                            dobStr = tempStr;
+                                        }
+                                    } else {
+                                        dobStr = tempStr; // إرجاع النص كما هو إذا لم يتطابق مع أي شيء
+                                    }
+                                }
+                            }
+                        }
+                        return {
+                            id: 'emp_' + Date.now() + '_' + index,
+                            name: fullName,
+                            dob: dobStr,
+                            rank: cleanRow["الرتبة"] || '',
+                            workplace: selectedInstitution,
+                            jobId: jobIdStr,
+                            photo: null
+                        };
+                    }).filter(emp => emp.name !== ''); // تصفية الأسطر الفارغة تماماً
+
+                    if (parsedEmployees.length === 0) {
+                        alert("تم قراءة الملف ولكن يبدو أنه لا يحتوي على أسماء موظفين، أو أن البيانات غير مكتوبة تحت عمود 'الاسم'.");
+                        return;
+                    }
+
+                    employees = parsedEmployees;
+                    saveToStorage();
+                    renderTable();
+                    alert("تم تحميل " + employees.length + " موظف بنجاح!");
+                    
+                } catch (error) {
+                    console.error("Error reading file:", error);
+                    alert("حدث خطأ أثناء تحليل ملف الإكسل. تأكد من أن الملف سليم وغير تالف.");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+
+
+        // --- 5. رسم الجدول ---
+function renderTable() {
+    const tbody = document.getElementById('table-body');
+    tbody.innerHTML = '';
+
+    employees.forEach((emp) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${emp.name}</td>
+            <td><span dir="ltr">${emp.dob}</span></td>
+            <td>${emp.rank}</td>
+            <td>${emp.workplace || '<span style="color:red">يرجى اختيار المؤسسة</span>'}</td>
+            <td><span dir="ltr">${emp.jobId}</span></td>
+            <td>
+                ${emp.photo 
+                    ? `<img src="${emp.photo}" width="40" height="52" style="object-fit:cover; border-radius:4px; vertical-align:middle;">
+                       <button class="btn btn-danger btn-sm" onclick="deletePhoto('${emp.id}')">حذف</button>` 
+                    : `<input type="file" accept="image/*" onchange="openCropper(event, '${emp.id}')" style="width: 180px;">`
+                }
+            </td>
+            <td class="action-buttons">
+                <button class="btn btn-warning btn-sm" onclick="openEmployeeModal('${emp.id}')">✏️ تعديل</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteEmployee('${emp.id}')">🗑️ حذف</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+        // --- 6. قص وإدارة الصور ---
+        function openCropper(event, empId) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            currentEditingId = empId;
+            const url = URL.createObjectURL(file);
+            const imageElement = document.getElementById('cropper-image');
+            imageElement.src = url;
+            
+            document.getElementById('cropper-modal').style.display = 'flex';
+
+            if (cropper) cropper.destroy();
+            cropper = new Cropper(imageElement, {
+                aspectRatio: 130 / 170, // تناسب الإطار في البطاقة
+                viewMode: 1,
+                autoCropArea: 1
+            });
+            event.target.value = "";
+        }
+
+        function closeCropper() {
+            document.getElementById('cropper-modal').style.display = 'none';
+            if (cropper) { cropper.destroy(); cropper = null; }
+            currentEditingId = null;
+        }
+
+     function saveCrop() {
+    if (!cropper) return;
+    
+    // استخدام الإعداد الجديد ذو الجودة الفائقة (8 أضعاف) فقط
+    const canvas = cropper.getCroppedCanvas({ 
+        width: 1040, 
+        height: 1360,
+        fillColor: '#fff' // لضمان عدم وجود خلفية شفافة تسبب مشاكل في الطباعة
+    });
+
+    // تصدير الصورة بصيغة PNG غير مضغوطة للحفاظ على أعلى جودة
+    const base64Image = canvas.toDataURL('image/png'); 
+
+    const empIndex = employees.findIndex(e => e.id === currentEditingId);
+    if (empIndex > -1) {
+        employees[empIndex].photo = base64Image;
+        saveToStorage();
+        renderTable();
+    }
+    closeCropper();
+}
+
+
+        function deletePhoto(empId) {
+            const empIndex = employees.findIndex(e => e.id === empId);
+            if (empIndex > -1) {
+                employees[empIndex].photo = null;
+                saveToStorage();
+                renderTable();
+            }
+        }
+
+      
+// --- 7. توليد البطاقات للطباعة ---
+let currentTemplate = 2; // لحفظ النموذج المختار
+let isLargeFormat = false;
+// دالة جديدة لتشغيل الطباعة حسب النموذج المختار
+// دالة تشغيل الطباعة المحدثة لتطبع الحجم الكبير دائماً
+function printTemplate(templateId) {
+    window.scrollTo(0, 0); 
+    currentTemplate = templateId;
+    isLargeFormat = true; 
+
+    // إعدادات الصفحة للطباعة
+    let style = document.getElementById('dynamic-page-orientation');
+    if (!style) {
+        style = document.createElement('style');
+        style.id = 'dynamic-page-orientation';
+        document.head.appendChild(style);
+    }
+    style.innerHTML = `
+        @media print { 
+            @page { size: A4 landscape !important; margin: 0mm !important; } 
+            body { margin: 0 !important; padding: 0 !important; }
+            .page-a4-large { margin: 0 !important; }
+        }
+    `;
+
+    // 1. رسم البطاقات أولاً
+    renderCards(); 
+    
+    // 2. تنفيذ التصغير التلقائي فوراً لضمان اكتمال النصوص
+    setTimeout(() => {
+        const container = document.getElementById('card-container');
+        if (container) {
+            autoShrinkText(container); // استهداف الحاوية الرئيسية
+        }
+    }, 50);
+
+    // 3. مهلة أمان (1 ثانية كاملة) لضمان أن المتصفح قد طبق الأحجام الجديدة لكل الموظفين
+    setTimeout(() => {
+        window.print();
+        
+        // إعادة الإعدادات للوضع الطبيعي بعد الطباعة
+        isLargeFormat = false;
+        style.innerHTML = `@media print { @page { size: A4 portrait !important; margin: 0mm !important; } }`;
+        renderCards();
+    }, 1000); 
+}
+
+function renderCards() {
+    const container = document.getElementById('card-container');
+    
+    // إضافة الكلاس المناسب حسب النموذج المختار
+    if (currentTemplate === 2) {
+        container.className = 'theme-2';
+    } else if (currentTemplate === 3) {
+        container.className = 'theme-3';
+    } else if (currentTemplate === 4) {
+        container.className = 'theme-4'; // إضافة التصميم الرابع
+    } else {
+        container.className = '';
+    }
+    
+    container.innerHTML = '';
+
+    // --- استبدل السطور من const chunkSize حتى تعريف pageHTML بهذا الكود ---
+    const chunkSize = isLargeFormat ? 4 : 6;
+    const wrapperClass = isLargeFormat ? 'card-wrapper-large' : 'card-wrapper';
+    
+    // الدوران على قائمة الموظفين لطباعة نفس العدد
+    for (let i = 0; i < employees.length; i += chunkSize) {
+        const chunk = employees.slice(i, i + chunkSize);
+        
+        let pageHTML = `<div class="${isLargeFormat ? 'page-a4-large' : 'page-a4'}">`;
+
+        
+        chunk.forEach(emp => {
+            if (currentTemplate === 3) {
+                // --- كود الجهة الخلفية الموحدة (النموذج الثالث بالرسومات) ---
+                pageHTML += `
+                <div class="${wrapperClass}">
+                    <div class="card">
+                        <div class="back-content">
+                            <div class="back-graphics">
+                                <img src="https://lh3.googleusercontent.com/d/1O9TZQrn9q4iRnI1NldJNxfq0bKuc8S-u" alt="شعار وزارة التربية" class="ministry-logo-back">
+                            </div>
+                            
+                            <div class="ministry-title-back">وزارة التربية الوطنية</div>
+                            
+                            <div class="rules-container">
+                                <img src="https://i.ibb.co/placeholder-stamp.png" alt="ختم" class="stamp-watermark" style="opacity: 0;">
+                                
+                                <ul class="rules-list">
+                                    <li>كل استعمال غير قانوني أو لأغراض غير مهنية للبطاقة المهنية يعرض صاحبها لعقوبات تأديبية</li>
+                                    <li>في حالة التقاعد أو الإستقالة أو الخروج من الولاية يجب على الموظف تسليم البطاقة للإدارة</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            
+            } else if (currentTemplate === 4) {
+                // --- كود الجهة الخلفية (التصميم الرابع الرسمي والحديث) ---
+                pageHTML += `
+                <div class="${wrapperClass}">
+                    <div class="card">
+                        <div class="back-header">
+                            <h3>الجمهورية الجزائرية الديمقراطية الشعبية</h3>
+                            <h2>وزارة التربية الوطنية</h2>
+                        </div>
+                        
+                        <div class="back-body">
+                            <div class="watermark-logo"></div>
+                            <div class="instructions-title">تنبيه هام</div>
+                            <ul class="rules-list-modern">
+                                <li>كل استعمال غير قانوني أو لأغراض غير مهنية للبطاقة، يعرض صاحبها لعقوبات تأديبية.</li>
+                                <li>في حالة التقاعد، الإستقالة، أو النقل خارج الولاية، يُلزم الموظف بتسليم البطاقة للإدارة.</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="back-footer">
+                            <div class="return-text">
+                                في حالة العثور على هذه البطاقة، يرجى تسليمها إلى مديرية التربية لولاية توقرت أو أقرب مؤسسة تربوية.
+                            </div>
+                            <div class="qr-box">
+                                <div class="local-qr" data-qrinfo="Directorate_of_Education_Touggourt : 0664446349" style="width: 100%; height: 100%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            } else {
+                // --- الكود الخاص بوجه البطاقة (النموذج الأول والثاني) ---
+                const photoHTML = emp.photo 
+                    ? `<img src="${emp.photo}" style="width:100%; height:100%; object-fit:cover;">`
+                    : `<span style="color:#ccc; font-size:14px">صورة شمسية</span>`;
+
+                const barcodeValue = emp.jobId ? emp.jobId : "0000000000";
+
+                if (currentTemplate === 1) {
+                    pageHTML += `
+                    <div class="${wrapperClass}">
+                        <div class="card">
+                            <div class="top-deco-bar"><div class="bar-green"></div><div class="bar-red"></div></div>
+                            <div class="watermark"></div>
+                            <div class="header">
+                                <div class="logo-box">
+                                    <img src="https://lh3.googleusercontent.com/d/1O9TZQrn9q4iRnI1NldJNxfq0bKuc8S-u" class="header-logo">
+                                    <div class="logo-text">وزارة التربية الوطنية</div>
+                                </div>
+                                <div class="header-center"><div class="main-title">الجمهورية الجزائرية الديمقراطية الشعبية</div></div>
+                                <div class="logo-box">
+                                    <img src="https://lh3.googleusercontent.com/d/1O9TZQrn9q4iRnI1NldJNxfq0bKuc8S-u" class="header-logo">
+                                    <div class="logo-text">مديرية التربية لولاية توقرت</div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="info-section">
+                                    <div class="card-name-title">بطاقة التعريف المهنية</div>
+                                    <div class="info-row"><span class="label">الاسم واللقب:&rlm;</span><span class="value">${emp.name || '...................'}</span></div>
+                                    <div class="info-row"><span class="label">تاريخ الميلاد:&rlm;</span><span class="value" dir="ltr">${emp.dob || '...................'}</span></div>
+                                    <div class="info-row"><span class="label">الرتبة:&rlm;</span><span class="value">${emp.rank || '...................'}</span></div>
+                                    <div class="info-row"><span class="label">مكان العمل:&rlm;</span><span class="value">${emp.workplace || '...................'}</span></div>
+                                    <div class="info-row"><span class="label">الرقم التعريف الوظيفي:&rlm;</span><span class="value">${emp.jobId || '...................'}</span></div>
+                                </div>
+                                <div class="photo-section">
+                                    <div class="serial-number"><span>الرقم:</span><span dir="ltr">2026 / </span></div>
+                                    <div class="photo-frame">${photoHTML}</div>
+                                    <div class="signature-title">مدير التربية</div>
+                                </div>
+                            </div>
+                            
+                            <div class="barcode-container">
+                                <svg class="barcode"
+                                    jsbarcode-value="${barcodeValue}"
+                                    jsbarcode-format="CODE128"
+                                    jsbarcode-displayValue="false"
+                                    jsbarcode-height="28"
+                                    jsbarcode-width="1.5"
+                                    jsbarcode-margin="0"
+                                    jsbarcode-background="transparent">
+                                </svg>
+                            </div>
+
+                            <div class="footer">على السلطات المدنية والعسكرية أن تسمح لحامل هذه البطاقة بالمرور في كل الحالات</div>
+                        </div>
+                    </div>`;
+                } else if (currentTemplate === 2) {
+                   
+                    pageHTML += `
+                    <div class="${wrapperClass}">
+                        <div class="card">
+                            
+                            
+                            <div class="corner-ribbon-container">
+                                <div class="corner-ribbon-content">
+                                    <div class="stripe green"></div>
+                                    <div class="stripe red"></div>
+                                </div>
+                            </div>
+                            <div class="header">
+                                <div class="main-title">الجمهورية الجزائرية الديمقراطية الشعبية</div>
+                                <div class="side-group right">
+                                    <div class="side-text">وزارة التربية الوطنية</div>
+                                </div>
+                                <div class="side-group left">
+                                    <img src="https://lh3.googleusercontent.com/d/1O9TZQrn9q4iRnI1NldJNxfq0bKuc8S-u" alt="شعار" class="header-logo">
+                                    <div class="side-text">مديرية التربية لولاية توقرت</div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="right-section">
+                                    <div class="card-type-title">بطاقة التعريف المهنية</div>
+                                    <div class="info-row"><span class="info-label">اللقب والاسم:&rlm;</span><span>${emp.name}</span></div>
+                                    <div class="info-row"><span class="info-label">تاريخ الميلاد:&rlm;</span><span dir="ltr">${emp.dob}</span></div>
+
+                                    <div class="info-row"><span class="info-label">الرتبة:&rlm;</span><span class="shrink-target">${emp.rank}</span></div>
+                                    <div class="info-row"><span class="info-label">مكان العمل:&rlm;</span><span class="shrink-target">${emp.workplace || ''}</span></div>
+
+                                    <div class="info-row"><span class="info-label">توقرت في:&rlm;</span></div>
+
+                                </div>
+                                <div class="left-section">
+                                    <div class="number-row">
+                                        <span>الرقم:</span>
+                                        <span dir="ltr">2026 /</span>
+                                    </div>
+                                    <div class="photo-area">${photoHTML}</div>
+                                    <div class="signature" style="line-height: 1;">
+                                           مدير التربية<br>
+                                           بوعزيز صالح
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="footer">
+                                على السلطات المدنية والعسكرية أن تسمح لحامل هذه البطاقة بالمرور في كل الحالات
+                            </div>
+                        </div>
+                    </div>`;
+                }
+            }
+        });
+        
+        pageHTML += `</div>`; 
+        container.innerHTML += pageHTML;
+    }
+
+    // 1. تفعيل الباركود للنموذج الأول
+    if (employees.length > 0 && currentTemplate === 1) {
+        JsBarcode(".barcode").init();
+    }
+
+  // 2. تفعيل الـ QR Code محلياً (باستخدام مكتبة QRious الحديثة)
+    if (employees.length > 0) {
+        const qrElements = document.querySelectorAll('.local-qr');
+        qrElements.forEach(el => {
+            try {
+                // إنشاء لوحة رسم (Canvas) نظيفة داخل المربع
+                el.innerHTML = '<canvas></canvas>'; 
+                const canvas = el.querySelector('canvas');
+                
+                // جلب البيانات الخاصة بالموظف
+                // جلب البيانات الخاصة بالموظف
+const rawText = el.getAttribute('data-qrinfo');
+if(!rawText) return;
+
+// --- الإصلاح: تحويل النص لدعم اللغة العربية (UTF-8) ---
+const utf8Text = unescape(encodeURIComponent(rawText));
+
+// توليد الرمز باحترافية عالية
+new QRious({
+    element: canvas,
+    value: utf8Text,    // نستخدم النص المحول هنا
+    size: 150,
+    level: 'L',         // <-- أضفنا الفاصلة هنا
+    padding: 0          // لتقليل المسافة الداخلية للرمز
+});
+
+               
+                // إجبار الكانفاس على ملء الإطار المخصص له (85px)
+                canvas.style.width = '100%';
+                canvas.style.height = '100%';
+                canvas.style.display = 'block';
+                
+            } catch (e) {
+                console.error("خطأ في توليد الـ QR:", e);
+            }
+        });
+    }
+setTimeout(autoShrinkText, 50);
+}
+
+function goBackToMain() {
+    // مسح تصريح الدخول من الجلسة (لكي لا يفتح الرابط مجدداً إذا ضغط على زر "للأمام" في المتصفح)
+    sessionStorage.removeItem("secure_cards_access");
+    
+    // التوجيه للصفحة الرئيسية (تأكد أن اسم الصفحة الرئيسية الخاص بك هو index.html)
+    window.location.href = "index.html"; 
+}
+
+// --- 8. إضافة وتعديل وحذف الموظفين يدوياً ---
+
+function openEmployeeModal(empId = null) {
+    const modal = document.getElementById('employee-modal');
+    const title = document.getElementById('emp-modal-title');
+    
+    // تفريغ الحقول أو تعبئتها
+    if (empId) {
+        // حالة التعديل
+        const emp = employees.find(e => e.id === empId);
+        if (emp) {
+            title.innerText = "تعديل بيانات الموظف";
+            document.getElementById('emp-id').value = emp.id;
+            document.getElementById('emp-name').value = emp.name;
+            document.getElementById('emp-dob').value = emp.dob;
+            document.getElementById('emp-rank').value = emp.rank;
+            document.getElementById('emp-jobid').value = emp.jobId;
+        }
+    } else {
+        // حالة الإضافة الجديدة
+        title.innerText = "إضافة موظف جديد";
+        document.getElementById('emp-id').value = "";
+        document.getElementById('emp-name').value = "";
+        document.getElementById('emp-dob').value = "";
+        document.getElementById('emp-rank').value = "";
+        document.getElementById('emp-jobid').value = "";
+    }
+    
+    modal.style.display = 'flex';
+}
+
+function closeEmployeeModal() {
+    document.getElementById('employee-modal').style.display = 'none';
+}
+
+function saveEmployee() {
+    const id = document.getElementById('emp-id').value;
+    const name = document.getElementById('emp-name').value;
+    const dob = document.getElementById('emp-dob').value;
+    const rank = document.getElementById('emp-rank').value;
+    const jobId = document.getElementById('emp-jobid').value;
+    const workplace = document.getElementById('sel-institution').value || "";
+
+    if (!name.trim()) {
+        alert("يرجى إدخال الاسم واللقب على الأقل!");
+        return;
+    }
+
+    if (id) {
+        // تحديث موظف موجود
+        const index = employees.findIndex(e => e.id === id);
+        if (index > -1) {
+            employees[index].name = name;
+            employees[index].dob = dob;
+            employees[index].rank = rank;
+            employees[index].jobId = jobId;
+        }
+    } else {
+        // إضافة موظف جديد
+        const newEmp = {
+            id: 'emp_manual_' + Date.now(),
+            name: name,
+            dob: dob,
+            rank: rank,
+            workplace: workplace,
+            jobId: jobId,
+            photo: null
+        };
+        // إضافته في بداية المصفوفة ليظهر في أعلى الجدول
+        employees.unshift(newEmp); 
+    }
+
+    saveToStorage();
+    renderTable();
+    closeEmployeeModal();
+}
+
+function deleteEmployee(empId) {
+    if (confirm("هل أنت متأكد من حذف هذا الموظف؟ لا يمكن التراجع عن هذا الإجراء.")) {
+        employees = employees.filter(e => e.id !== empId);
+        saveToStorage();
+        renderTable();
+    }
+}
+
+
+
+// دالة الطباعة بالحجم الكبير (من القائمة المنسدلة)
+
+function printLargeTemplate() {
+    window.scrollTo(0, 0); 
+    
+    const templateId = parseInt(document.getElementById('pdf-template-select').value);
+    currentTemplate = templateId;
+    isLargeFormat = true;
+    
+    // --- كود جديد: إجبار المتصفح على الوضع الأفقي (Landscape) ---
+    let style = document.getElementById('dynamic-page-orientation');
+    if (!style) {
+        style = document.createElement('style');
+        style.id = 'dynamic-page-orientation';
+        document.head.appendChild(style);
+    }
+    style.innerHTML = `
+        @media print { 
+            @page { size: A4 landscape !important; margin: 0mm !important; } 
+            body { margin: 0 !important; padding: 0 !important; }
+            .page-a4-large { margin: 0 !important; }
+        }
+    `;
+    // -------------------------------------------------------------
+
+    renderCards();
+    
+    setTimeout(() => {
+        window.print();
+        
+        // إعادة النظام والتنسيقات للوضع العادي (العمودي) تلقائياً بعد الطباعة
+        isLargeFormat = false;
+        style.innerHTML = `@media print { @page { size: A4 portrait !important; margin: 0mm !important; } }`;
+        renderCards();
+    }, 600);
+}
+
+// --- دوال مساعدة لضمان تحميل الموارد قبل التصدير ---
+
+// دالة لانتظار تحميل جميع الصور داخل عنصر معين
+async function waitForImages(element) {
+    const images = element.querySelectorAll('img');
+    const promises = Array.from(images).map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise((resolve) => {
+            img.onload = resolve;
+            img.onerror = resolve; // لا توقف العملية إذا فشلت صورة واحدة
+        });
+    });
+    return Promise.all(promises);
+}
+
+// دالة لانتظار تحميل الخطوط بالكامل
+async function waitForFonts() {
+    await document.fonts.ready;
+}
+
+// دالة لتوليد كود الـ HTML للبطاقة بدون الإطارات والتحجيم (Scale)
+function getCardHTML(emp, templateId) {
+    const photoHTML = emp.photo 
+        ? `<img src="${emp.photo}" style="width:100%; height:100%; object-fit:cover;">`
+        : `<span style="color:#ccc; font-size:14px">صورة شمسية</span>`;
+    const barcodeValue = emp.jobId ? emp.jobId : "0000000000";
+
+   // هذا التعديل يجعل إطار الـ PDF مطاباقاً تماماً لمعاينة الحجم الكبير
+const cardPrintStyle = "position: relative; transform: none; right: auto; top: auto; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; overflow: hidden;";
+
+    if (templateId === 1) {
+        return `
+        <div class="card" style="${cardPrintStyle}">
+            <div class="top-deco-bar"><div class="bar-green"></div><div class="bar-red"></div></div>
+            <div class="watermark"></div>
+            <div class="header">
+                <div class="logo-box">
+                    <img src="https://lh3.googleusercontent.com/d/1O9TZQrn9q4iRnI1NldJNxfq0bKuc8S-u" class="header-logo">
+                    <div class="logo-text">وزارة التربية الوطنية</div>
+                </div>
+                <div class="header-center"><div class="main-title">الجمهورية الجزائرية الديمقراطية الشعبية</div></div>
+                <div class="logo-box">
+                    <img src="https://lh3.googleusercontent.com/d/1O9TZQrn9q4iRnI1NldJNxfq0bKuc8S-u" class="header-logo">
+                    <div class="logo-text">مديرية التربية لولاية توقرت</div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="info-section">
+                    <div class="card-name-title">بطاقة التعريف المهنية</div>
+                    <div class="info-row"><span class="label">الاسم واللقب:</span><span class="value">${emp.name}</span></div>
+                    <div class="info-row"><span class="label">تاريخ الميلاد:</span><span class="value" dir="ltr">${emp.dob}</span></div>
+                    <div class="info-row"><span class="label">الرتبة:</span><span class="value">${emp.rank}</span></div>
+                    <div class="info-row"><span class="label">مكان العمل:</span><span class="value">${emp.workplace || ''}</span></div>
+                    <div class="info-row"><span class="label">الرقم التعريف الوظيفي:</span><span class="value">${emp.jobId}</span></div>
+                </div>
+                <div class="photo-section">
+                    <div class="serial-number"><span>الرقم:</span><span dir="ltr">2026 / </span></div>
+                    <div class="photo-frame">${photoHTML}</div>
+                    <div class="signature-title">مدير التربية</div>
+                </div>
+            </div>
+            <div class="barcode-container">
+                <svg class="barcode-render"
+                    jsbarcode-value="${barcodeValue}" jsbarcode-format="CODE128"
+                    jsbarcode-displayValue="false" jsbarcode-height="28"
+                    jsbarcode-width="1.5" jsbarcode-margin="0" jsbarcode-background="transparent">
+                </svg>
+            </div>
+            <div class="footer">على السلطات المدنية والعسكرية أن تسمح لحامل هذه البطاقة بالمرور في كل الحالات</div>
+        </div>`;
+    } 
+    else if (templateId === 2) {
+        return `
+        <div class="card" style="${cardPrintStyle}">
+            <div class="corner-ribbon-container">
+                <div class="corner-ribbon-content"><div class="stripe green"></div><div class="stripe red"></div></div>
+            </div>
+            <div class="header">
+                <div class="main-title">الجمهورية الجزائرية الديمقراطية الشعبية</div>
+                <div class="side-group right"><div class="side-text">وزارة التربية الوطنية</div></div>
+                <div class="side-group left">
+                    <img src="https://lh3.googleusercontent.com/d/1O9TZQrn9q4iRnI1NldJNxfq0bKuc8S-u" alt="شعار" class="header-logo">
+                    <div class="side-text">مديرية التربية لولاية توقرت</div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="right-section">
+                    <div class="card-type-title">بطاقة التعريف المهنية</div>
+                    <div class="info-row"><span class="info-label">اللقب والاسم:</span><span>${emp.name}</span></div>
+                    <div class="info-row"><span class="info-label">تاريخ الميلاد:</span><span dir="ltr">${emp.dob}</span></div>
+                    <div class="info-row"><span class="info-label">الرتبة:</span><span class="shrink-target">${emp.rank}</span></div>
+                    <div class="info-row"><span class="info-label">مكان العمل:</span><span class="shrink-target">${emp.workplace || ''}</span></div>
+                    <div class="info-row"><span class="info-label">توقرت في:</span></div> 
+                </div>
+                <div class="left-section">
+                    <div class="number-row"><span>الرقم:</span><span dir="ltr">2026 /</span></div>
+                    <div class="photo-area">${photoHTML}</div>
+                    <div class="signature" style="line-height: 1;">مدير التربية<br>بوعزيز صالح</div>
+                </div>
+            </div>
+            <div class="footer">على السلطات المدنية والعسكرية أن تسمح لحامل هذه البطاقة بالمرور في كل الحالات</div>
+        </div>`;
+    }
+    else if (templateId === 3) {
+        // استخدام ستايل الإطار المتوفر في كودك
+        const printStyle = typeof normalPrintStyle !== 'undefined' ? normalPrintStyle : cardPrintStyle;
+        
+        return `
+        <div class="card" style="${printStyle}" dir="rtl">
+            <div class="back-content">
+                <div class="back-graphics">
+                    <img src="https://lh3.googleusercontent.com/d/1O9TZQrn9q4iRnI1NldJNxfq0bKuc8S-u" alt="شعار وزارة التربية" class="ministry-logo-back">
+                </div>
+                
+                <div class="ministry-title-back" style="letter-spacing: normal !important; font-family: 'Cairo', sans-serif !important; text-align: center; width: 100%;">وزارة التربية الوطنية</div>
+                
+                <div class="rules-container">
+                    <ul class="rules-list" style="letter-spacing: normal !important;">
+                        <li>كل استعمال غير قانوني أو لأغراض غير مهنية للبطاقة المهنية يعرض صاحبها لعقوبات تأديبية</li>
+                        <li>في حالة التقاعد أو الإستقالة أو الخروج من الولاية يجب على الموظف تسليم البطاقة للإدارة</li>
+                    </ul>
+                </div>
+            </div>
+        </div>`;
+    }
+}
+// --- الدالة الموحدة لإنشاء وتصدير PDF باحترافية ---
+// --- الدالة الموحدة لإنشاء وتصدير PDF باحترافية (تم الإصلاح) ---
+async function generateProfessionalPDF(isLargeFormatConfig) {
+    if (employees.length === 0) {
+        alert("يرجى تحميل أو إضافة بيانات الموظفين أولاً.");
+        return;
+    }
+
+    const templateId = parseInt(document.getElementById('pdf-template-select').value);
+    const institutionSelect = document.getElementById('sel-institution');
+    let institutionName = (institutionSelect.selectedIndex !== -1 && institutionSelect.value !== "") 
+        ? institutionSelect.options[institutionSelect.selectedIndex].text.replace(/\s+/g, '_') 
+        : "بدون_مؤسسة";
+
+    // 1. إصلاح مشكلة الزر: تحديد الزر بناءً على المعطيات بدون استخدام event
+    const btn = isLargeFormatConfig 
+        ? document.querySelector('button[onclick="downloadLargePDF()"]')
+        : document.querySelector('button[onclick="downloadSelectedPDF()"]');
+        
+    const originalText = btn ? btn.innerHTML : '';
+    if (btn) {
+        btn.innerHTML = '⏳ جاري تحضير وإنشاء الـ PDF...';
+        btn.disabled = true;
+    }
+    document.body.style.cursor = 'wait';
+
+    // 2. إصلاح مشكلة الـ CSS: نقوم بتغيير اسم الحاوية الأصلية مؤقتاً
+    // لكي نتمكن من استخدام id="card-container" للحاوية المخفية وتطبيق كافة ألوانك وتنسيقاتك عليها
+    const originalContainer = document.getElementById('card-container');
+    if (originalContainer) originalContainer.id = 'card-container-temp';
+
+    try {
+        const { jsPDF } = window.jspdf;
+        
+        // إعدادات مقاسات الميليمتر الثابتة
+        const pdfOrientation = isLargeFormatConfig ? 'landscape' : 'portrait';
+        const doc = new jsPDF({ orientation: pdfOrientation, unit: 'mm', format: 'a4' });
+        
+        const cardWidthPx = 750;
+        const cardHeightPx = 474;
+        
+        // إعدادات هندسة الصفحة
+        const config = isLargeFormatConfig ? {
+            cardW_mm: 100, cardH_mm: 67, cols: 2, rows: 2,
+            startX: 41, startY: 10, gapX: 15, gapY: 4, cardsPerPage: 4
+        } : {
+            cardW_mm: 85.6, cardH_mm: 54, cols: 2, rows: 3,
+            startX: 11.9, startY: 15, gapX: 15, gapY: 20, cardsPerPage: 6
+        };
+
+        // إنشاء حاوية مخفية خارج الشاشة لتصيير البطاقات بحجمها الأصلي
+        const renderContainer = document.createElement('div');
+        renderContainer.id = 'card-container'; // إعطاؤها المُعرّف الأصلي لسحب الـ CSS
+        renderContainer.style.position = 'fixed';
+        renderContainer.style.top = '-9999px';
+        renderContainer.style.left = '-9999px';
+        renderContainer.style.width = `${cardWidthPx}px`;
+        renderContainer.style.height = `${cardHeightPx}px`;
+        renderContainer.style.background = 'white';
+        renderContainer.style.zIndex = '-1000';
+        
+        // إضافة الكلاس المناسب للتصميم
+        renderContainer.className = templateId === 2 ? 'theme-2' : (templateId === 3 ? 'theme-3' : (templateId === 4 ? 'theme-4' : ''));
+        document.body.appendChild(renderContainer);
+
+        await waitForFonts(); // التأكد من تحميل الخطوط قبل التصيير
+
+        // الدوران على الموظفين لمعالجة كل بطاقة على حدة
+        for (let i = 0; i < employees.length; i++) {
+            const emp = employees[i];
+            
+          
+// بعد حقن الـ HTML
+renderContainer.innerHTML = getCardHTML(emp, templateId);
+// استدعاء التصغير فوراً
+autoShrinkText(renderContainer); 
+// انتظار 100ms لضمان اكتمال معالجة النص الطويل قبل تصويره
+await new Promise(r => setTimeout(r, 100));
+         
+            // 3. الإصلاح الجذري للباركود ليعمل مع الحاوية المخفية
+            if (templateId === 1) {
+                const barcodeSvg = renderContainer.querySelector(".barcode-render");
+                if (barcodeSvg) {
+                    JsBarcode(barcodeSvg, emp.jobId || "0000000000", {
+                        format: "CODE128",
+                        displayValue: false,
+                        height: 28,
+                        width: 1.5,
+                        margin: 0,
+                        background: "transparent"
+                    });
+                }
+            }
+            
+            // توليد QR Code إذا لزم الأمر
+            if (templateId === 4) {
+                const qrEl = renderContainer.querySelector('.local-qr-render');
+                if(qrEl) {
+                    qrEl.innerHTML = '<canvas></canvas>';
+                    const utf8Text = unescape(encodeURIComponent(qrEl.getAttribute('data-qrinfo')));
+                    new QRious({
+                        element: qrEl.querySelector('canvas'),
+                        value: utf8Text, size: 200, level: 'L', padding: 0
+                    });
+                    qrEl.querySelector('canvas').style.width = '100%';
+                    qrEl.querySelector('canvas').style.height = '100%';
+                }
+            }
+
+            // انتظار تحميل الصور 
+            await waitForImages(renderContainer);
+
+            // التقاط الصورة بجودة عالية
+            const canvas = await html2canvas(renderContainer, {
+                scale: 3, 
+                useCORS: true,
+                backgroundColor: '#ffffff',
+                logging: false
+            });
+            const imgData = canvas.toDataURL('image/jpeg', 0.98);
+
+            // حساب الإحداثيات الرياضية للورقة
+            const pageIndex = i % config.cardsPerPage;
+            if (i > 0 && pageIndex === 0) {
+                doc.addPage();
+            }
+
+            const col = pageIndex % config.cols;
+            const row = Math.floor(pageIndex / config.cols);
+            
+            const x = config.startX + (col * (config.cardW_mm + config.gapX));
+            const y = config.startY + (row * (config.cardH_mm + config.gapY));
+
+            // رسم البطاقة على الـ PDF
+            doc.addImage(imgData, 'JPEG', x, y, config.cardW_mm, config.cardH_mm);
+        }
+
+        // تنظيف وحفظ الملف
+        document.body.removeChild(renderContainer);
+        const fileName = isLargeFormatConfig 
+            ? `البطاقات_المهنية_${institutionName}_نموذج_${templateId}.pdf`
+            : `البطاقات_المهنية_${institutionName}_نموذج_${templateId}.pdf`;
+            
+        doc.save(fileName);
+        alert(`✅ تم حفظ الملف (${fileName}) بنجاح بدقة تامة!`);
+
+    } catch (error) {
+        console.error("خطأ تقني في بناء الـ PDF:", error);
+        alert("حدث خطأ أثناء التصدير. يرجى التحقق من لوحة تحكم المتصفح (F12) لمزيد من التفاصيل.");
+    } finally {
+        // 4. استرجاع الإعدادات الأصلية للواجهة (هام جداً)
+        if (originalContainer) originalContainer.id = 'card-container';
+        if (btn) {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+        document.body.style.cursor = 'default';
+    }
+}
+
+// استبدال الدوال الأصلية لترتبط بالهندسة الجديدة
+function downloadSelectedPDF() {
+    generateProfessionalPDF(false); // حجم قياسي (6 بطاقات، Portrait)
+}
+
+function downloadLargePDF() {
+    generateProfessionalPDF(true); // حجم كبير (4 بطاقات، Landscape)
+}
+
+function autoShrinkText(container = document) {
+    const elements = container.querySelectorAll('.shrink-target');
+    
+    elements.forEach(el => {
+        el.style.fontSize = '25px'; // البدء بالحجم الطبيعي
+        let fontSize = 25;
+        
+        // حد الأمان قبل الخط العمودي
+        const containerLimit = 440; 
+        const labelWidth = el.previousElementSibling ? el.previousElementSibling.offsetWidth : 0;
+        const availableWidth = containerLimit - labelWidth;
+
+        // التصغير بدقة 0.2 درجة لضمان أفضل تعبئة للمساحة دون قطع النص
+        if (el.scrollWidth > availableWidth) {
+            while (el.scrollWidth > availableWidth && fontSize > 2) {
+                fontSize -= 0.2; 
+                el.style.fontSize = fontSize + 'px';
+            }
+        }
+        // التأكد من أن النص يظهر كاملاً بعد التصغير
+        el.style.width = "auto";
+    });
+}
+// تعديل استدعاء الدالة لضمان تنفيذها بعد الرسم تماماً
+const originalRenderCards = renderCards;
+renderCards = function() {
+    originalRenderCards();
+    setTimeout(autoShrinkText, 50); // تنفيذ التصغير بعد 50 مللي ثانية من الرسم
+};
+
+
+        
+
+        // --- ميزة التحديث التلقائي الذكية ---
+const VERSION_FILE_URL = 'version.json'; // تأكد من أن اسم الملف مطابق لما لديك
+let currentVersion = "1.0.7"; // الإصدار الحالي المتوافق مع ملفك
+
+async function checkVersionUpdate() {
+    try {
+        // إضافة timestamp لمنع المتصفح من كاش (Cache) الملف القديم
+        const response = await fetch(`${VERSION_FILE_URL}?t=${Date.now()}`);
+        if (!response.ok) return;
+
+        const data = await response.json();
+
+        // المقارنة: إذا كان رقم الإصدار في الملف يختلف عن الإصدار الحالي
+        if (data.version !== currentVersion) {
+            console.log("تم اكتشاف تحديث جديد: " + data.version);
+            
+            // إشعار المستخدم قبل التحويل (اختياري)
+            alert("تم تحديث النظام إلى نسخة جديدة (" + data.version + "). سيتم توجيهك للرئيسية.");
+            
+            // العودة للصفحة الرئيسية وتحديث الصفحة
+            window.location.href = "index.html"; 
+        }
+    } catch (error) {
+        console.error("فشل التحقق من التحديثات:", error);
+    }
+}
+
+// فحص التحديثات كل 30 ثانية
+setInterval(checkVersionUpdate, 5000);
+
+// فحص فوري عند تحميل الصفحة لأول مرة
+checkVersionUpdate();
+
+    </script>
+</body>
+</html>
+
+

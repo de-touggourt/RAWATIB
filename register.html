@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>إنشاء حساب جديد - مصلحة نفقات المستخدمين توقرت</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- الخطوط والأيقونات -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- المكتبات الأساسية -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <!-- ملفات المنظومة -->
+  <link rel="stylesheet" href="css/main.css">
+  <script src="js/firebase-init.js"></script>
+  <script src="js/geo-data.js"></script>
+  <script src="js/app-core.js"></script>
+  <script src="js/auth-check.js"></script>
+
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #1e40af 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 30px 15px;
+      font-family: 'Cairo', sans-serif !important;
+      margin: 0;
+      position: relative;
+    }
+
+    .register-card-box {
+      background: rgba(255, 255, 255, 0.98);
+      border-radius: 24px;
+      padding: 35px 40px;
+      width: 100%;
+      max-width: 720px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+      position: relative;
+      z-index: 10;
+      animation: fadeInScale 0.35s ease;
+    }
+
+    @keyframes fadeInScale {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .form-wizard-header {
+      text-align: center;
+      margin-bottom: 25px;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 18px;
+    }
+
+    .wizard-logo-img {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      border: 2px solid #2563eb;
+      margin-bottom: 10px;
+    }
+
+    .form-wizard-header h2 {
+      font-size: 22px;
+      font-weight: 900;
+      color: #0f172a;
+      margin: 0 0 5px 0;
+    }
+
+    .form-wizard-header p {
+      font-size: 13px;
+      color: #64748b;
+      margin: 0;
+      font-weight: 600;
+    }
+
+    /* مؤشر الخطوات */
+    .step-progress-bar {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 25px;
+      position: relative;
+    }
+
+    .step-item {
+      flex: 1;
+      text-align: center;
+      position: relative;
+    }
+
+    .step-item::after {
+      content: "";
+      position: absolute;
+      top: 14px;
+      right: 50%;
+      width: 100%;
+      height: 2px;
+      background: #e2e8f0;
+      z-index: 1;
+    }
+
+    .step-item:first-child::after {
+      display: none;
+    }
+
+    .step-circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #e2e8f0;
+      color: #64748b;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      position: relative;
+      z-index: 2;
+      transition: all 0.3s;
+    }
+
+    .step-item.active .step-circle {
+      background: #2563eb;
+      color: white;
+      box-shadow: 0 0 0 4px rgba(37,99,235,0.2);
+    }
+
+    .step-item.completed .step-circle {
+      background: #10b981;
+      color: white;
+    }
+
+    .step-item.completed::after {
+      background: #10b981;
+    }
+
+    .step-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      margin-top: 4px;
+      display: block;
+    }
+
+    .step-item.active .step-title {
+      color: #2563eb;
+      font-weight: 800;
+    }
+
+    /* شبكة الحقول */
+    .form-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .form-group-field {
+      margin-bottom: 15px;
+      text-align: right;
+    }
+
+    .form-group-field label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .input-control {
+      width: 100%;
+      height: 46px;
+      padding: 8px 14px;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e293b;
+      background: #fff;
+      transition: all 0.25s ease;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    .input-control:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+
+    .input-readonly {
+      background-color: #f1f5f9 !important;
+      color: #475569 !important;
+      border-color: #cbd5e1 !important;
+      cursor: not-allowed;
+      font-weight: 700;
+    }
+
+    .ccp-highlight-input {
+      font-size: 18px !important;
+      letter-spacing: 2px !important;
+      text-align: center !important;
+      font-weight: 800 !important;
+      color: #1e40af !important;
+    }
+
+    /* مؤشر قوة كلمة المرور */
+    .strength-meter-box {
+      margin-top: 6px;
+    }
+
+    .strength-meter-bar {
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+
+    .strength-bar-fill {
+      height: 100%;
+      width: 0%;
+      transition: all 0.3s ease;
+      border-radius: 10px;
+    }
+
+    .strength-text-label {
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* أزرار الإجراءات */
+    .action-btn-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 25px;
+    }
+
+    .btn-action-primary {
+      flex: 1;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: white;
+      border: none;
+      height: 48px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 15px rgba(37,99,235,0.3);
+    }
+
+    .btn-action-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(37,99,235,0.4);
+    }
+
+    .btn-action-secondary {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      padding: 0 20px;
+      height: 48px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .btn-action-secondary:hover {
+      background: #e2e8f0;
+      color: #1e293b;
+    }
+
+    /* تصميم بطاقة الحساب القابلة للطباعة */
+    #accountCardPrintSection {
+      display: none;
+      background: white;
+      border: 2px solid #0f172a;
+      border-radius: 16px;
+      padding: 25px;
+      margin-top: 20px;
+      text-align: right;
+    }
+
+    .print-official-badge {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 12px;
+      margin-bottom: 15px;
+    }
+
+    .print-data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+    }
+
+    .print-data-table th, .print-data-table td {
+      border: 1px solid #cbd5e1;
+      padding: 8px 12px;
+      font-size: 13.5px;
+    }
+
+    .print-data-table th {
+      background: #f8fafc;
+      width: 32%;
+      color: #334155;
+      font-weight: 800;
+    }
+
+    .print-data-table td {
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    @media (max-width: 650px) {
+      .form-grid-2 { grid-template-columns: 1fr; gap: 0; }
+      .register-card-box { padding: 25px 20px; }
+    }
+
+    @media print {
+      body { background: white !important; padding: 0 !important; }
+      .register-card-box > *:not(#accountCardPrintSection) { display: none !important; }
+      #accountCardPrintSection { display: block !important; border: 2px solid #000 !important; box-shadow: none !important; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="register-card-box">
+    
+    <div class="form-wizard-header">
+      <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" 
+           alt="شعار" class="wizard-logo-img">
+      <h2>إنشاء حساب موظف / مدير مؤسسة</h2>
+      <p>التحقق الآلي من رقم الحساب الجاري واعتماد الحساب الإداري</p>
+    </div>
+
+    <!-- مؤشر المراحل -->
+    <div class="step-progress-bar no-print">
+      <div class="step-item active" id="stepIndicator1">
+        <div class="step-circle">1</div>
+        <span class="step-title">فحص CCP</span>
+      </div>
+      <div class="step-item" id="stepIndicator2">
+        <div class="step-circle">2</div>
+        <span class="step-title">المؤسسة والطور</span>
+      </div>
+      <div class="step-item" id="stepIndicator3">
+        <div class="step-circle">3</div>
+        <span class="step-title">بيانات الحساب</span>
+      </div>
+    </div>
+
+    <!-- ==================== الخطوة 1: فحص CCP واستخراج البيانات ==================== -->
+    <div id="stepSection1">
+      <div class="form-group-field">
+        <label for="ccpVerifyInput">
+          رقم الحساب البريدي الجاري CCP <span style="color:#dc2626;">* (من 10 إلى 12 رقماً بدون المفتاح)</span>:
+        </label>
+        <input type="text" id="ccpVerifyInput" class="input-control ccp-highlight-input" 
+               placeholder="أدخل من 10 إلى 12 رقماً" maxlength="12" 
+               oninput="this.value = this.value.replace(/\D/g, '')">
+        <small style="color: #64748b; display: block; margin-top: 4px; font-weight: 600;">
+          * يجب إدخال من 10 إلى 12 رقماً فقط، وسيتم التحقق التلقائي في قاعدة بيانات الموظفين الدائمين.
+        </small>
+      </div>
+
+      <div class="action-btn-group">
+        <button type="button" class="btn-action-primary" id="btnVerifyCcp" onclick="verifyCcpStep()">
+          <i class="fas fa-search"></i>
+          <span>التحقق واستخراج بيانات الموظف</span>
+        </button>
+        <a href="login.html" class="btn-action-secondary">
+          <i class="fas fa-arrow-right"></i>
+          <span>العودة لتسجيل الدخول</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- ==================== الخطوة 2: استخراج البيانات واختيار المؤسسة ==================== -->
+    <div id="stepSection2" style="display: none;">
+      
+      <!-- تنبيه التحقق الناجح -->
+      <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px 16px; border-radius: 12px; margin-bottom: 20px; font-size: 13.5px; color: #1e40af;">
+        <i class="fas fa-circle-check"></i> <b>تم التحقق بنجاح من قاعدة البيانات الدائمة!</b> يرجى استكمال بيانات المؤسسة والاتصال.
+      </div>
+
+      <!-- البيانات المستخرجة من قاعدة البيانات (للقراءة فقط) -->
+      <div class="form-grid-2">
+        <div class="form-group-field">
+          <label>الاسم:</label>
+          <input type="text" id="empFirstName" class="input-control input-readonly" readonly>
+        </div>
+        <div class="form-group-field">
+          <label>اللقب:</label>
+          <input type="text" id="empLastName" class="input-control input-readonly" readonly>
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-group-field">
+          <label>تاريخ الميلاد:</label>
+          <input type="text" id="empBirthDate" class="input-control input-readonly" readonly>
+        </div>
+        <div class="form-group-field">
+          <label>الرتبة الرسمية:</label>
+          <input type="text" id="empGradeTitle" class="input-control input-readonly" readonly>
+          <input type="hidden" id="empGradeCode">
+        </div>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 15px 0;">
+
+      <!-- الطور، الدائرة، البلدية، المؤسسة -->
+      <div class="form-grid-2">
+        <div class="form-group-field">
+          <label for="selLevel">الطور التعليمي: <span style="color:#dc2626;">*</span></label>
+          <select id="selLevel" class="input-control" onchange="onLevelChange()">
+            <option value="">-- اختر الطور --</option>
+            <option value="ابتدائي">ابتدائي</option>
+            <option value="متوسط">متوسط</option>
+            <option value="ثانوي">ثانوي</option>
+          </select>
+        </div>
+
+        <div class="form-group-field">
+          <label for="selDaaira">الدائرة: <span style="color:#dc2626;">*</span></label>
+          <select id="selDaaira" class="input-control" onchange="onDaairaChange()">
+            <option value="">-- اختر الطور أولاً --</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-grid-2">
+        <div class="form-group-field">
+          <label for="selBaladiya">البلدية: <span style="color:#dc2626;">*</span></label>
+          <select id="selBaladiya" class="input-control" onchange="onBaladiyaChange()">
+            <option value="">-- اختر الدائرة أولاً --</option>
+          </select>
+        </div>
+
+        <div class="form-group-field">
+          <label for="selSchool">المؤسسة: <span style="color:#dc2626;">*</span></label>
+          <select id="selSchool" class="input-control" onchange="onSchoolChange()">
+            <option value="">-- اختر البلدية أولاً --</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- رمز المؤسسة -->
+      <div class="form-group-field" id="schoolCodeGroup" style="display: none;">
+        <label for="txtSchoolCode">رمز المؤسسة:</label>
+        <input type="text" id="txtSchoolCode" class="input-control input-readonly" readonly>
+      </div>
+
+      <div class="action-btn-group">
+        <button type="button" class="btn-action-primary" onclick="proceedToStep3()">
+          <span>متابعة لبيانات الحساب</span>
+          <i class="fas fa-arrow-left"></i>
+        </button>
+        <button type="button" class="btn-action-secondary" onclick="backToStep1()">
+          <i class="fas fa-arrow-right"></i>
+          <span>السابق</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== الخطوة 3: بيانات الاتصال والحساب ==================== -->
+    <div id="stepSection3" style="display: none;">
+      
+      <!-- البريد الإلكتروني والهاتف -->
+      <div class="form-grid-2">
+        <div class="form-group-field">
+          <label for="txtEmail">البريد الإلكتروني (Gmail حصراً): <span style="color:#dc2626;">*</span></label>
+          <input type="email" id="txtEmail" class="input-control" 
+                 placeholder="example@gmail.com" dir="ltr" required>
+          <small style="color:#64748b; font-size:11px;">* يقبل فقط نطاق @gmail.com</small>
+        </div>
+
+        <div class="form-group-field">
+          <label for="txtPhone">رقم الهاتف (الجزائر): <span style="color:#dc2626;">*</span></label>
+          <input type="tel" id="txtPhone" class="input-control" 
+                 placeholder="06 00 00 00 00" maxlength="14" dir="ltr"
+                 oninput="handlePhoneInput(this)">
+          <small style="color:#64748b; font-size:11px;">* يبدأ بـ 05، 06، أو 07 ومكون من 10 أرقام</small>
+        </div>
+      </div>
+
+      <!-- اسم المستخدم -->
+      <div class="form-group-field">
+        <label for="txtUsername">اسم المستخدم للدخول: <span style="color:#dc2626;">*</span></label>
+        <input type="text" id="txtUsername" class="input-control" 
+               placeholder="اختر اسم مستخدم متميز (أحرف أو أرقام)" dir="ltr" required>
+      </div>
+
+      <!-- كلمة المرور وتأكيدها -->
+      <div class="form-grid-2">
+        <div class="form-group-field">
+          <label for="txtPassword">كلمة المرور: <span style="color:#dc2626;">*</span></label>
+          <input type="password" id="txtPassword" class="input-control" 
+                 placeholder="••••••••" oninput="checkPasswordStrength(this.value)">
+          
+          <!-- مؤشر القوة -->
+          <div class="strength-meter-box">
+            <div class="strength-meter-bar">
+              <div class="strength-bar-fill" id="strengthBarFill"></div>
+            </div>
+            <div class="strength-text-label">
+              <span>قوة كلمة المرور:</span>
+              <span id="strengthTextLabel" style="color: #64748b;">لم يتم الإدخال</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group-field">
+          <label for="txtConfirmPassword">تأكيد كلمة المرور: <span style="color:#dc2626;">*</span></label>
+          <input type="password" id="txtConfirmPassword" class="input-control" 
+                 placeholder="••••••••">
+        </div>
+      </div>
+
+      <div class="action-btn-group">
+        <button type="button" class="btn-action-primary" id="btnSubmitAccount" onclick="submitCreateAccount()">
+          <i class="fas fa-check-circle"></i>
+          <span>حفظ وتأكيد إنشاء الحساب</span>
+        </button>
+        <button type="button" class="btn-action-secondary" onclick="backToStep2()">
+          <i class="fas fa-arrow-right"></i>
+          <span>السابق</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== استمارة / بطاقة الحساب الرسمية للطباعة ==================== -->
+    <div id="accountCardPrintSection">
+      
+      <div class="print-official-badge">
+        <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" style="width: 60px; height: 60px; border-radius: 50%;">
+        <div style="text-align: center;">
+          <h4 style="margin: 0; font-size: 15px; font-weight: 800;">الجمهورية الجزائرية الديمقراطية الشعبية</h4>
+          <h5 style="margin: 3px 0; font-size: 13px; color: #334155;">وزارة التربية الوطنية - مديرية التربية لولاية توقرت</h5>
+          <h5 style="margin: 0; font-size: 13px; color: #1e40af; font-weight: 800;">مصلحة تسيير نفقات المستخدمين</h5>
+        </div>
+        <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" style="width: 60px; height: 60px; border-radius: 50%;">
+      </div>
+
+      <div style="text-align: center; margin: 15px 0;">
+        <h3 style="font-size: 18px; font-weight: 900; color: #0f172a; text-decoration: underline; margin: 0 0 5px 0;">
+          بطاقة معلومات الحساب الرقمي للمستخدم
+        </h3>
+        <span style="font-size: 12px; color: #64748b;">تاريخ استخراج البطاقة: <b id="printCardDate"></b></span>
+      </div>
+
+      <table class="print-data-table">
+        <tr>
+          <th>الاسم واللقب:</th>
+          <td id="p_fullname"></td>
+        </tr>
+        <tr>
+          <th>رقم الحساب الجاري (CCP):</th>
+          <td id="p_ccp" style="font-family: monospace; font-size: 15px; letter-spacing: 1px;"></td>
+        </tr>
+        <tr>
+          <th>الرتبة والرمز:</th>
+          <td id="p_grade"></td>
+        </tr>
+        <tr>
+          <th>المؤسسة والطور:</th>
+          <td id="p_school"></td>
+        </tr>
+        <tr>
+          <th>الدائرة والبلدية:</th>
+          <td id="p_geo"></td>
+        </tr>
+        <tr>
+          <th>اسم المستخدم للدخول:</th>
+          <td id="p_username" style="font-weight: 900; color: #1e40af; font-size: 15px;"></td>
+        </tr>
+        <tr>
+          <th>البريد الإلكتروني المعتمد:</th>
+          <td id="p_email" dir="ltr" style="text-align: right;"></td>
+        </tr>
+        <tr>
+          <th>رقم الهاتف المعتمد:</th>
+          <td id="p_phone" dir="ltr" style="text-align: right;"></td>
+        </tr>
+      </table>
+
+      <!-- باركود آلي -->
+      <div style="text-align: center; margin-top: 15px;">
+        <svg id="printBarcode"></svg>
+      </div>
+
+      <!-- إمضاء المعني والإدارة -->
+      <div style="display: flex; justify-content: space-between; margin-top: 30px; padding: 0 20px;">
+        <div style="text-align: center; border: 1px dashed #000; padding: 10px 25px; border-radius: 6px;">
+          <b>إمضاء صاحب الحساب</b><br><small>أصرح بصحة البيانات</small>
+        </div>
+        <div style="text-align: center; border: 1px dashed #000; padding: 10px 25px; border-radius: 6px;">
+          <b>ختم ومصادقة الإدارة</b><br><small>مصلحة نفقات المستخدمين</small>
+        </div>
+      </div>
+
+      <!-- أزرار الطباعة والعودة (مخفية عند الطباعة) -->
+      <div class="action-btn-group no-print" style="margin-top: 25px;">
+        <button type="button" class="btn-action-primary" onclick="window.print()">
+          <i class="fas fa-print"></i>
+          <span>طباعة بطاقة الحساب (A4)</span>
+        </button>
+        <a href="login.html" class="btn-action-secondary">
+          <i class="fas fa-right-to-bracket"></i>
+          <span>المتابعة إلى تسجيل الدخول</span>
+        </a>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    let verifiedEmployeeData = null;
+    let verifiedCcp12 = "";
+
+    // ------------------------------------------------------------
+    // الخطوة 1: فحص CCP في employeescompay
+    // ------------------------------------------------------------
+    async function verifyCcpStep() {
+      const rawCcp = document.getElementById("ccpVerifyInput").value.trim();
+      const valRes = AppCore.CCP.validateOrError(rawCcp);
+
+      if (!valRes.valid) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'تنبيه رقم الحساب (CCP)',
+          text: valRes.message,
+          confirmButtonColor: '#2563eb'
+        });
+        return;
+      }
+
+      const ccp12 = valRes.ccp;
+
+      Swal.fire({
+        title: 'جاري البحث في قاعدة البيانات...',
+        text: 'يتم فحص وجود الموظف ضمن الموظفين الدائمين',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
+        // 1. هل لديه حساب مسجل مسبقاً؟
+        const existingAcc = await AppCore.Users.isCcpRegistered(ccp12);
+        if (existingAcc.exists) {
+          Swal.close();
+          Swal.fire({
+            icon: 'info',
+            title: 'يوجد حساب مسجل مسبقاً',
+            html: `
+              <p style="font-size: 14px; color: #334155; line-height: 1.7;">
+                رقم الحساب الجاري <b>${ccp12}</b> لديه حساب منشأ مسبقاً باسم المستخدم: 
+                <b style="color: #2563eb;">${existingAcc.user.username || ''}</b>.<br>
+                يمكنك التوجه مباشرة لصفحة تسجيل الدخول.
+              </p>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'تسجيل الدخول',
+            cancelButtonText: 'إلغاء',
+            confirmButtonColor: '#2563eb'
+          }).then((res) => {
+            if (res.isConfirmed) {
+              window.location.href = "login.html";
+            }
+          });
+          return;
+        }
+
+        // 2. البحث في كولكشن employeescompay
+        const permCheck = await AppCore.PermanentEmployee.findByCcp(ccp12);
+
+        if (!permCheck.exists) {
+          Swal.close();
+          Swal.fire({
+            icon: 'error',
+            title: 'رقم الحساب غير موجود',
+            html: `
+              <div style="font-size: 14px; color: #334155; line-height: 1.7;">
+                رقم الحساب الجاري <b>(${ccp12})</b> غير موجود في قاعدة بيانات الموظفين الدائمين.<br>
+                <span style="color: #dc2626; font-weight: 700;">لا يمكن إنشاء حساب جديد إلا للموظفين الدائمين المسجلين بمديرية التربية.</span>
+              </div>
+            `,
+            confirmButtonColor: '#dc2626'
+          });
+          return;
+        }
+
+        // 3. تم العثور على الموظف بنجاح
+        verifiedEmployeeData = permCheck.data;
+        verifiedCcp12 = ccp12;
+        Swal.close();
+
+        // 4. فحص الصلاحية والرتبة (Grade Check)
+        const rawGrade = String(verifiedEmployeeData.grade || verifiedEmployeeData.gr || "").trim();
+        const gradeTitle = AppCore.Grades.getTitle(rawGrade);
+        const isAllowed = await AppCore.Grades.isGradeAllowed(rawGrade);
+
+        if (!isAllowed) {
+          const proceedAnyway = await Swal.fire({
+            icon: 'warning',
+            title: 'تنبيه بشأن الرتبة والصلاحية',
+            html: `
+              <div style="font-size: 13.5px; line-height: 1.8; text-align: right; direction: rtl;">
+                تم استخراج بيانات الموظف: <b>${verifiedEmployeeData.fmn || ''} ${verifiedEmployeeData.frn || ''}</b><br>
+                الرتبة: <b style="color:#2563eb;">${gradeTitle} (كود: ${rawGrade || 'غير محدد'})</b>.<br>
+                <p style="color:#b45309; margin-top:8px;">
+                  ⚠️ رتبتك الحالية غير مدرجة ضمن قائمة الرتب الإدارية المعتمدة تلقائياً. هل ترغب في إتمام التسجيل بصفة موظف قيد الاعتماد؟
+                </p>
+              </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'متابعة التسجيل',
+            cancelButtonText: 'إلغاء',
+            confirmButtonColor: '#2563eb'
+          });
+
+          if (!proceedAnyway.isConfirmed) return;
+        }
+
+        // 5. تعبئة البيانات في النموذج
+        document.getElementById("empFirstName").value = verifiedEmployeeData.frn || verifiedEmployeeData.prenom || "";
+        document.getElementById("empLastName").value = verifiedEmployeeData.fmn || verifiedEmployeeData.nom || "";
+        document.getElementById("empBirthDate").value = verifiedEmployeeData.diz || verifiedEmployeeData.date_naissance || "غير محدد";
+        document.getElementById("empGradeTitle").value = `${gradeTitle} (كود: ${rawGrade})`;
+        document.getElementById("empGradeCode").value = rawGrade;
+
+        // الانتقال للخطوة 2
+        document.getElementById("stepSection1").style.display = "none";
+        document.getElementById("stepSection2").style.display = "block";
+        document.getElementById("stepIndicator1").classList.remove("active");
+        document.getElementById("stepIndicator1").classList.add("completed");
+        document.getElementById("stepIndicator2").classList.add("active");
+
+      } catch (err) {
+        Swal.close();
+        console.error("خطأ فحص CCP:", err);
+        Swal.fire({
+          icon: 'error',
+          title: 'خطأ في الاتصال',
+          text: 'حدث خطأ أثناء فحص البيانات، يرجى المحاولة مرة أخرى.',
+          confirmButtonColor: '#2563eb'
+        });
+      }
+    }
+
+    // ------------------------------------------------------------
+    // معالجة القوائم الجغرافية المترابطة (الطور -> الدائرة -> البلدية -> المؤسسة)
+    // ------------------------------------------------------------
+    function onLevelChange() {
+      const level = document.getElementById("selLevel").value;
+      const daairaSel = document.getElementById("selDaaira");
+      daairaSel.innerHTML = '<option value="">-- اختر الدائرة --</option>';
+      document.getElementById("selBaladiya").innerHTML = '<option value="">-- اختر الدائرة أولاً --</option>';
+      document.getElementById("selSchool").innerHTML = '<option value="">-- اختر البلدية أولاً --</option>';
+      document.getElementById("schoolCodeGroup").style.display = "none";
+
+      if (!level) return;
+
+      // ملء الدوائر
+      for (const d in baladiyaMap) {
+        daairaSel.innerHTML += `<option value="${d}">${d}</option>`;
+      }
+    }
+
+    function onDaairaChange() {
+      const daaira = document.getElementById("selDaaira").value;
+      const baladiyaSel = document.getElementById("selBaladiya");
+      baladiyaSel.innerHTML = '<option value="">-- اختر البلدية --</option>';
+      document.getElementById("selSchool").innerHTML = '<option value="">-- اختر البلدية أولاً --</option>';
+      document.getElementById("schoolCodeGroup").style.display = "none";
+
+      if (daaira && baladiyaMap[daaira]) {
+        baladiyaMap[daaira].forEach(b => {
+          baladiyaSel.innerHTML += `<option value="${b}">${b}</option>`;
+        });
+      }
+    }
+
+    function onBaladiyaChange() {
+      const level = document.getElementById("selLevel").value;
+      const daaira = document.getElementById("selDaaira").value;
+      const baladiya = document.getElementById("selBaladiya").value;
+      const schoolSel = document.getElementById("selSchool");
+      schoolSel.innerHTML = '<option value="">-- اختر المؤسسة --</option>';
+      document.getElementById("schoolCodeGroup").style.display = "none";
+
+      if (!level || !daaira || !baladiya) return;
+
+      const schools = AppCore.Institutions.getSchools(level, daaira, baladiya);
+      schools.forEach(s => {
+        schoolSel.innerHTML += `<option value="${s.name}" data-code="${s.code || ''}">${s.name}</option>`;
+      });
+    }
+
+    function onSchoolChange() {
+      const schoolSel = document.getElementById("selSchool");
+      const selectedOption = schoolSel.options[schoolSel.selectedIndex];
+      const code = selectedOption ? selectedOption.getAttribute("data-code") : "";
+      
+      const codeGroup = document.getElementById("schoolCodeGroup");
+      const codeInp = document.getElementById("txtSchoolCode");
+
+      if (code) {
+        codeInp.value = code;
+        codeGroup.style.display = "block";
+      } else {
+        codeInp.value = "";
+        codeGroup.style.display = "none";
+      }
+    }
+
+    function backToStep1() {
+      document.getElementById("stepSection2").style.display = "none";
+      document.getElementById("stepSection1").style.display = "block";
+      document.getElementById("stepIndicator2").classList.remove("active");
+      document.getElementById("stepIndicator1").classList.remove("completed");
+      document.getElementById("stepIndicator1").classList.add("active");
+    }
+
+    function proceedToStep3() {
+      const level = document.getElementById("selLevel").value;
+      const daaira = document.getElementById("selDaaira").value;
+      const baladiya = document.getElementById("selBaladiya").value;
+      const school = document.getElementById("selSchool").value;
+
+      if (!level || !daaira || !baladiya || !school) {
+        Swal.fire("تنبيه", "يرجى تحديد الطور والدائرة والبلدية والمؤسسة التعليمية.", "warning");
+        return;
+      }
+
+      document.getElementById("stepSection2").style.display = "none";
+      document.getElementById("stepSection3").style.display = "block";
+      document.getElementById("stepIndicator2").classList.remove("active");
+      document.getElementById("stepIndicator2").classList.add("completed");
+      document.getElementById("stepIndicator3").classList.add("active");
+    }
+
+    function backToStep2() {
+      document.getElementById("stepSection3").style.display = "none";
+      document.getElementById("stepSection2").style.display = "block";
+      document.getElementById("stepIndicator3").classList.remove("active");
+      document.getElementById("stepIndicator2").classList.remove("completed");
+      document.getElementById("stepIndicator2").classList.add("active");
+    }
+
+    // ------------------------------------------------------------
+    // تنسيق رقم الهاتف الجزائري تلقائياً (00 00 00 00 00)
+    // ------------------------------------------------------------
+    function handlePhoneInput(el) {
+      let val = el.value.replace(/\D/g, "");
+      if (val.length > 10) val = val.slice(0, 10);
+      
+      // التنسيق البصري
+      let parts = [];
+      for (let i = 0; i < val.length; i += 2) {
+        parts.push(val.slice(i, i + 2));
+      }
+      el.value = parts.join(" ");
+    }
+
+    // ------------------------------------------------------------
+    // فحص قوة كلمة المرور بصرياً
+    // ------------------------------------------------------------
+    function checkPasswordStrength(pass) {
+      const res = AppCore.Password.evaluate(pass);
+      const fill = document.getElementById("strengthBarFill");
+      const label = document.getElementById("strengthTextLabel");
+
+      fill.style.width = res.percent + "%";
+      fill.style.backgroundColor = res.color;
+      label.textContent = res.label;
+      label.style.color = res.color;
+    }
+
+    // ------------------------------------------------------------
+    // تأكيد وإنشاء الحساب النهائي
+    // ------------------------------------------------------------
+    async function submitCreateAccount() {
+      const email = document.getElementById("txtEmail").value.trim();
+      const phone = document.getElementById("txtPhone").value.replace(/\s/g, "");
+      const username = document.getElementById("txtUsername").value.trim();
+      const password = document.getElementById("txtPassword").value.trim();
+      const confirmPass = document.getElementById("txtConfirmPassword").value.trim();
+
+      // 1. التحقق من البريد (Gmail حصراً)
+      const emailCheck = AppCore.Email.validateOrError(email);
+      if (!emailCheck.valid) {
+        Swal.fire("خطأ في البريد الإلكتروني", emailCheck.message, "error");
+        return;
+      }
+
+      // 2. التحقق من الهاتف الجزائري
+      const phoneCheck = AppCore.Phone.validateOrError(phone);
+      if (!phoneCheck.valid) {
+        Swal.fire("خطأ في رقم الهاتف", phoneCheck.message, "error");
+        return;
+      }
+
+      // 3. التحقق من اسم المستخدم
+      if (username.length < 3) {
+        Swal.fire("اسم المستخدم", "يجب أن يتكون اسم المستخدم من 3 أحرف/أرقام على الأقل.", "warning");
+        return;
+      }
+
+      // 4. التحقق من كلمة المرور وتطابقها
+      if (password.length < 6) {
+        Swal.fire("كلمة المرور", "كلمة المرور يجب أن تتكون من 6 خانات على الأقل.", "warning");
+        return;
+      }
+
+      if (password !== confirmPass) {
+        Swal.fire("تطابق كلمة المرور", "كلمة المرور وتأكيد كلمة المرور غير متطابقين.", "error");
+        return;
+      }
+
+      Swal.fire({
+        title: 'جاري إنشاء الحساب...',
+        text: 'يتم فحص اسم المستخدم وحفظ البيانات بأمان',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
+        // فحص تكرار اسم المستخدم
+        const isTaken = await AppCore.Users.isUsernameTaken(username);
+        if (isTaken) {
+          Swal.close();
+          Swal.fire("اسم المستخدم مستخدم مسبقاً", "يرجى اختيار اسم مستخدم آخر.", "warning");
+          return;
+        }
+
+        // تجهيز بيانات الحساب
+        const level = document.getElementById("selLevel").value;
+        const daaira = document.getElementById("selDaaira").value;
+        const baladiya = document.getElementById("selBaladiya").value;
+        const school = document.getElementById("selSchool").value;
+        const schoolCode = document.getElementById("txtSchoolCode").value;
+        const gradeCode = document.getElementById("empGradeCode").value;
+        const gradeTitle = document.getElementById("empGradeTitle").value;
+        const firstName = document.getElementById("empFirstName").value;
+        const lastName = document.getElementById("empLastName").value;
+        const birthDate = document.getElementById("empBirthDate").value;
+
+        const newAccount = {
+          ccp: verifiedCcp12,
+          first_name: firstName,
+          last_name: lastName,
+          birth_date: birthDate,
+          grade: gradeCode,
+          grade_title: gradeTitle,
+          level: level,
+          daaira: daaira,
+          baladiya: baladiya,
+          school_name: school,
+          school_code: schoolCode,
+          email: emailCheck.email,
+          phone: phoneCheck.phone,
+          username: username,
+          password: password, // يتم حفظه بالحساب مع الحماية
+          role: "director"
+        };
+
+        await AppCore.Users.createAccount(newAccount);
+        Swal.close();
+
+        // عرض بطاقة الحساب الرسمية للطباعة
+        showAccountPrintCard(newAccount);
+
+      } catch (err) {
+        Swal.close();
+        console.error("خطأ إنشاء الحساب:", err);
+        Swal.fire("خطأ", "تعذر حفظ الحساب في قاعدة البيانات، يرجى المحاولة لاحقاً.", "error");
+      }
+    }
+
+    // عرض بطاقة الحساب واستمارة المعلومات
+    function showAccountPrintCard(acc) {
+      document.getElementById("stepSection3").style.display = "none";
+      document.querySelector(".form-wizard-header").style.display = "none";
+      document.querySelector(".step-progress-bar").style.display = "none";
+
+      document.getElementById("p_fullname").textContent = `${acc.first_name} ${acc.last_name}`;
+      document.getElementById("p_ccp").textContent = acc.ccp;
+      document.getElementById("p_grade").textContent = acc.grade_title;
+      document.getElementById("p_school").textContent = `${acc.school_name} (${acc.level})`;
+      document.getElementById("p_geo").textContent = `دائرة ${acc.daaira} - بلدية ${acc.baladiya}`;
+      document.getElementById("p_username").textContent = acc.username;
+      document.getElementById("p_email").textContent = acc.email;
+      document.getElementById("p_phone").textContent = AppCore.Phone.formatDisplay(acc.phone);
+      
+      const now = new Date();
+      document.getElementById("printCardDate").textContent = `${now.toLocaleDateString('ar-DZ')} ${now.toLocaleTimeString('ar-DZ')}`;
+
+      // توليد الباركود
+      try {
+        JsBarcode("#printBarcode", acc.ccp, {
+          format: "CODE128",
+          width: 2,
+          height: 45,
+          displayValue: true,
+          fontSize: 14
+        });
+      } catch (e) {}
+
+      document.getElementById("accountCardPrintSection").style.display = "block";
+
+      Swal.fire({
+        icon: 'success',
+        title: '🎉 تم إنشاء الحساب بنجاح!',
+        text: 'تم تسجيل وتفعيل حسابكم بنجاح. يمكنك الآن طباعة استمارة الحساب للمتابعة.',
+        confirmButtonText: 'عرض بطاقة الحساب',
+        confirmButtonColor: '#2563eb'
+      });
+    }
+  </script>
+
+</body>
+</html>

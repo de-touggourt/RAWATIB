@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>مصلحة نفقات المستخدمين - مديرية التربية لولاية توقرت</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- الخطوط والأيقونات -->
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- المكتبات الأساسية -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+
+  <!-- ملفات المنظومة -->
+  <link rel="stylesheet" href="css/main.css">
+  <script src="js/firebase-init.js"></script>
+  <script src="js/app-core.js"></script>
+
+  <style>
+    :root {
+      --primary: #1e40af;
+      --primary-dark: #1e3a8a;
+      --primary-light: #3b82f6;
+      --accent: #0ea5e9;
+      --gold: #f59e0b;
+      --bg-slate: #f8fafc;
+      --dark-navy: #0f172a;
+    }
+
+    body {
+      background-color: var(--bg-slate);
+      color: #1e293b;
+      font-family: 'Cairo', sans-serif !important;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* رأس الصفحة الرسمي */
+    .top-official-bar {
+      background: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 10px 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .container-wide {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    .nav-flex {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .official-brand {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .brand-logo-img {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      border: 2px solid var(--primary-light);
+      object-fit: cover;
+      box-shadow: 0 2px 8px rgba(30,64,175,0.2);
+    }
+
+    .brand-titles h1 {
+      font-size: 17px;
+      font-weight: 900;
+      color: var(--dark-navy);
+      margin: 0;
+      line-height: 1.3;
+    }
+
+    .brand-titles span {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      display: block;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-login-header {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: white;
+      padding: 10px 24px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(37,99,235,0.35);
+      transition: all 0.25s ease;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-login-header:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(37,99,235,0.45);
+      color: white;
+    }
+
+    /* Hero Section */
+    .hero-banner {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #1e40af 100%);
+      color: white;
+      padding: 70px 0 90px 0;
+      position: relative;
+      overflow: hidden;
+      text-align: center;
+    }
+
+    .hero-banner::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.25) 0%, transparent 60%),
+                  radial-gradient(circle at 80% 80%, rgba(245, 158, 11, 0.15) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 6px 20px;
+      border-radius: 50px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #93c5fd;
+      margin-bottom: 22px;
+      backdrop-filter: blur(8px);
+    }
+
+    .hero-main-title {
+      font-size: 38px;
+      font-weight: 900;
+      line-height: 1.35;
+      margin-bottom: 18px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+
+    .hero-desc {
+      font-size: 17px;
+      line-height: 1.8;
+      color: #cbd5e1;
+      margin-bottom: 35px;
+      font-weight: 500;
+    }
+
+    .hero-cta-group {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .btn-hero-primary {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: white;
+      padding: 15px 40px;
+      border-radius: 14px;
+      font-size: 18px;
+      font-weight: 800;
+      text-decoration: none;
+      box-shadow: 0 8px 25px rgba(245,158,11,0.4);
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-hero-primary:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 12px 30px rgba(245,158,11,0.5);
+      color: white;
+    }
+
+    .btn-hero-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      padding: 15px 32px;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      text-decoration: none;
+      backdrop-filter: blur(8px);
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-hero-secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      transform: translateY(-2px);
+    }
+
+    /* شريط الإحصائيات المختصرة الحية */
+    .stats-card-wrapper {
+      max-width: 1080px;
+      margin: -50px auto 40px auto;
+      padding: 0 20px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .stats-card-inner {
+      background: white;
+      border-radius: 20px;
+      padding: 25px 30px;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.08);
+      border: 1px solid #e2e8f0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+
+    .stat-box-modern {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 10px;
+      border-left: 1px solid #f1f5f9;
+    }
+
+    .stat-box-modern:last-child {
+      border-left: none;
+    }
+
+    .stat-box-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .stat-icon-blue { background: #eff6ff; color: #2563eb; }
+    .stat-icon-amber { background: #fffbeb; color: #d97706; }
+    .stat-icon-emerald { background: #ecfdf5; color: #059669; }
+    .stat-icon-purple { background: #faf5ff; color: #7c3aed; }
+
+    .stat-box-text h4 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 900;
+      color: var(--dark-navy);
+      line-height: 1.2;
+    }
+
+    .stat-box-text p {
+      margin: 3px 0 0 0;
+      font-size: 13px;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    /* قسم التعريف بالمصلحة وخدماتها */
+    .services-section {
+      max-width: 1100px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    .section-header-center {
+      text-align: center;
+      margin-bottom: 45px;
+    }
+
+    .section-header-center h3 {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--dark-navy);
+      margin-bottom: 8px;
+    }
+
+    .section-header-center p {
+      font-size: 15px;
+      color: #64748b;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .services-grid-modern {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 24px;
+    }
+
+    .service-card-item {
+      background: white;
+      border-radius: 18px;
+      padding: 30px 24px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .service-card-item:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 12px 30px rgba(37,99,235,0.12);
+      border-color: #bfdbfe;
+    }
+
+    .service-card-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #eff6ff, #dbeafe);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    .service-card-item h4 {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--dark-navy);
+      margin-bottom: 10px;
+    }
+
+    .service-card-item p {
+      font-size: 13.5px;
+      color: #64748b;
+      line-height: 1.7;
+      margin: 0;
+      flex-grow: 1;
+    }
+
+    /* فوتر احترافي */
+    .landing-footer {
+      background: var(--dark-navy);
+      color: #94a3b8;
+      padding: 45px 0 25px 0;
+      margin-top: auto;
+      font-size: 13px;
+    }
+
+    .footer-flex {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 25px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .hero-main-title { font-size: 26px; }
+      .hero-desc { font-size: 15px; }
+      .stats-card-wrapper { margin-top: -30px; }
+      .stat-box-modern { border-left: none; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== الشريط العلوي ==================== -->
+  <header class="top-official-bar">
+    <div class="container-wide">
+      <div class="nav-flex">
+        
+        <div class="official-brand">
+          <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" 
+               alt="شعار مديرية التربية لولاية توقرت" 
+               class="brand-logo-img">
+          <div class="brand-titles">
+            <span>الجمهورية الجزائرية الديمقراطية الشعبية - وزارة التربية الوطنية</span>
+            <h1>مديرية التربية لولاية توقرت - مصلحة تسيير نفقات المستخدمين</h1>
+          </div>
+        </div>
+
+        <div class="nav-actions">
+          <a href="login.html" class="btn-login-header">
+            <i class="fas fa-right-to-bracket"></i>
+            <span>دخول</span>
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== الواجهة التعريفية (Hero Section) ==================== -->
+  <section class="hero-banner">
+    <div class="container-wide">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <i class="fas fa-certificate"></i> فضاء الرقمنة الإدارية والمالية الموحدة
+        </div>
+        <h2 class="hero-main-title">
+          المنصة الرقمية لمصلحة تسيير نفقات المستخدمين
+        </h2>
+        <p class="hero-desc">
+          بوابة متكاملة لرقمنة وتسيير ملفات ومستحقات موظفي قطاع التربية الوطنية بولاية توقرت، 
+          التحقق الآلي من رقم الحساب البريدي الجاري CCP، وتسيير مستخلفي ومتعاقدي المؤسسات التعليمية بدقة وأمان.
+        </p>
+
+        <div class="hero-cta-group">
+          <a href="login.html" class="btn-hero-primary">
+            <span>دخول المنظومة</span>
+            <i class="fas fa-arrow-left"></i>
+          </a>
+          <a href="register.html" class="btn-hero-secondary">
+            <i class="fas fa-user-plus"></i>
+            <span>إنشاء حساب جديد</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== إحصائيات مختصرة ==================== -->
+  <div class="stats-card-wrapper">
+    <div class="stats-card-inner">
+      
+      <div class="stat-box-modern">
+        <div class="stat-box-icon stat-icon-blue">
+          <i class="fas fa-users-gear"></i>
+        </div>
+        <div class="stat-box-text">
+          <h4 id="statEmployeesCount">...</h4>
+          <p>موظف دائم مسجل</p>
+        </div>
+      </div>
+
+      <div class="stat-box-modern">
+        <div class="stat-box-icon stat-icon-emerald">
+          <i class="fas fa-school"></i>
+        </div>
+        <div class="stat-box-text">
+          <h4 id="statSchoolsCount">170+</h4>
+          <p>مؤسسة تعليمية</p>
+        </div>
+      </div>
+
+      <div class="stat-box-modern">
+        <div class="stat-box-icon stat-icon-amber">
+          <i class="fas fa-file-signature"></i>
+        </div>
+        <div class="stat-box-text">
+          <h4 id="statContractsCount">...</h4>
+          <p>ملف مستخلف ومتعاقد</p>
+        </div>
+      </div>
+
+      <div class="stat-box-modern">
+        <div class="stat-box-icon stat-icon-purple">
+          <i class="fas fa-id-card"></i>
+        </div>
+        <div class="stat-box-text">
+          <h4 id="statAccountsCount">...</h4>
+          <p>حساب مستخدم نشط</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== التعريف بالخدمات والمهام ==================== -->
+  <section class="services-section">
+    <div class="section-header-center">
+      <h3>خدمات مصلحة نفقات المستخدمين الرقمية</h3>
+      <p>منظومة معتمدة لضمان الدقة والسرعة في المعالجة الإدارية والمالية لكافة أسلاك القطاع</p>
+    </div>
+
+    <div class="services-grid-modern">
+      
+      <div class="service-card-item">
+        <div class="service-card-icon">
+          <i class="fas fa-barcode"></i>
+        </div>
+        <h4>فحص فوري لـ CCP (من 10 إلى 12 رقماً)</h4>
+        <p>فحص صارم ومباشر في قاعدة بيانات الموظفين الدائمين للتحقق من هوية صاحب الحساب وتفادي تكرار التسجيل.</p>
+      </div>
+
+      <div class="service-card-item">
+        <div class="service-card-icon">
+          <i class="fas fa-user-shield"></i>
+        </div>
+        <h4>بوابة تسيير المستخلفين</h4>
+        <p>تتيح لمدير المؤسسة إدخال مستخلفي ومتعاقدي المؤسسة، ومتابعة دراسة ملفاتهم من مكاتب الأطوار ومصلحة الرواتب.</p>
+      </div>
+
+      <div class="service-card-item">
+        <div class="service-card-icon">
+          <i class="fas fa-id-card-clip"></i>
+        </div>
+        <h4>البطاقات المهنية والاستمارات</h4>
+        <p>استخراج وطباعة استمارات المعلومات والبطاقات المهنية الرسمية بنظام الترميز الآلي بالباركود ورموز الاستجابة السريعة QR.</p>
+      </div>
+
+      <div class="service-card-item">
+        <div class="service-card-icon">
+          <i class="fas fa-calculator"></i>
+        </div>
+        <h4>المطابقة والاعتماد المالي</h4>
+        <p>حساب المستحقات المالية وفترات العمل وتوليد الرتب والرموز التلقائية وفق المعايير الوزارية المقررة.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ==================== التذييل الرسمي ==================== -->
+  <footer class="landing-footer">
+    <div class="container-wide">
+      <div class="footer-flex">
+        <div>
+          <h4 style="color: white; font-size: 16px; font-weight: 800; margin-bottom: 5px;">
+            مديرية التربية لولاية توقرت
+          </h4>
+          <p style="margin: 0; color: #94a3b8;">
+            مصلحة تسيير نفقات المستخدمين - رقمنة قطاع التربية الوطنية
+          </p>
+        </div>
+
+        <div style="direction: ltr; text-align: left;">
+          <span style="color: #cbd5e1; font-weight: bold;">République Algérienne Démocratique et Populaire</span><br>
+          <span style="color: #64748b;">Direction de l'Éducation - Wilaya de Touggourt</span>
+        </div>
+      </div>
+
+      <div style="text-align: center; color: #64748b; font-size: 12px;">
+        جميع الحقوق محفوظة © مديرية التربية لولاية توقرت 2026-2027 | المنظومة الرقمية لمصلحة الرواتب
+      </div>
+    </div>
+  </footer>
+
+  <!-- تحميل الإحصائيات الحية ديناميكياً من Firebase -->
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      if (!window.db) return;
+
+      try {
+        // 1. عدد الموظفين الدائمين
+        window.db.collection("employeescompay").limit(500).get().then(snap => {
+          document.getElementById("statEmployeesCount").textContent = snap.size > 0 ? (snap.size >= 500 ? "+500" : snap.size) : "+1200";
+        }).catch(() => {
+          document.getElementById("statEmployeesCount").textContent = "+1200";
+        });
+
+        // 2. عدد الحسابات المنشأة
+        window.db.collection("users_accounts").get().then(snap => {
+          document.getElementById("statAccountsCount").textContent = snap.size || "0";
+        }).catch(() => {
+          document.getElementById("statAccountsCount").textContent = "0";
+        });
+
+        // 3. عدد المستخلفين والمتعاقدين
+        window.db.collection("contract_registrations").get().then(snap => {
+          document.getElementById("statContractsCount").textContent = snap.size || "0";
+        }).catch(() => {
+          document.getElementById("statContractsCount").textContent = "0";
+        });
+      } catch (err) {
+        console.warn("إحصائيات الواجهة:", err);
+      }
+    });
+  </script>
+
+</body>
+</html>
