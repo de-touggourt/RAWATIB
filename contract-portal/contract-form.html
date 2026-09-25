@@ -43,7 +43,7 @@
           <p id="formSchoolSubtitle">مديرية التربية لولاية توقرت</p>
         </div>
       </div>
-      <a href="director-dashboard.html" class="btn btn-secondary">
+      <a href="director-dashboard.html" class="btn btn-secondary" id="btnBackToDashboard">
         <i class="fas fa-arrow-right"></i> العودة للوحة المؤسسة
       </a>
     </div>
@@ -296,9 +296,40 @@
     let editDocId = null;
 
     document.addEventListener("DOMContentLoaded", async () => {
-      // 1. فحص الحماية لجلسة المدير
-      currentDirector = AuthGuard.requireDirector();
-      if (!currentDirector) return;
+      // 1. فحص الحماية: متاح لمدير المؤسسة أو رئيس مكتب الطور أو مصلحة الرواتب أو المشرف العام
+      const officeSession = AuthGuard.getOfficeSession();
+      const adminSession = AuthGuard.getAdminSession();
+
+      if (officeSession) {
+        currentDirector = {
+          directorName: officeSession.roleTitle || officeSession.username || "مسؤول المكتب",
+          schoolName: officeSession.officeType === "payroll" ? "مصلحة الرواتب" : `مكتب ${officeSession.filterLevel || ''}`,
+          is_office: true,
+          is_admin: !!officeSession.is_admin,
+          ccp: officeSession.username || "office"
+        };
+        const backBtn = document.getElementById("btnBackToDashboard");
+        if (backBtn) {
+          backBtn.href = "../office-portal/office-dashboard.html";
+          backBtn.innerHTML = '<i class="fas fa-arrow-right"></i> العودة للوحة المكتب';
+        }
+      } else if (adminSession) {
+        currentDirector = {
+          directorName: "المشرف العام",
+          schoolName: "مديرية التربية",
+          is_office: true,
+          is_admin: true,
+          ccp: "admin"
+        };
+        const backBtn = document.getElementById("btnBackToDashboard");
+        if (backBtn) {
+          backBtn.href = "../admin/dashboard.html";
+          backBtn.innerHTML = '<i class="fas fa-arrow-right"></i> العودة للوحة التحكم';
+        }
+      } else {
+        currentDirector = AuthGuard.requireDirector();
+        if (!currentDirector) return;
+      }
 
       document.getElementById("formSchoolSubtitle").textContent = `${currentDirector.schoolName} (${currentDirector.directorName})`;
 
@@ -338,7 +369,7 @@
           } catch(e) {}
         }
 
-        // الضبط الافتراضي على مؤسسة ودائرة وبلدية المدير الحالي
+        // الضبط الافتراضي على مؤسسة ودائرة وبلدية المدير الحالي إن وجدت
         applyDirectorGeoDefaults();
       }
 
@@ -447,8 +478,8 @@
         const data = docSnap.data();
         Swal.close();
 
-        // فحص صلاحية التعديل للمدير
-        if (typeof canDirectorEdit === "function" && !canDirectorEdit(data)) {
+        // فحص صلاحية التعديل لمدير المؤسسة فقط (المكتب ومسؤول الرواتب والمشرف لديهم صلاحية كاملة دائماً)
+        if (!currentDirector.is_office && !currentDirector.is_admin && typeof canDirectorEdit === "function" && !canDirectorEdit(data)) {
           return Swal.fire({
             icon: 'error',
             title: 'التعديل غير مسموح ومجمد',
@@ -699,13 +730,70 @@
       };
 
       Swal.fire({
-        title: 'جاري الحفظ والتأكيد...',
-        text: 'يتم تسجيل الملف وتوليد الباركود وتحديث المزامنة',
+        title: 'جاري فحص وتأكيد التسجيل...',
+        text: 'التحقق من عدم تكرار تسجيل الموظف وتوليد الباركود',
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading()
       });
 
       try {
+        // 1. فحص عدم تكرار التسجيل لنفس السنة الدراسية (CCP و NIN) في أي مؤسسة أو صفة
+        const currentYear = recordData.academic_year;
+        let isDuplicate = false;
+        let dupInfo = null;
+
+        const ccpSnap = await window.db.collection("contract_registrations")
+          .where("ccp", "==", ccp)
+          .where("academic_year", "==", currentYear)
+          .get();
+
+        ccpSnap.forEach(doc => {
+          if (!editMode || doc.id !== editDocId) {
+            isDuplicate = true;
+            dupInfo = doc.data();
+          }
+        });
+
+        if (!isDuplicate && nin) {
+          const ninSnap = await window.db.collection("contract_registrations")
+            .where("nin", "==", nin)
+            .where("academic_year", "==", currentYear)
+            .get();
+
+          ninSnap.forEach(doc => {
+            if (!editMode || doc.id !== editDocId) {
+              isDuplicate = true;
+              dupInfo = doc.data();
+            }
+          });
+        }
+
+        if (isDuplicate && dupInfo) {
+          Swal.close();
+          return Swal.fire({
+            icon: 'error',
+            title: '❌ تكرار التسجيل ممنوع',
+            html: `
+              <div style="text-align: right; direction: rtl; line-height: 1.8; font-size: 13.5px;">
+                <p style="color: #dc2626; font-weight: bold; margin-bottom: 8px;">
+                  الموظف(ة) صاحب رقم الحساب (<b>${ccp}</b>) أو رقم التعريف (<b>${nin}</b>) مسجل مسبقاً للسنة الدراسية (${currentYear}) بمؤسسة:
+                </p>
+                <div style="background: #fef2f2; border: 1.5px solid #fecaca; padding: 12px 14px; border-radius: 10px;">
+                  <b>المؤسسة المسجل بها:</b> <span style="color:#b91c1c; font-weight:bold;">${dupInfo.school_name || '---'}</span><br>
+                  <b>الاسم واللقب:</b> ${dupInfo.fmn_ar || ''} ${dupInfo.frn_ar || ''}<br>
+                  <b>الصفة والرتبة:</b> ${dupInfo.status_type || '---'} - ${dupInfo.rank || '---'}<br>
+                  <b>الفترة:</b> من ${dupInfo.start_date || '---'} إلى ${dupInfo.end_date || '---'}
+                </div>
+                <p style="color: #64748b; font-size: 12px; margin-top: 8px;">
+                  * تمنع لوائح المنظومة تسجيل نفس الموظف في أكثر من مؤسسة أو أكثر من صفة لنفس السنة الدراسية.
+                </p>
+              </div>
+            `,
+            confirmButtonText: 'موافق',
+            confirmButtonColor: '#dc2626'
+          });
+        }
+
         let savedDocId = editDocId;
 
         if (editMode && editDocId) {
@@ -752,6 +840,17 @@
 
         Swal.close();
 
+        // تحديد مسار العودة الذكي حسب نوع المستخدم
+        let returnUrl = "director-dashboard.html";
+        let returnLabel = "العودة لجدول المؤسسة";
+        if (currentDirector.is_office) {
+          returnUrl = "../office-portal/office-dashboard.html";
+          returnLabel = "العودة للوحة المكتب";
+        } else if (currentDirector.is_admin) {
+          returnUrl = "../admin/dashboard.html";
+          returnLabel = "العودة للوحة المشرف";
+        }
+
         // نافذة نجاح مع خيارات الطباعة الفورية أو العودة
         Swal.fire({
           icon: 'success',
@@ -764,7 +863,7 @@
           `,
           showCancelButton: true,
           confirmButtonText: '🖨️ طباعة الاستمارة الرسمية A4',
-          cancelButtonText: 'العودة لجدول المؤسسة',
+          cancelButtonText: returnLabel,
           confirmButtonColor: '#6a11cb',
           cancelButtonColor: '#2575fc',
           allowOutsideClick: false
@@ -772,7 +871,7 @@
           if (result.isConfirmed) {
             window.location.href = `print-sheet.html?id=${savedDocId}&type=sheet`;
           } else {
-            window.location.href = "director-dashboard.html";
+            window.location.href = returnUrl;
           }
         });
 

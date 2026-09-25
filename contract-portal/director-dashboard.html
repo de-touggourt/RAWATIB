@@ -503,44 +503,37 @@
                 <i class="fas fa-file-lines"></i> الاستمارة A4
               </a>
 
-              <!-- 2. زر طباعة المقرر الرسمي (منفصل: مشروط بوجود رقم المقرر أولاً) -->
+              <!-- 2. زر طباعة المقرر الرسمي (منفصل: متاح حصرياً بعد أن يقوم رئيس مكتب الطور بوضع رقمه الرسمي) -->
               ${hasDecisionNumber ? `
                 <a href="print-sheet.html?id=${emp.id}&type=decision" target="_blank" class="btn-action-decision" title="طباعة مقرر الاستخلاف والتعاقد الرسمي">
                   <i class="fas fa-certificate"></i> طباعة المقرر
                 </a>
               ` : `
-                <button class="btn-action-decision-set" onclick="openDecisionModal('${emp.id}', '${nameAr}', '${emp.decision_number || ''}')" title="يجب إضافة رقم المقرر أولاً للتمكن من طباعة المقرر ونشره للموظف">
-                  <i class="fas fa-plus"></i> إضافة رقم المقرر
+                <button class="btn-action-decision" style="background:#f1f5f9; color:#94a3b8; border:1px dashed #cbd5e1; cursor:not-allowed;" disabled title="لا يمكن للمدير طباعة المقرر إلا بعد أن يقوم رئيس مكتب التعليم بتسجيل الرقم الرسمي للمقرر">
+                  <i class="fas fa-clock"></i> في انتظار رقم المقرر
                 </button>
               `}
 
-              <!-- 3. زر إدارة ونشر المقرر (تعديل الرقم وحالة النشر) -->
-              ${hasDecisionNumber ? `
-                <button style="background:transparent; border:none; color:#d97706; cursor:pointer; padding:2px 4px;" onclick="openDecisionModal('${emp.id}', '${nameAr}', '${emp.decision_number || ''}')" title="تعديل رقم المقرر أو إعدادات النشر">
-                  <i class="fas fa-pen-to-square"></i>
-                </button>
-              ` : ''}
-
-              <!-- 4. زر شهادة العمل الرسمية (مطابقة لنموذج الصورة) -->
+              <!-- 3. زر شهادة العمل الرسمية (مطابقة لنموذج الصورة) -->
               <a href="print-sheet.html?id=${emp.id}&type=work_cert" target="_blank" class="btn-action-workcert" title="استخراج وطباعة شهادة عمل رسمية">
                 <i class="fas fa-stamp"></i> شهادة عمل
               </a>
 
-              <!-- 5. زر التعديل: يظهر لحظياً إذا كان مسموحاً ويختفي تماماً إذا لم يكن مسموحاً -->
+              <!-- 4. زر التعديل: يظهر لحظياً إذا كان مسموحاً ويختفي تماماً إذا لم يكن مسموحاً -->
               ${allowEdit ? `
                 <button class="btn-action-edit" onclick="editRegistration('${emp.id}')" title="تعديل بيانات الملف">
                   <i class="fas fa-pen"></i> تعديل
                 </button>
               ` : ''}
 
-              <!-- 6. زر الحذف: يظهر لحظياً إذا كان مسموحاً ويختفي تماماً إذا لم يكن مسموحاً -->
+              <!-- 5. زر الحذف: يظهر لحظياً إذا كان مسموحاً ويختفي تماماً إذا لم يكن مسموحاً -->
               ${allowDelete ? `
                 <button class="btn-action-delete" onclick="deleteRegistration('${emp.id}', '${nameAr}')" title="حذف الملف">
                   <i class="fas fa-trash-can"></i> حذف
                 </button>
               ` : ''}
 
-              <!-- 7. زر معاينة المسار والتفاصيل -->
+              <!-- 6. زر معاينة المسار والتفاصيل -->
               <button class="btn-table-action" style="background:#475569; color:white; padding:5px 8px; font-size:11px;" onclick="showWorkflowModal('${emp.id}')" title="معاينة تفاصيل ومسار دراسة الملف">
                 <i class="fas fa-eye"></i>
               </button>
@@ -550,88 +543,6 @@
         `;
         tbody.appendChild(tr);
       });
-    }
-
-    // ============================================================
-    // نافذة إضافة وتحديد رقم المقرر ونشره للموظف (شرط طباعة المقرر)
-    // ============================================================
-    async function openDecisionModal(empId, empName, currentDecNum) {
-      const emp = institutionEmployees.find(e => e.id === empId);
-      const isPublished = emp ? emp.is_decision_published !== false : true;
-      const decDate = (emp && emp.decision_date) ? emp.decision_date : new Date().toISOString().slice(0, 10);
-
-      const { value: formValues } = await Swal.fire({
-        title: `إدارة ونشر المقرر الرسمي`,
-        html: `
-          <div style="direction: rtl; text-align: right; font-size: 13.5px; line-height: 1.8;">
-            <p style="color: #1e40af; font-weight: bold; margin-bottom: 10px;">
-              الموظف(ة): <b>${empName}</b>
-            </p>
-            <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; font-size: 12.5px; color: #1e3a8a;">
-              <i class="fas fa-info-circle"></i> تنبيه: لا يمكن طباعة مقرر الاستخلاف إلا بعد إضافة وتسجيل رقمه الرسمي الصادر.
-            </div>
-
-            <div style="margin-bottom: 12px;">
-              <label style="font-weight: 700; display: block; margin-bottom: 4px;">رقم المقرر الرسمي:</label>
-              <input type="text" id="swal_dec_num" class="swal2-input" placeholder="مثال: 124 أو 352/2026" 
-                     value="${currentDecNum || ''}" style="width: 100%; margin: 0; font-weight: bold; text-align: center; font-size: 16px;">
-            </div>
-
-            <div style="margin-bottom: 12px;">
-              <label style="font-weight: 700; display: block; margin-bottom: 4px;">تاريخ صدور المقرر:</label>
-              <input type="date" id="swal_dec_date" class="swal2-input" value="${decDate}" style="width: 100%; margin: 0; text-align: center;">
-            </div>
-
-            <div style="margin-top: 15px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px;">
-              <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; margin: 0;">
-                <input type="checkbox" id="swal_dec_publish" ${isPublished ? 'checked' : ''} style="width: 18px; height: 18px;">
-                <span style="font-weight: 800; color: #059669;">
-                  نشر المقرر للموظف في صفحة الاستعلام (إتاحة الطباعة للأستاذ)
-                </span>
-              </label>
-            </div>
-          </div>
-        `,
-        focusConfirm: false,
-        showCancelButton: true,
-        confirmButtonText: 'حفظ وتأكيد المقرر',
-        cancelButtonText: 'إلغاء',
-        confirmButtonColor: '#16a34a',
-        preConfirm: () => {
-          const num = document.getElementById("swal_dec_num").value.trim();
-          const date = document.getElementById("swal_dec_date").value;
-          const pub = document.getElementById("swal_dec_publish").checked;
-          if (!num) {
-            Swal.showValidationMessage("يرجى إدخال رقم المقرر للمتابعة");
-            return false;
-          }
-          return { decNum: num, decDate: date, isPub: pub };
-        }
-      });
-
-      if (formValues) {
-        Swal.fire({ title: 'جاري تسجيل المقرر...', didOpen: () => Swal.showLoading() });
-        try {
-          await window.db.collection("contract_registrations").doc(empId).update({
-            decision_number: formValues.decNum,
-            decision_date: formValues.decDate,
-            is_decision_published: formValues.isPub,
-            last_updated: new Date().toISOString()
-          });
-
-          Swal.fire({
-            icon: 'success',
-            title: 'تم حفظ المقرر بنجاح',
-            text: 'تم تفعيل زر طباعة المقرر للمدير ونشره للموظف للاستعلام.',
-            timer: 1800,
-            showConfirmButton: false
-          });
-
-        } catch (err) {
-          console.error("خطأ حفظ المقرر:", err);
-          Swal.fire('خطأ', 'فشل حفظ رقم المقرر: ' + err.message, 'error');
-        }
-      }
     }
 
     // فحص مرشح جديد للدخول

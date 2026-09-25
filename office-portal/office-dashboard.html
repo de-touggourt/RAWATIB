@@ -148,24 +148,31 @@
       to { transform: translate(-50%, 0); opacity: 1; }
     }
 
-    /* حقول الفلترة */
+    /* حقول الفلترة المعدلة بالكامل لحل مشكلة قص وضغط النصوص */
     .filter-input-styled {
-      height: 40px;
-      font-size: 13px;
-      font-weight: 600;
-      color: #1e293b;
-      background-color: #ffffff;
-      border: 1.5px solid #cbd5e1;
-      border-radius: 10px;
-      padding: 0 12px;
-      transition: all 0.2s ease;
-      width: 100%;
-      box-sizing: border-box;
-      outline: none;
+      height: 44px !important;
+      line-height: 44px !important;
+      font-size: 13.5px !important;
+      font-weight: 700 !important;
+      color: #0f172a !important;
+      background-color: #ffffff !important;
+      border: 1.8px solid #cbd5e1 !important;
+      border-radius: 10px !important;
+      padding: 0 12px !important;
+      transition: all 0.2s ease !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+      outline: none !important;
     }
     .filter-input-styled:focus {
-      border-color: #2563eb;
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+      border-color: #2563eb !important;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+    }
+    select.filter-input-styled option {
+      padding: 8px 12px !important;
+      font-size: 13.5px !important;
+      font-weight: 600 !important;
+      color: #0f172a !important;
     }
 
     /* مفتاح التبديل Switch */
@@ -258,57 +265,73 @@
     </div>
 
     <!-- ==================== بطاقات الأيقونات الرئيسية (Icon Cards Hub) ==================== -->
-    <div id="section_hub_cards" class="hub-grid">
-      
-      <!-- 1. دراسة ومطابقة ملفات المستخلفين -->
-      <div class="hub-card-item" onclick="openModuleView('records')">
-        <div class="hub-card-icon icon-blue">
-          <i class="fas fa-folder-open"></i>
+    <div id="section_hub_container">
+      <div style="background: white; border-radius: 18px; padding: 20px 24px; margin-bottom: 18px; border: 1.5px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+        <div>
+          <h2 style="margin: 0 0 5px 0; font-size: 19px; font-weight: 900; color: #0f172a;">
+            <i class="fas fa-cubes" style="color: #2563eb;"></i> بوابة الخدمات والوحدات المركزية
+          </h2>
+          <p style="margin: 0; font-size: 13px; color: #64748b; font-weight: 600;">
+            اختر إحدى البطاقات أدناه للولوج المباشر للخدمة بملء الشاشة مع إمكانية الرجوع في أي وقت
+          </p>
         </div>
-        <div class="hub-card-title">ملفات المستخلفين والمتعاقدين</div>
-        <p class="hub-card-desc">دراسة ومطابقة الملفات، إحالتها لمصلحة الرواتب، والاعتماد المالي النهائي</p>
+        <div>
+          <button class="btn btn-main btn-sm" onclick="openModuleView('records')" style="font-weight: 800; background: linear-gradient(135deg, #2563eb, #1d4ed8);">
+            <i class="fas fa-table-list"></i> فتح جدول السجلات الشامل
+          </button>
+        </div>
       </div>
 
-      <!-- 2. نظام إدارة ونشر كشوف الأجور والمخلفات (لمصلحة الرواتب والمشرف) -->
-      <div class="hub-card-item" onclick="openModuleView('salaries')" id="hubCardSalaries">
-        <div class="hub-card-icon icon-emerald">
-          <i class="fas fa-money-check-dollar"></i>
+      <div id="section_hub_cards" class="hub-grid">
+        <!-- 1. دراسة ومطابقة ملفات المستخلفين -->
+        <div class="hub-card-item" onclick="openModuleView('records')">
+          <div class="hub-card-icon icon-blue">
+            <i class="fas fa-folder-open"></i>
+          </div>
+          <div class="hub-card-title">ملفات المستخلفين والمتعاقدين</div>
+          <p class="hub-card-desc">دراسة ومطابقة الملفات، إدراج رقم وتاريخ المقرر، والاعتماد المالي النهائي</p>
         </div>
-        <div class="hub-card-title">نظام رفع ونشر الأجور والمخلفات</div>
-        <p class="hub-card-desc">رفع جداول الأجور والمخلفات والتحكم في نشرها أو إخفائها للموظفين</p>
-      </div>
 
-      <!-- 3. نظام الصلاحيات والأذونات الديناميكي -->
-      <div class="hub-card-item" onclick="openModuleView('permissions')">
-        <div class="hub-card-icon icon-amber">
-          <i class="fas fa-shield-halved"></i>
+        <!-- 2. نظام إدارة ونشر كشوف الأجور والمخلفات (لمصلحة الرواتب والمشرف) -->
+        <div class="hub-card-item" onclick="openModuleView('salaries')" id="hubCardSalaries">
+          <div class="hub-card-icon icon-emerald">
+            <i class="fas fa-money-check-dollar"></i>
+          </div>
+          <div class="hub-card-title">نظام رفع ونشر الأجور والمخلفات</div>
+          <p class="hub-card-desc">رفع جداول الأجور والمخلفات والتحكم في نشرها أو إخفائها للموظفين</p>
         </div>
-        <div class="hub-card-title">إدارة الصلاحيات والأذونات</div>
-        <p class="hub-card-desc">السماح بالتعديل والحذف ديناميكياً بالمؤسسة أو حسب التحديد الجماعي</p>
-      </div>
 
-      <!-- 4. مركز المسح الذكي بالهاتف -->
-      <div class="hub-card-item" onclick="openSmartScannerHubModal()">
-        <div class="hub-card-icon icon-purple">
-          <i class="fas fa-mobile-screen-button"></i>
+        <!-- 3. نظام الصلاحيات والأذونات الديناميكي -->
+        <div class="hub-card-item" onclick="openModuleView('permissions')">
+          <div class="hub-card-icon icon-amber">
+            <i class="fas fa-shield-halved"></i>
+          </div>
+          <div class="hub-card-title">إدارة الصلاحيات والأذونات</div>
+          <p class="hub-card-desc">السماح بالتعديل والحذف ديناميكياً بالمؤسسة أو حسب التحديد الجماعي للمدراء</p>
         </div>
-        <div class="hub-card-title">نظام استلام الملفات بالمسح</div>
-        <p class="hub-card-desc">إدارة جلسات المسح عبر الهاتف، الأجهزة المسموح بها، ونظام الغلق والفتح</p>
-      </div>
 
-      <!-- 5. تصدير التقارير إكسل RTL الشامل -->
-      <div class="hub-card-item" onclick="exportToExcel()">
-        <div class="hub-card-icon icon-rose">
-          <i class="fas fa-file-excel"></i>
+        <!-- 4. مركز المسح الذكي بالهاتف -->
+        <div class="hub-card-item" onclick="openSmartScannerHubModal()">
+          <div class="hub-card-icon icon-purple">
+            <i class="fas fa-mobile-screen-button"></i>
+          </div>
+          <div class="hub-card-title">نظام استلام الملفات بالمسح</div>
+          <p class="hub-card-desc">إدارة جلسات المسح عبر الهاتف، الأجهزة المسموح بها، ونظام الغلق والفتح</p>
         </div>
-        <div class="hub-card-title">تصدير إكسل الشامل (RTL)</div>
-        <p class="hub-card-desc">تحميل كامل بيانات الموظفين شاملة بحدود أنيقة واتجاه من اليمين إلى اليسار</p>
-      </div>
 
+        <!-- 5. تصدير التقارير إكسل RTL الشامل -->
+        <div class="hub-card-item" onclick="exportToExcel()">
+          <div class="hub-card-icon icon-rose">
+            <i class="fas fa-file-excel"></i>
+          </div>
+          <div class="hub-card-title">تصدير إكسل الشامل (RTL)</div>
+          <p class="hub-card-desc">تحميل كامل بيانات الموظفين شاملة بحدود أنيقة واتجاه من اليمين إلى اليسار</p>
+        </div>
+      </div>
     </div>
 
     <!-- شبكة الإحصائيات المفلترة حسب الطور -->
-    <div class="stats-grid" style="margin-bottom: 16px;">
+    <div id="section_hub_stats" class="stats-grid" style="margin-bottom: 16px;">
       <div class="stat-item stat-primary">
         <div class="stat-info-text">
           <p>إجمالي ملفات المسجلين</p>
@@ -359,7 +382,7 @@
     </div>
 
     <!-- ==================== 1. نافذة / قسم جدول السجلات الموسع ==================== -->
-    <div id="module_records" class="portal-card" style="padding: 16px; margin-bottom: 18px;">
+    <div id="module_records" class="portal-card" style="display: none; padding: 16px; margin-bottom: 18px;">
       
       <!-- رأس القسم مع زر الرجوع للبطاقات -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
@@ -734,26 +757,23 @@
     // إدارة أنماط العرض والتنقل بين البطاقات والأقسام الموسعة
     // ============================================================
     function toggleViewMode() {
-      isHubViewActive = !isHubViewActive;
-      const hubElem = document.getElementById("section_hub_cards");
-      const labelElem = document.getElementById("viewModeLabel");
-
-      if (isHubViewActive) {
-        hubElem.style.display = "grid";
-        labelElem.textContent = "عرض الجدول الموسع";
-        document.getElementById("module_records").style.display = "block";
-        document.getElementById("module_salaries").style.display = "none";
-        document.getElementById("module_permissions").style.display = "none";
+      const hubContainer = document.getElementById("section_hub_container");
+      const isHubVisible = hubContainer && hubContainer.style.display !== "none";
+      if (isHubVisible) {
+        openModuleView('records');
       } else {
-        hubElem.style.display = "none";
-        labelElem.textContent = "عرض شبكة البطاقات";
-        document.getElementById("module_records").style.display = "block";
+        backToHub();
       }
     }
 
     function openModuleView(mod) {
-      document.getElementById("section_hub_cards").style.display = "none";
-      document.getElementById("viewModeLabel").textContent = "عرض شبكة البطاقات";
+      const hubContainer = document.getElementById("section_hub_container");
+      if (hubContainer) hubContainer.style.display = "none";
+
+      const statsElem = document.getElementById("section_hub_stats");
+      if (statsElem) statsElem.style.display = (mod === "records") ? "grid" : "none";
+
+      document.getElementById("viewModeLabel").textContent = "الرجوع لشبكة البطاقات";
       isHubViewActive = false;
 
       document.getElementById("module_records").style.display = (mod === "records") ? "block" : "none";
@@ -765,9 +785,14 @@
 
     function backToHub() {
       isHubViewActive = true;
-      document.getElementById("section_hub_cards").style.display = "grid";
-      document.getElementById("viewModeLabel").textContent = "عرض الجدول الموسع";
-      document.getElementById("module_records").style.display = "block";
+      const hubContainer = document.getElementById("section_hub_container");
+      if (hubContainer) hubContainer.style.display = "block";
+
+      const statsElem = document.getElementById("section_hub_stats");
+      if (statsElem) statsElem.style.display = "grid";
+
+      document.getElementById("viewModeLabel").textContent = "فتح جدول السجلات";
+      document.getElementById("module_records").style.display = "none";
       document.getElementById("module_salaries").style.display = "none";
       document.getElementById("module_permissions").style.display = "none";
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -943,24 +968,39 @@
           <td style="text-align: center;">
             <div class="action-btns" style="justify-content:center; gap: 4px; flex-wrap: wrap;">
               
-              <!-- زر دراسة ومطابقة الملف -->
-              <button class="btn-table-action" style="background:#2563eb; color:white;" onclick="openReviewModal('${emp.id}')" title="دراسة الملف واتخاذ القرار">
+              <!-- 1. زر دراسة ومطابقة الملف -->
+              <button class="btn-table-action" style="background:#2563eb; color:white;" onclick="openReviewModal('${emp.id}')" title="دراسة ومطابقة الملف قانونياً ومالياً">
                 <i class="fas fa-clipboard-check"></i> دراسة
               </button>
 
-              <!-- طباعة الاستمارة الرسمية A4 -->
+              <!-- 2. زر إدراج / تعديل رقم وتاريخ المقرر الرسمي (صلاحية رئيس المكتب) -->
+              <button class="btn-table-action" style="background:#059669; color:white;" onclick="openOfficeDecisionModal('${emp.id}', '${nameAr}', '${emp.decision_number || ''}')" title="إدراج أو تعديل رقم وتاريخ المقرر الرسمي لتمكين المدير من طباعته">
+                <i class="fas fa-certificate"></i> ${emp.decision_number ? 'تعديل المقرر' : 'إدراج المقرر'}
+              </button>
+
+              <!-- 3. زر تعديل بيانات ملف الموظف للمكتب -->
+              <a href="../contract-portal/contract-form.html?id=${emp.id}&mode=edit" target="_blank" class="btn-table-action" style="background:#4f46e5; color:white;" title="تعديل بيانات ملف الموظف">
+                <i class="fas fa-pen"></i> تعديل
+              </a>
+
+              <!-- 4. طباعة الاستمارة الرسمية A4 -->
               <a href="../contract-portal/print-sheet.html?id=${emp.id}&type=sheet" target="_blank" class="btn-table-action" style="background:#7c3aed; color:white;" title="طباعة استمارة المعلومات الرسمية A4">
                 <i class="fas fa-print"></i> استمارة
               </a>
 
-              <!-- طباعة المقرر في حال اعتماده وتوفر رقمه -->
+              <!-- 5. طباعة شهادة العمل الرسمية (مطابقة لنموذج المديرية) -->
+              <a href="../contract-portal/print-sheet.html?id=${emp.id}&type=work_cert" target="_blank" class="btn-table-action" style="background:#0284c7; color:white;" title="استخراج وطباعة شهادة العمل الرسمية">
+                <i class="fas fa-stamp"></i> شهادة عمل
+              </a>
+
+              <!-- 6. طباعة المقرر في حال اعتماده وتوفر رقمه -->
               ${emp.decision_number ? `
                 <a href="../contract-portal/print-sheet.html?id=${emp.id}&type=decision" target="_blank" class="btn-table-action" style="background:#16a34a; color:white;" title="طباعة مقرر الاستخلاف المعتمد">
-                  <i class="fas fa-certificate"></i> مقرر
+                  <i class="fas fa-file-contract"></i> المقرر
                 </a>
               ` : ''}
 
-              <!-- مفتاح إذن تعديل المدير الفوري -->
+              <!-- 7. مفتاح إذن تعديل المدير الفوري -->
               <button class="btn-table-action" style="background:${isDirectorUnlocked ? '#f59e0b' : '#64748b'}; color:white;" 
                       onclick="quickToggleDirectorPermission('${emp.id}', ${!isDirectorUnlocked})" 
                       title="${isDirectorUnlocked ? 'التعديل مفتوح للمدير - انقر لقفله' : 'التعديل مقفل عن المدير - انقر للسماح له'}">
@@ -1131,6 +1171,25 @@
               <tr><th>الهاتف المعتمد:</th><td dir="ltr" style="text-align:right;">${emp.phone}</td><th>رقم المقرر:</th><td><b>${emp.decision_number || 'لم يحدد بعد'}</b></td></tr>
             </table>
 
+            <!-- إدراج أو تعديل رقم وتاريخ المقرر الرسمي الصادر (صلاحية رئيس المكتب) -->
+            <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 12px 16px; margin: 12px 0;">
+              <div style="font-weight: 800; color: #166534; font-size: 13px; margin-bottom: 8px;">
+                <i class="fas fa-file-signature"></i> تسجيل رقم وتاريخ المقرر الرسمي (صلاحية رئيس المكتب لتمكين المدير من الطباعة):
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                  <label style="font-size: 12px; font-weight: 700; color: #166534; display: block; margin-bottom: 3px;">رقم المقرر الصادر:</label>
+                  <input type="text" id="modal_review_dec_num" value="${emp.decision_number || ''}" placeholder="مثال: 145 أو 352/2026" 
+                         style="width: 100%; height: 38px; border: 1.5px solid #86efac; border-radius: 8px; font-weight: bold; text-align: center; font-size: 14px; box-sizing: border-box;">
+                </div>
+                <div>
+                  <label style="font-size: 12px; font-weight: 700; color: #166534; display: block; margin-bottom: 3px;">تاريخ صدور المقرر:</label>
+                  <input type="date" id="modal_review_dec_date" value="${emp.decision_date || new Date().toISOString().slice(0, 10)}" 
+                         style="width: 100%; height: 38px; border: 1.5px solid #86efac; border-radius: 8px; text-align: center; font-size: 13px; box-sizing: border-box;">
+                </div>
+              </div>
+            </div>
+
             <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px 16px; margin: 15px 0;">
               <label style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                 <input type="checkbox" id="chk_allow_director_edit" ${isDirectorUnlocked ? 'checked' : ''} style="width: 18px; height: 18px;">
@@ -1157,12 +1216,18 @@
         preConfirm: () => {
           return {
             note: document.getElementById("modal_review_note").value.trim(),
-            allowDir: document.getElementById("chk_allow_director_edit").checked
+            allowDir: document.getElementById("chk_allow_director_edit").checked,
+            decNum: document.getElementById("modal_review_dec_num")?.value.trim() || "",
+            decDate: document.getElementById("modal_review_dec_date")?.value || ""
           };
         }
       }).then(async (result) => {
-        const note = document.getElementById("modal_review_note")?.value.trim() || "";
-        const allowDir = document.getElementById("chk_allow_director_edit") ? document.getElementById("chk_allow_director_edit").checked : false;
+        if (!result.isConfirmed && !result.isDenied) return;
+
+        const note = result.value?.note || document.getElementById("modal_review_note")?.value.trim() || "";
+        const allowDir = result.value ? result.value.allowDir : false;
+        const decNum = result.value ? result.value.decNum : "";
+        const decDate = result.value ? result.value.decDate : "";
 
         if (result.isConfirmed) {
           const targetStatus = isPayroll ? "payroll_approved" : "office_approved";
@@ -1170,13 +1235,20 @@
 
           Swal.fire({ title: 'جاري الحفظ والتأشير...', didOpen: () => Swal.showLoading() });
           try {
+            const extraData = { allow_director_edit: allowDir };
+            if (decNum) {
+              extraData.decision_number = decNum;
+              extraData.decision_date = decDate;
+              extraData.is_decision_published = true;
+            }
+
             await updateFileStatus(
               emp.id, 
               targetStatus, 
               currentOffice.username, 
               currentOffice.roleTitle, 
               note || defaultNote,
-              { allow_director_edit: allowDir }
+              extraData
             );
             Swal.fire('تم الاعتماد بنجاح', 'تم تسجيل القرار وإحالة الملف بنجاح.', 'success');
             await loadOfficeEmployees();
@@ -1208,6 +1280,92 @@
           }
         }
       });
+    }
+
+    // ============================================================
+    // نافذة إدراج وتعديل رقم وتاريخ المقرر الرسمي الصادر (رئيس المكتب)
+    // ============================================================
+    async function openOfficeDecisionModal(empId, empName, currentDecNum) {
+      const emp = allOfficeRecords.find(e => e.id === empId);
+      if (!emp) return;
+
+      const isPublished = emp.is_decision_published !== false;
+      const decDate = emp.decision_date || new Date().toISOString().slice(0, 10);
+
+      const { value: formValues } = await Swal.fire({
+        title: `تسجيل رقم وتاريخ المقرر الرسمي`,
+        html: `
+          <div style="direction: rtl; text-align: right; font-size: 13.5px; line-height: 1.8;">
+            <p style="color: #1e40af; font-weight: bold; margin-bottom: 8px;">
+              الموظف(ة): <b>${emp.fmn_ar || ''} ${emp.frn_ar || ''}</b>
+            </p>
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 10px 14px; border-radius: 10px; margin-bottom: 14px; font-size: 12.5px; color: #1e3a8a;">
+              <i class="fas fa-info-circle"></i> تنبيه: لا يتمكن مدير المؤسسة من طباعة المقرر الرسمي إلا بعد قيام رئيس المكتب بتسجيل هذا الرقم.
+            </div>
+
+            <div style="margin-bottom: 12px;">
+              <label style="font-weight: 700; display: block; margin-bottom: 4px;">رقم المقرر الرسمي المسجل بالمديرية:</label>
+              <input type="text" id="swal_dec_num" class="swal2-input" placeholder="مثال: 142 أو 358/2026" 
+                     value="${currentDecNum || emp.decision_number || ''}" style="width: 100%; margin: 0; font-weight: bold; text-align: center; font-size: 16px;">
+            </div>
+
+            <div style="margin-bottom: 12px;">
+              <label style="font-weight: 700; display: block; margin-bottom: 4px;">تاريخ صدور المقرر:</label>
+              <input type="date" id="swal_dec_date" class="swal2-input" value="${decDate}" style="width: 100%; margin: 0; text-align: center;">
+            </div>
+
+            <div style="margin-top: 15px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px;">
+              <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; margin: 0;">
+                <input type="checkbox" id="swal_dec_publish" ${isPublished ? 'checked' : ''} style="width: 18px; height: 18px;">
+                <span style="font-weight: 800; color: #059669;">
+                  نشر المقرر للموظف في صفحة الاستعلام (إتاحة الطباعة للأستاذ)
+                </span>
+              </label>
+            </div>
+          </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'حفظ وتأكيد المقرر',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#059669',
+        preConfirm: () => {
+          const num = document.getElementById("swal_dec_num").value.trim();
+          const date = document.getElementById("swal_dec_date").value;
+          const pub = document.getElementById("swal_dec_publish").checked;
+          if (!num) {
+            Swal.showValidationMessage("يرجى إدخال رقم المقرر للمتابعة");
+            return false;
+          }
+          return { decNum: num, decDate: date, isPub: pub };
+        }
+      });
+
+      if (formValues) {
+        Swal.fire({ title: 'جاري تسجيل المقرر...', didOpen: () => Swal.showLoading() });
+        try {
+          await window.db.collection("contract_registrations").doc(empId).update({
+            decision_number: formValues.decNum,
+            decision_date: formValues.decDate,
+            is_decision_published: formValues.isPub,
+            last_updated: new Date().toISOString()
+          });
+
+          Swal.fire({
+            icon: 'success',
+            title: 'تم تسجيل المقرر بنجاح',
+            text: 'تم حفظ رقم المقرر وتفعيل زر الطباعة للمدير وللموظف.',
+            timer: 1800,
+            showConfirmButton: false
+          });
+
+          await loadOfficeEmployees();
+
+        } catch (err) {
+          console.error("خطأ حفظ المقرر:", err);
+          Swal.fire('خطأ', 'فشل حفظ رقم المقرر: ' + err.message, 'error');
+        }
+      }
     }
 
     async function quickToggleDirectorPermission(docId, newAllowState) {

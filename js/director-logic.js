@@ -124,6 +124,50 @@ const DirectorLogic = {
         return { allowed: false, reason: "permanent" };
       }
 
+      // الخطوة 1.5: الفحص في contract_registrations لمنع تسجيل نفس الموظف في أكثر من مؤسسة أو صفة في نفس السنة
+      const sysSettings = typeof getSystemSettings === "function" ? await getSystemSettings() : null;
+      const currentYear = (sysSettings && sysSettings.active_academic_year) ? sysSettings.active_academic_year : "2026-2027";
+      
+      const { candidates: ccpCandidates } = this.normalizeCCP(clean);
+      let duplicateDoc = null;
+      for (const cand of ccpCandidates) {
+        const snap = await window.db.collection("contract_registrations")
+          .where("ccp", "==", cand)
+          .where("academic_year", "==", currentYear)
+          .get();
+        if (!snap.empty) {
+          duplicateDoc = snap.docs[0].data();
+          break;
+        }
+      }
+
+      if (duplicateDoc) {
+        Swal.close();
+        Swal.fire({
+          icon: "error",
+          title: "❌ تكرار التسجيل ممنوع",
+          html: `
+            <div style="text-align: right; direction: rtl; line-height: 1.8; font-size: 13.5px;">
+              <p style="color: #dc2626; font-weight: bold; margin-bottom: 8px;">
+                الموظف مسجل بالفعل للسنة الدراسية الحالية (${duplicateDoc.academic_year || currentYear}):
+              </p>
+              <div style="background: #fef2f2; border: 1.5px solid #fecaca; padding: 12px 14px; border-radius: 10px;">
+                <b>الاسم واللقب:</b> ${duplicateDoc.fmn_ar || ''} ${duplicateDoc.frn_ar || ''}<br>
+                <b>المؤسسة المسجل بها:</b> <span style="color:#b91c1c; font-weight:bold;">${duplicateDoc.school_name || '---'}</span><br>
+                <b>الصفة والرتبة:</b> ${duplicateDoc.status_type || '---'} - ${duplicateDoc.rank || '---'}<br>
+                <b>الفترة:</b> من ${duplicateDoc.start_date || '---'} إلى ${duplicateDoc.end_date || '---'}
+              </div>
+              <p style="color: #64748b; font-size: 12px; margin-top: 8px;">
+                * تمنع لوائح المنظومة ازدواجية تسجيل نفس الموظف في أكثر من مؤسسة أو أكثر من صفة لنفس السنة الدراسية.
+              </p>
+            </div>
+          `,
+          confirmButtonText: "موافق",
+          confirmButtonColor: "#dc2626"
+        });
+        return { allowed: false, reason: "duplicate_academic_year" };
+      }
+
       // الخطوة 2: الفحص في employeescompaycontra (المستخلفون والمتعاقدون السابقون)
       const contraCheck = await this.findInContractEmployees(clean);
       Swal.close();
