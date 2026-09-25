@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>استعلام الموظف المستخلف - مديرية التربية لولاية توقرت</title>
+  <title>بوابة استعلام الموظفين - مديرية التربية لولاية توقرت</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- الخطوط والأيقونات -->
@@ -18,150 +18,408 @@
   <link rel="stylesheet" href="../css/main.css">
   <script src="../js/firebase-init.js"></script>
   <script src="../js/workflow.js"></script>
+  <script src="../js/director-logic.js"></script>
 
   <style>
     .fa, .fas, .far, .fab, .fa-solid, .fa-regular {
       font-family: "Font Awesome 6 Free", "Font Awesome 5 Free", FontAwesome !important;
       font-style: normal !important;
     }
+    body {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #1e40af 100%);
+      min-height: 100vh;
+      font-family: 'Cairo', sans-serif !important;
+      margin: 0;
+      padding: 25px 12px;
+      color: #1e293b;
+      position: relative;
+    }
+
+    body::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.25) 0%, transparent 40%),
+                  radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.15) 0%, transparent 40%);
+      pointer-events: none;
+    }
+
+    .inquiry-main-card {
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(16px);
+      border-radius: 24px;
+      padding: 35px 28px;
+      width: 100%;
+      max-width: 820px;
+      margin: 15px auto;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      position: relative;
+      z-index: 10;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .inquiry-header-box {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .inquiry-logo-img {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      border: 3px solid #2563eb;
+      object-fit: cover;
+      margin: 0 auto 12px auto;
+      display: block;
+      box-shadow: 0 4px 15px rgba(37,99,235,0.25);
+    }
+
+    .inquiry-header-box h2 {
+      font-size: 22px;
+      font-weight: 900;
+      color: #0f172a;
+      margin: 0 0 6px 0;
+    }
+
+    .inquiry-header-box p {
+      font-size: 13px;
+      color: #64748b;
+      margin: 0;
+      font-weight: 600;
+    }
+
+    .inquiry-input-card {
+      max-width: 500px;
+      margin: 0 auto;
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    }
+
+    .custom-field-group {
+      margin-bottom: 16px;
+      text-align: right;
+    }
+
+    .custom-field-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+    }
+
+    .custom-inquiry-input {
+      width: 100%;
+      height: 48px;
+      border: 2px solid #cbd5e1;
+      border-radius: 12px;
+      font-size: 17px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-align: center;
+      color: #0f172a;
+      background: #ffffff;
+      transition: all 0.25s ease;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+    .custom-inquiry-input:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+    }
+
+    .btn-search-inquiry {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: white;
+      border: none;
+      width: 100%;
+      height: 48px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .btn-search-inquiry:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(37, 99, 235, 0.45);
+    }
+
+    /* كروت تفاصيل الموظف */
+    .details-section-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .info-card-styled {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 18px;
+      font-size: 13.5px;
+      line-height: 1.9;
+    }
+
+    .info-card-title {
+      font-size: 14.5px;
+      font-weight: 800;
+      color: #1e3a8a;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* كارت الأجور والمخلفات المنشورة */
+    .salary-published-box {
+      background: #ffffff;
+      border: 2px solid #bbf7d0;
+      border-radius: 16px;
+      padding: 20px;
+      margin-top: 20px;
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.1);
+    }
+
+    .salary-box-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .salary-item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      background: #f0fdf4;
+      border: 1px solid #dcfce7;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .salary-type-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 50px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .salary-type-monthly {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+    .salary-type-arrears {
+      background: #fefce8;
+      color: #a16207;
+      border: 1px solid #fef08a;
+    }
+
+    .salary-amount-tag {
+      font-size: 20px;
+      font-weight: 900;
+      color: #15803d;
+      direction: ltr;
+    }
+
+    /* قسم المقرر المنشور */
+    .decision-published-card {
+      background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+      border: 2px solid #86efac;
+      border-radius: 16px;
+      padding: 16px 20px;
+      margin-top: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    @media (max-width: 600px) {
+      .inquiry-main-card {
+        padding: 22px 15px;
+        border-radius: 18px;
+      }
+      .details-section-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
-<body class="bg-gradient-flow" style="display: block; padding: 25px 15px;">
+<body>
 
-  <div class="app-container" style="max-width: 800px;">
+  <div class="inquiry-main-card">
     
-    <!-- بطاقة تسجيل الدخول والاستعلام -->
-    <div class="welcome-card" id="inquiryLoginCard" style="max-width: 520px; margin: 30px auto;">
-      <div class="logo-spinning-wrapper" style="width: 110px; height: 110px;">
-        <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار المديرية" class="spinning-logo-img" style="width: 100px; height: 100px;">
-      </div>
+    <!-- رأس البوابة -->
+    <div class="inquiry-header-box">
+      <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" 
+           alt="شعار مديرية التربية لولاية توقرت" 
+           class="inquiry-logo-img">
+      <h2>فضاء استعلام الأساتذة المستخلفين والمتعاقدين</h2>
+      <p>مديرية التربية لولاية توقرت - مصلحة تسيير نفقات المستخدمين</p>
+    </div>
 
-      <h2 class="gradient-title-text" style="font-size: 22px;">بوابة استعلام الموظف المستخلف</h2>
-      <p style="font-size: 13px; color: #666; margin-bottom: 25px; font-weight: 600;">
-        متابعة مسار اعتماد الملف وكشف الحساب التقديري للمستحقات
-      </p>
-
-      <form onsubmit="event.preventDefault(); handleEmployeeInquiry();">
-        <div class="form-group">
-          <label style="text-align: right;">رقم الحساب البريدي الجاري (CCP):</label>
-          <input type="text" id="inp_emp_ccp" placeholder="أدخل رقم الحساب الجاري بدون المفتاح"
-                 style="text-align: center; font-size: 17px; letter-spacing: 2px;"
-                 oninput="this.value = this.value.replace(/\D/g, '')" required>
+    <!-- استمارة البحث الأنيقة برقم الحساب CCP -->
+    <div class="inquiry-input-card" id="searchBoxCard">
+      <form onsubmit="event.preventDefault(); executeInquiry();">
+        <div class="custom-field-group">
+          <label for="searchCcp">رقم الحساب البريدي الجاري (CCP):</label>
+          <input type="text" id="searchCcp" class="custom-inquiry-input" 
+                 placeholder="أدخل من 10 إلى 12 رقماً" maxlength="12"
+                 oninput="this.value = this.value.replace(/\D/g, '')" required autofocus>
+          <small style="color: #64748b; font-size: 11px; display: block; margin-top: 5px; text-align: center;">
+            * أدخل رقم الحساب بدون المفتاح للاطلاع على حالة دراسة الملف والأجور والمخلفات المنشورة
+          </small>
         </div>
 
-        <div class="form-group">
-          <label style="text-align: right;">رقم التعريف الوطني (NIN) أو رقم الضمان (NSS):</label>
-          <input type="text" id="inp_emp_nin" placeholder="أدخل 18 رقماً للـ NIN أو 12 رقماً للـ NSS"
-                 style="text-align: center; font-size: 17px; letter-spacing: 2px;"
-                 oninput="this.value = this.value.replace(/\D/g, '')" required>
-        </div>
-
-        <button type="submit" class="btn btn-main btn-lg" style="width: 100%; margin-top: 15px;">
-          <i class="fas fa-search"></i> استعلام ومتابعة الملف
+        <button type="submit" class="btn-search-inquiry">
+          <i class="fas fa-magnifying-glass"></i>
+          <span>استعلام وفحص الملف</span>
         </button>
 
-        <a href="../index.html" class="btn btn-secondary" style="width: 100%; margin-top: 10px;">
-          <i class="fas fa-arrow-right"></i> العودة للمدخل الرئيسي
-        </a>
+        <div style="text-align: center; margin-top: 14px;">
+          <a href="../login.html" style="color: #64748b; font-size: 12.5px; text-decoration: none; font-weight: 700;">
+            <i class="fas fa-arrow-right"></i> العودة لبوابة الدخول الموحدة
+          </a>
+        </div>
       </form>
     </div>
 
-    <!-- بطاقة عرض النتائج ومسار الملف وكشف المستحقات -->
-    <div class="portal-card" id="resultCard" style="display: none;">
+    <!-- نتائج الاستعلام (تظهر بعد إدخال رقم الحساب) -->
+    <div id="resultsWrapper" style="display: none; margin-top: 25px;">
       
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #edf2f7; padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+      <!-- شريط علوي لاسم الموظف والإجراءات السريعة -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 14px; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
         <div>
-          <h2 id="res_emp_name" style="font-size: 20px; font-weight: 800; color: var(--dark-color); margin-bottom: 4px;">...</h2>
-          <p style="font-size: 13px; color: var(--text-muted);">
-            رقم الحساب: <b id="res_emp_ccp" style="color: var(--primary-color);">...</b> | المؤسسة: <b id="res_emp_school">...</b>
-          </p>
+          <div style="font-size: 12px; color: #64748b; font-weight: 700;">بيانات الأستاذ(ة) المستخلف(ة):</div>
+          <h3 id="resEmpName" style="font-size: 20px; font-weight: 900; color: #0f172a; margin: 2px 0;">...</h3>
+          <div style="font-size: 13px; color: #2563eb; font-weight: 700;">
+            رقم الحساب CCP: <b id="resEmpCcp">---</b> | المؤسسة: <span id="resEmpSchool">---</span>
+          </div>
         </div>
 
-        <div style="display: flex; gap: 8px;">
-          <a id="lnk_print_sheet" href="#" target="_blank" class="btn btn-sm btn-main">
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <a id="btnSheetPrint" href="#" target="_blank" class="btn btn-primary btn-sm" style="font-weight: 700; border-radius: 8px;">
             <i class="fas fa-print"></i> الاستمارة A4
           </a>
-          <button class="btn btn-sm btn-secondary" onclick="resetInquiry()">
-            <i class="fas fa-arrow-right"></i> استعلام جديد
+          <button class="btn btn-secondary btn-sm" style="border-radius: 8px;" onclick="resetInquirySearch()">
+            <i class="fas fa-arrows-rotate"></i> بحث آخر
           </button>
         </div>
       </div>
 
-      <!-- مسار تتبع وضعية الملف التفاعلي (Stepper) -->
-      <div style="background: white; border-radius: 12px; padding: 15px; border: 1px solid var(--border-color); margin-bottom: 20px;">
-        <h3 style="font-size: 15px; font-weight: 800; color: var(--dark-color); margin-bottom: 10px;">
-          <i class="fas fa-route" style="color: var(--primary-color);"></i> مسار تتبع وضعية الملف:
-        </h3>
+      <!-- مسار تتبع وضعية الملف التفاعلي (Workflow Stepper) -->
+      <div style="background: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 16px; padding: 16px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+        <div style="font-size: 14px; font-weight: 800; color: #1e3a8a; margin-bottom: 12px;">
+          <i class="fas fa-route"></i> مسار وتتبع دراسة الملف بالمديرية:
+        </div>
         <div id="stepperContainer"></div>
       </div>
 
-      <!-- البطاقات الملخصة لمعلومات التعيين -->
-      <div class="form-grid" style="margin-bottom: 20px;">
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; font-size: 13px; line-height: 1.8;">
-          <strong style="color: var(--primary-color); display: block; margin-bottom: 5px; font-size: 14px;">
-            <i class="fas fa-briefcase"></i> البيانات المهنية والتعيين:
-          </strong>
-          <div>الطور التعليمي: <b id="res_level">---</b></div>
-          <div>الصفة: <b id="res_status_type">---</b> (شهادة: <span id="res_diploma">---</span>)</div>
-          <div>الرتبة المعتمدة: <b id="res_rank" style="color: #1e3a8a;">---</b></div>
-          <div>المؤسسة: <span id="res_school">---</span> (<span id="res_daaira">---</span>)</div>
-          <div>الفترة: من <b id="res_start">---</b> إلى <b id="res_end">---</b></div>
-          <div>مدة العمل: <b id="res_duration" style="color: #28a745;">---</b></div>
+      <!-- بطاقة مقرر الاستخلاف (في حال تم تسجيله ونشره من المدير) -->
+      <div id="decisionAlertCard" class="decision-published-card" style="display: none;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 44px; height: 44px; border-radius: 12px; background: #16a34a; color: white; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+            <i class="fas fa-certificate"></i>
+          </div>
+          <div>
+            <div style="font-size: 14.5px; font-weight: 900; color: #14532d;">
+              تم اعتماد وإصدار مقرر الاستخلاف الرسمي رقم: <span id="resDecNum" style="color: #047857; text-decoration: underline;">---</span>
+            </div>
+            <div style="font-size: 12px; color: #166534; font-weight: 600;">
+              تاريخ المقرر: <span id="resDecDate">---</span> | تم اعتماده رسميّاً ويمكنك استخراجه وطباعته الآن
+            </div>
+          </div>
         </div>
 
-        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; font-size: 13px; line-height: 1.8;">
-          <strong style="color: var(--primary-color); display: block; margin-bottom: 5px; font-size: 14px;">
-            <i class="fas fa-address-card"></i> البيانات الشخصية المسجلة:
-          </strong>
-          <div>الاسم واللقب بالإنجليزية: <b id="res_name_en" dir="ltr">---</b></div>
-          <div>رقم التعريف الوطني (NIN): <b id="res_nin">---</b></div>
-          <div>رقم الضمان الاجتماعي: <b id="res_nss">---</b></div>
-          <div>تاريخ ومكان الميلاد: <span id="res_dob">---</span> بـ: <span id="res_pob">---</span></div>
-          <div>الحالة العائلية: <span id="res_marital">---</span></div>
-          <div>رقم الهاتف: <b id="res_phone" dir="ltr">---</b></div>
-        </div>
+        <a id="btnDecPrint" href="#" target="_blank" class="btn btn-success" style="font-weight: 800; border-radius: 10px; background: #16a34a; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);">
+          <i class="fas fa-print"></i> استخراج وطباعة المقرر
+        </a>
       </div>
 
-      <!-- كشف الحساب التقديري والمستحقات المالية -->
-      <div style="background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); color: white; border-radius: 16px; padding: 22px; margin-top: 25px; box-shadow: var(--shadow-md);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+      <!-- تفاصيل التعيين والبيانات الشخصية -->
+      <div class="details-section-grid">
+        
+        <!-- كارت بيانات التعيين والمؤسسة -->
+        <div class="info-card-styled">
+          <div class="info-card-title">
+            <i class="fas fa-briefcase" style="color: #2563eb;"></i> بيانات التعيين والمؤسسة
+          </div>
+          <div><b>الطور التعليمي:</b> <span id="resLevel">---</span></div>
+          <div><b>المؤسسة التربوية:</b> <b id="resSchoolFull">---</b></div>
+          <div><b>الدائرة والبلدية:</b> <span id="resDaairaBaladiya">---</span></div>
+          <div><b>الصفة المعتمدة:</b> <b id="resStatusType">---</b> (شهادة: <span id="resDiploma">---</span>)</div>
+          <div><b>الرتبة:</b> <b id="resRank" style="color: #1e3a8a;">---</b></div>
+          <div><b>فترة الاستخلاف:</b> من <b id="resStartDate">---</b> إلى <b id="resEndDate">---</b></div>
+          <div><b>مدة العمل المنجزة:</b> <b id="resDuration" style="color: #16a34a;">---</b></div>
+        </div>
+
+        <!-- كارت البيانات الشخصية والحساب -->
+        <div class="info-card-styled">
+          <div class="info-card-title">
+            <i class="fas fa-id-card-clip" style="color: #0d9488;"></i> البيانات الشخصية والتعريف
+          </div>
+          <div><b>الاسم واللقب بالإنجليزية:</b> <span id="resNameEn" dir="ltr">---</span></div>
+          <div><b>رقم التعريف الوطني (NIN):</b> <b id="resNin">---</b></div>
+          <div><b>رقم الضمان الاجتماعي (NSS):</b> <b id="resNss">---</b></div>
+          <div><b>تاريخ ومكان الميلاد:</b> <span id="resDobPob">---</span></div>
+          <div><b>الحالة العائلية:</b> <span id="resMarital">---</span></div>
+          <div><b>رقم الهاتف:</b> <b id="resPhone" dir="ltr">---</b></div>
+        </div>
+
+      </div>
+
+      <!-- ==================== كشف الأجور والمخلفات المنشورة الرسمية ==================== -->
+      <div class="salary-published-box">
+        <div class="salary-box-header">
           <div>
-            <h3 style="font-size: 17px; font-weight: 800; margin: 0;">
-              <i class="fas fa-calculator"></i> كشف الحساب التقديري والمستحقات المالية
+            <h3 style="margin: 0; font-size: 16.5px; font-weight: 900; color: #14532d; display: flex; align-items: center; gap: 8px;">
+              <i class="fas fa-file-invoice-dollar" style="color: #16a34a;"></i>
+              كشف الأجر الشهري والمخلفات المعتمدة للصرف
             </h3>
-            <p style="font-size: 12px; opacity: 0.9; margin: 2px 0 0 0;">
-              محسوب تقديرياً بناءً على فترة الاستخلاف المنجزة والرتبة المسجلة
+            <p style="margin: 3px 0 0 0; font-size: 12px; color: #475569; font-weight: 600;">
+              المبالغ الفعلية المعتمدة من طرف مصلحة تسيير نفقات المستخدمين
             </p>
           </div>
-          <span class="badge" style="background: rgba(255,255,255,0.25); color: white; font-size: 12px;">
-            نظام الرواتب لقطاع التربية
+
+          <span class="badge" style="background: #dcfce7; color: #15803d; border: 1px solid #86efac; font-size: 12px;">
+            <i class="fas fa-check-double"></i> الصرف عبر بريد الجزائر
           </span>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px;">
-          <div style="background: rgba(255,255,255,0.12); padding: 12px; border-radius: 10px; text-align: center;">
-            <small style="opacity: 0.85; display: block;">عدد الأيام المحسوبة</small>
-            <b id="calc_days" style="font-size: 20px;">0 يوم</b>
-          </div>
-          <div style="background: rgba(255,255,255,0.12); padding: 12px; border-radius: 10px; text-align: center;">
-            <small style="opacity: 0.85; display: block;">الراتب الشهري التقديري</small>
-            <b id="calc_monthly_salary" style="font-size: 18px;">--- دج</b>
-          </div>
-          <div style="background: rgba(255,255,255,0.12); padding: 12px; border-radius: 10px; text-align: center;">
-            <small style="opacity: 0.85; display: block;">الأجر اليومي القاعدي</small>
-            <b id="calc_daily_rate" style="font-size: 18px;">--- دج</b>
-          </div>
-        </div>
-
-        <div style="background: rgba(0,0,0,0.25); border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <div>
-            <span style="font-size: 13px; opacity: 0.9;">إجمالي المستحقات التقديرية الصافية المستحقة للصرف:</span>
-            <div id="calc_net_total" style="font-size: 26px; font-weight: 900; color: #4ade80;">
-              0.00 دج
-            </div>
-          </div>
-          <div style="font-size: 11px; opacity: 0.85; text-align: left; direction: ltr;">
-            * Estimation after approximate SS & IRG deductions. Final amounts subject to Payroll confirmation.
+        <!-- قائمة كشوف الأجور والمخلفات المحملة -->
+        <div id="salaryItemsContainer">
+          <div style="text-align: center; padding: 25px 15px; color: #64748b; font-size: 13.5px; background: #f8fafc; border-radius: 12px;">
+            <i class="fas fa-receipt fa-2x" style="opacity: 0.5; margin-bottom: 8px; display: block;"></i>
+            لم يتم نشر كشوفات الأجور أو المخلفات لهذه الفترة بعد من قبل مصلحة نفقات المستخدمين.<br>
+            <small style="color: #94a3b8;">* يتم إدراج الأجرة فور اعتماد ملفات الدفع الشهرية أو جداول المخلفات.</small>
           </div>
         </div>
       </div>
@@ -171,142 +429,210 @@
   </div>
 
   <script>
-    async function handleEmployeeInquiry() {
-      const ccpInput = document.getElementById("inp_emp_ccp").value.trim().replace(/\D/g, '');
-      const ninInput = document.getElementById("inp_emp_nin").value.trim().replace(/\D/g, '');
-
-      if (!ccpInput || ccpInput.length < 3) {
-        Swal.fire("تنبيه", "يرجى إدخال رقم الحساب الجاري (CCP) بشكل صحيح.", "warning");
-        return;
+    document.addEventListener("DOMContentLoaded", () => {
+      const p = new URLSearchParams(window.location.search);
+      const ccp = p.get("ccp");
+      if (ccp) {
+        document.getElementById("searchCcp").value = ccp;
+        executeInquiry();
       }
-      if (!ninInput || ninInput.length < 6) {
-        Swal.fire("تنبيه", "يرجى إدخال رقم التعريف الوطني (NIN) أو رقم الضمان (NSS).", "warning");
-        return;
+    });
+
+    async function executeInquiry() {
+      const rawCcp = document.getElementById("searchCcp").value.trim();
+      const cleanCcp = rawCcp.replace(/\D/g, '');
+
+      if (cleanCcp.length < 10 || cleanCcp.length > 12) {
+        return Swal.fire({
+          icon: 'warning',
+          title: 'رقم الحساب الجاري (CCP)',
+          text: `رقم الحساب البريدي الجاري CCP يجب أن يتكون من 10 إلى 12 رقماً (أدخلت ${cleanCcp.length} رقم).`,
+          confirmButtonColor: '#2563eb'
+        });
       }
 
       Swal.fire({
-        title: "جاري البحث عن ملفك...",
-        text: "يتم التحقق من بيانات الملف ومساره في مصلحة الرواتب",
+        title: 'جاري استعلام بيانات الملف والأجور...',
+        text: 'يتم فحص قاعدة البيانات والتحقق من كشوف الأجور المنشورة',
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading()
       });
 
       try {
-        // البحث بالـ CCP
-        const q = window.db.collection("contract_registrations").where("ccp", "==", ccpInput);
-        const snap = await q.get();
+        const { candidates } = DirectorLogic.normalizeCCP(cleanCcp);
+
+        // 1. البحث في contract_registrations
+        let foundRecord = null;
+        for (const c of candidates) {
+          const snap = await window.db.collection("contract_registrations").where("ccp", "==", c).limit(1).get();
+          if (!snap.empty) {
+            foundRecord = { id: snap.docs[0].id, ...snap.docs[0].data() };
+            break;
+          }
+        }
+
+        // إذا لم نجد عبر where("ccp")، نجرب أيضاً البحث بـ docId أو كولكشن المستخلفين
+        if (!foundRecord) {
+          for (const c of candidates) {
+            const docSnap = await window.db.collection("contract_registrations").doc(c).get();
+            if (docSnap.exists) {
+              foundRecord = { id: docSnap.id, ...docSnap.data() };
+              break;
+            }
+          }
+        }
+
+        // 2. البحث عن الأجور والمخلفات المنشورة لهذا الـ CCP
+        let publishedSalaries = [];
+        for (const c of candidates) {
+          const salSnap = await window.db.collection("employee_salaries")
+            .where("ccp", "==", c)
+            .where("is_published", "==", true)
+            .get();
+
+          salSnap.forEach(d => {
+            publishedSalaries.push({ id: d.id, ...d.data() });
+          });
+        }
 
         Swal.close();
 
-        if (snap.empty) {
-          Swal.fire({
-            icon: "error",
-            title: "لم يتم العثور على الملف",
+        if (!foundRecord && publishedSalaries.length === 0) {
+          return Swal.fire({
+            icon: 'info',
+            title: 'لم يتم العثور على أي ملف',
             html: `
-              <p style="font-size: 14px; line-height: 1.7; color: #444;">
-                لم نتمكن من العثور على أي ملف مستخلف مسجل برقم الحساب <b>(${ccpInput})</b>.<br>
-                يرجى التأكد من تسجيل ملفك من طرف مدير المؤسسة أولاً.
-              </p>
+              <div style="font-size:13.5px; line-height:1.7; color:#334155; text-align:right; direction:rtl;">
+                لم يتم العثور على أي ملف مستخلف أو كشف أجور مرتبط برقم الحساب <b>(${cleanCcp})</b> للسنة الدراسية الحالية.<br>
+                يرجى التأكد من رقم الحساب أو مراجعة مدير المؤسسة التي تعمل بها لتسجيل الملف.
+              </div>
             `,
-            confirmButtonColor: "#2575fc"
+            confirmButtonColor: '#2563eb'
           });
-          return;
         }
 
-        // مطابقة الـ NIN أو الـ NSS للتحقق من هوية الموظف
-        let matchedRecord = null;
-        snap.forEach(doc => {
-          const d = doc.data();
-          if (String(d.nin || '').includes(ninInput) || String(d.nss || '').includes(ninInput) || ninInput === "123456") {
-            matchedRecord = { id: doc.id, ...d };
-          }
-        });
-
-        if (!matchedRecord) {
-          Swal.fire({
-            icon: "warning",
-            title: "عدم تطابق الهوية",
-            text: "رقم الحساب موجود ولكن رقم التعريف الوطني أو رقم الضمان المدخل لا يتطابق مع الملف.",
-            confirmButtonColor: "#2575fc"
-          });
-          return;
-        }
-
-        // عرض تفاصيل الملف بنجاح
-        displayEmployeeResults(matchedRecord);
+        // تعبئة واجهة النتائج
+        renderInquiryResults(foundRecord, publishedSalaries, cleanCcp);
 
       } catch (err) {
         Swal.close();
-        console.error("خطأ استعلام الموظف:", err);
-        Swal.fire("خطأ", "حدث خطأ في الاتصال بقاعدة البيانات", "error");
+        console.error("خطأ الاستعلام:", err);
+        Swal.fire('خطأ في الاتصال', 'تعذر جلب البيانات، يرجى المحاولة لاحقاً.', 'error');
       }
     }
 
-    function displayEmployeeResults(emp) {
-      document.getElementById("inquiryLoginCard").style.display = "none";
-      document.getElementById("resultCard").style.display = "block";
+    function renderInquiryResults(rec, salaries, ccp) {
+      document.getElementById("resultsWrapper").style.display = "block";
 
-      const fullNameAr = `${emp.fmn_ar || ''} ${emp.frn_ar || ''}`.trim();
-      document.getElementById("res_emp_name").textContent = fullNameAr;
-      document.getElementById("res_emp_ccp").textContent = emp.ccp;
-      document.getElementById("res_emp_school").textContent = emp.school_name || '---';
+      const nameAr = rec ? `${rec.fmn_ar || ''} ${rec.frn_ar || ''}`.trim() : (salaries[0]?.employee_name || 'الأستاذ(ة)');
+      document.getElementById("resEmpName").textContent = nameAr;
+      document.getElementById("resEmpCcp").textContent = ccp;
+      document.getElementById("resEmpSchool").textContent = rec?.school_name || '---';
 
-      // رسم مسار الستبر
-      document.getElementById("stepperContainer").innerHTML = renderWorkflowStepper(emp.workflow_status, emp.rejection_reason);
+      // زر طباعة الاستمارة
+      const btnSheet = document.getElementById("btnSheetPrint");
+      if (rec && rec.id) {
+        btnSheet.href = `print-sheet.html?id=${rec.id}&type=sheet`;
+        btnSheet.style.display = "inline-flex";
+      } else {
+        btnSheet.style.display = "none";
+      }
 
-      // البيانات المهنية
-      document.getElementById("res_level").textContent = emp.level || '---';
-      document.getElementById("res_status_type").textContent = emp.status_type || '---';
-      document.getElementById("res_diploma").textContent = emp.diploma || '---';
-      document.getElementById("res_rank").textContent = emp.rank || '---';
-      document.getElementById("res_school").textContent = emp.school_name || '---';
-      document.getElementById("res_daaira").textContent = emp.daaira || '---';
-      document.getElementById("res_start").textContent = emp.start_date || '---';
-      document.getElementById("res_end").textContent = emp.end_date || '---';
-      document.getElementById("res_duration").textContent = emp.duration_text || `${emp.duration_days || 0} يوم`;
+      // الستبر التفاعلي لمسار الملف
+      const stepperBox = document.getElementById("stepperContainer");
+      if (rec) {
+        stepperBox.innerHTML = renderWorkflowStepper(rec.workflow_status, rec.rejection_reason);
+      } else {
+        stepperBox.innerHTML = `<div style="text-align:center; color:#64748b; font-size:13px;">تم استلام واعتماد الأجر المباشر من مصلحة الرواتب.</div>`;
+      }
 
-      // البيانات الشخصية
-      document.getElementById("res_name_en").textContent = `${emp.fmn_en || ''} ${emp.frn_en || ''}`.trim() || '---';
-      document.getElementById("res_nin").textContent = emp.nin || '---';
-      document.getElementById("res_nss").textContent = emp.nss || '---';
-      document.getElementById("res_dob").textContent = emp.birth_date || '---';
-      document.getElementById("res_pob").textContent = emp.birth_place || '---';
-      document.getElementById("res_marital").textContent = emp.marital_status || '---';
-      document.getElementById("res_phone").textContent = emp.phone || '---';
+      // بطاقة المقرر إن كان منشورا وله رقم مقرر
+      const decCard = document.getElementById("decisionAlertCard");
+      if (rec && rec.decision_number && rec.is_decision_published !== false) {
+        decCard.style.display = "flex";
+        document.getElementById("resDecNum").textContent = rec.decision_number;
+        document.getElementById("resDecDate").textContent = rec.decision_date || rec.created_at?.slice(0, 10) || '---';
+        document.getElementById("btnDecPrint").href = `print-sheet.html?id=${rec.id}&type=decision`;
+      } else {
+        decCard.style.display = "none";
+      }
 
-      // رابط طباعة الاستمارة
-      document.getElementById("lnk_print_sheet").href = `print-sheet.html?id=${emp.id}&type=sheet`;
+      // تعبئة بيانات التعيين
+      if (rec) {
+        document.getElementById("resLevel").textContent = rec.level || '---';
+        document.getElementById("resSchoolFull").textContent = rec.school_name || '---';
+        document.getElementById("resDaairaBaladiya").textContent = `${rec.daaira || '---'} - ${rec.baladiya || '---'}`;
+        document.getElementById("resStatusType").textContent = rec.status_type || 'مستخلف';
+        document.getElementById("resDiploma").textContent = rec.diploma || '---';
+        document.getElementById("resRank").textContent = rec.rank || '---';
+        document.getElementById("resStartDate").textContent = rec.start_date || '---';
+        document.getElementById("resEndDate").textContent = rec.end_date || '---';
+        document.getElementById("resDuration").textContent = rec.duration_text || (rec.duration_days ? `${rec.duration_days} يوم` : '---');
 
-      // حساب المستحقات التقديرية
-      calculateDuesEstimation(emp);
+        document.getElementById("resNameEn").textContent = `${rec.fmn_en || ''} ${rec.frn_en || ''}`.trim() || '---';
+        document.getElementById("resNin").textContent = rec.nin || '---';
+        document.getElementById("resNss").textContent = rec.nss || '---';
+        document.getElementById("resDobPob").textContent = `${rec.dob || '---'} بـ: ${rec.pob || '---'}`;
+        document.getElementById("resMarital").textContent = rec.marital_status || '---';
+        document.getElementById("resPhone").textContent = rec.phone || '---';
+      }
+
+      // تعبئة الأجور والمخلفات المنشورة
+      renderPublishedSalariesList(salaries);
+
+      // التمرير السلس للنتائج
+      document.getElementById("resultsWrapper").scrollIntoView({ behavior: 'smooth' });
     }
 
-    // حساب كشف الحساب التقديري والمستحقات
-    function calculateDuesEstimation(emp) {
-      const days = parseInt(emp.duration_days, 10) || 30;
-      
-      // رواتب مرجعية تقريبية حسب الرتبة والطور في الجزائر (دج)
-      let baseMonthly = 36000;
-      if (emp.level === "متوسط") baseMonthly = 41000;
-      if (emp.level === "ثانوي") baseMonthly = 46000;
-      if (String(emp.rank || '').includes("قسم أول")) baseMonthly += 3000;
+    function renderPublishedSalariesList(salaries) {
+      const container = document.getElementById("salaryItemsContainer");
+      container.innerHTML = "";
 
-      const dailyRate = Math.round(baseMonthly / 30);
-      const grossEstimated = dailyRate * days;
-      // خصم تقريبي للضمان والضريبة (حوالي 12%)
-      const netEstimated = Math.round(grossEstimated * 0.88);
+      if (!salaries || salaries.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 25px 15px; color: #64748b; font-size: 13.5px; background: #f8fafc; border-radius: 12px;">
+            <i class="fas fa-receipt fa-2x" style="opacity: 0.4; margin-bottom: 8px; display: block;"></i>
+            لم يتم نشر كشوفات الأجور أو المخلفات لهذه الفترة بعد من طرف مصلحة نفقات المستخدمين.<br>
+            <small style="color: #94a3b8;">* ستظهر هنا الأجرة الشهرية والمخلفات فور رفعها واعتماد نشرها رسمياً من لوحة تحكم الرواتب.</small>
+          </div>
+        `;
+        return;
+      }
 
-      document.getElementById("calc_days").textContent = `${days} يوم`;
-      document.getElementById("calc_monthly_salary").textContent = `${baseMonthly.toLocaleString()} دج`;
-      document.getElementById("calc_daily_rate").textContent = `${dailyRate.toLocaleString()} دج / يوم`;
-      document.getElementById("calc_net_total").textContent = `${netEstimated.toLocaleString()} دج`;
+      salaries.forEach(sal => {
+        const isMonthly = (sal.salary_type === "monthly" || sal.type === "monthly");
+        const typeLabel = isMonthly ? "أجرة شهرية" : "مخلفات مالية";
+        const typeClass = isMonthly ? "salary-type-monthly" : "salary-type-arrears";
+        const typeIcon = isMonthly ? "fa-calendar-check" : "fa-clock-rotate-left";
+        const periodText = sal.period || sal.month || "الفترة المعتمدة";
+        const netAmount = Number(sal.net_amount || sal.net || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2 });
+
+        const row = document.createElement("div");
+        row.className = "salary-item-row";
+        row.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="salary-type-tag ${typeClass}">
+              <i class="fas ${typeIcon}"></i> ${typeLabel}
+            </span>
+            <div>
+              <div style="font-weight: 800; font-size: 14px; color: #0f172a;">${periodText}</div>
+              <div style="font-size: 11.5px; color: #64748b;">${sal.notes || 'معتمد وجاهز للتحويل البريدي'}</div>
+            </div>
+          </div>
+
+          <div style="text-align: left;">
+            <div style="font-size: 11px; color: #64748b; font-weight: 700;">الصافي للدفع:</div>
+            <div class="salary-amount-tag">${netAmount} دج</div>
+          </div>
+        `;
+        container.appendChild(row);
+      });
     }
 
-    function resetInquiry() {
-      document.getElementById("inquiryLoginCard").style.display = "block";
-      document.getElementById("resultCard").style.display = "none";
-      document.getElementById("inp_emp_ccp").value = "";
-      document.getElementById("inp_emp_nin").value = "";
+    function resetInquirySearch() {
+      document.getElementById("resultsWrapper").style.display = "none";
+      document.getElementById("searchCcp").value = "";
+      document.getElementById("searchCcp").focus();
     }
   </script>
 </body>

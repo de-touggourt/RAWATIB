@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>تسجيل الدخول - مصلحة نفقات المستخدمين توقرت</title>
+  <title>بوابة الدخول الموحدة - مديرية التربية لولاية توقرت</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- الخطوط والأيقونات -->
@@ -17,8 +17,10 @@
   <!-- ملفات المنظومة -->
   <link rel="stylesheet" href="css/main.css">
   <script src="js/firebase-init.js"></script>
+  <script src="js/geo-data.js"></script>
   <script src="js/app-core.js"></script>
   <script src="js/auth-check.js"></script>
+  <script src="js/director-logic.js"></script>
 
   <style>
     .fa, .fas, .far, .fab, .fa-solid, .fa-regular {
@@ -26,12 +28,12 @@
       font-style: normal !important;
     }
     body {
-      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #1e40af 100%);
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #1d4ed8 100%);
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 20px 15px;
       font-family: 'Cairo', sans-serif !important;
       margin: 0;
       position: relative;
@@ -43,62 +45,117 @@
       position: absolute;
       width: 100%;
       height: 100%;
-      background: radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.2) 0%, transparent 40%),
-                  radial-gradient(circle at 90% 80%, rgba(245, 158, 11, 0.15) 0%, transparent 40%);
+      background: radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.25) 0%, transparent 40%),
+                  radial-gradient(circle at 90% 80%, rgba(245, 158, 11, 0.2) 0%, transparent 40%);
       pointer-events: none;
     }
 
     .login-container-card {
-      background: rgba(255, 255, 255, 0.96);
+      background: rgba(255, 255, 255, 0.98);
       backdrop-filter: blur(16px);
-      border-radius: 24px;
-      padding: 40px 35px;
+      border-radius: 26px;
+      padding: 35px 28px;
       width: 100%;
-      max-width: 440px;
-      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
-      border: 1px solid rgba(255, 255, 255, 0.8);
+      max-width: 490px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.9);
       position: relative;
       z-index: 10;
-      animation: fadeInScale 0.4s ease-out;
+      animation: fadeInScale 0.35s ease-out;
     }
 
     @keyframes fadeInScale {
-      from { opacity: 0; transform: scale(0.95) translateY(15px); }
+      from { opacity: 0; transform: scale(0.96) translateY(12px); }
       to { opacity: 1; transform: scale(1) translateY(0); }
     }
 
     .login-header-section {
       text-align: center;
-      margin-bottom: 28px;
+      margin-bottom: 22px;
     }
 
     .login-logo-circle {
-      width: 76px;
-      height: 76px;
+      width: 78px;
+      height: 78px;
       border-radius: 50%;
       border: 3px solid #2563eb;
       object-fit: cover;
-      margin: 0 auto 14px auto;
+      margin: 0 auto 12px auto;
       display: block;
-      box-shadow: 0 4px 15px rgba(37,99,235,0.25);
+      box-shadow: 0 6px 18px rgba(37,99,235,0.3);
+      transition: transform 0.3s ease;
+    }
+    .login-logo-circle:hover {
+      transform: rotate(5deg) scale(1.05);
     }
 
     .login-header-section h2 {
-      font-size: 22px;
+      font-size: 21px;
       font-weight: 900;
       color: #0f172a;
-      margin: 0 0 6px 0;
+      margin: 0 0 4px 0;
     }
 
     .login-header-section p {
-      font-size: 13px;
+      font-size: 12.5px;
       color: #64748b;
       margin: 0;
       font-weight: 600;
     }
 
+    /* أزرار التبديل الموحدة للرتب والمهام */
+    .unified-login-tabs {
+      display: flex;
+      background: #f1f5f9;
+      padding: 5px;
+      border-radius: 16px;
+      margin-bottom: 22px;
+      gap: 5px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .unified-tab-btn {
+      flex: 1;
+      padding: 10px 8px;
+      border: none;
+      background: transparent;
+      border-radius: 12px;
+      font-size: 12.5px;
+      font-weight: 800;
+      color: #475569;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.25s ease;
+    }
+
+    .unified-tab-btn i {
+      font-size: 15px;
+    }
+
+    .unified-tab-btn.active {
+      background: #ffffff;
+      color: #1d4ed8;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.18);
+    }
+
+    .tab-login-panel {
+      display: none;
+      animation: fadeIn 0.25s ease-out;
+    }
+    .tab-login-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     .form-group-custom {
-      margin-bottom: 18px;
+      margin-bottom: 16px;
       text-align: right;
     }
 
@@ -159,30 +216,8 @@
       justify-content: center;
       transition: color 0.2s;
     }
-
     .toggle-password-btn:hover {
       color: #2563eb;
-    }
-
-    .login-options {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-      font-size: 12.5px;
-    }
-
-    .forgot-link {
-      color: #2563eb;
-      text-decoration: none;
-      font-weight: 700;
-      transition: color 0.2s;
-      cursor: pointer;
-    }
-
-    .forgot-link:hover {
-      text-decoration: underline;
-      color: #1d4ed8;
     }
 
     .btn-submit-login {
@@ -190,9 +225,9 @@
       color: white;
       border: none;
       width: 100%;
-      height: 50px;
-      border-radius: 14px;
-      font-size: 16px;
+      height: 48px;
+      border-radius: 13px;
+      font-size: 15px;
       font-weight: 800;
       cursor: pointer;
       box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
@@ -202,72 +237,70 @@
       justify-content: center;
       gap: 10px;
     }
-
     .btn-submit-login:hover {
       transform: translateY(-2px);
       box-shadow: 0 8px 25px rgba(37, 99, 235, 0.45);
     }
-
     .btn-submit-login:active {
       transform: scale(0.98);
     }
 
-    .divider-text {
-      display: flex;
-      align-items: center;
-      text-align: center;
-      margin: 22px 0;
-      color: #94a3b8;
-      font-size: 12px;
-      font-weight: 700;
+    .btn-director-submit {
+      background: linear-gradient(135deg, #059669, #047857);
+      box-shadow: 0 6px 20px rgba(5, 150, 105, 0.35);
+    }
+    .btn-director-submit:hover {
+      box-shadow: 0 8px 25px rgba(5, 150, 105, 0.45);
     }
 
-    .divider-text::before, .divider-text::after {
-      content: '';
-      flex: 1;
-      border-bottom: 1px solid #e2e8f0;
-    }
-
-    .divider-text span {
-      padding: 0 10px;
-    }
-
-    .btn-register-link {
-      background: #f1f5f9;
-      color: #1e293b;
-      border: 1px solid #cbd5e1;
+    .btn-inquiry-link {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1.5px dashed #bfdbfe;
       width: 100%;
-      height: 48px;
-      border-radius: 14px;
-      font-size: 14.5px;
+      height: 46px;
+      border-radius: 12px;
+      font-size: 13.5px;
       font-weight: 800;
       text-decoration: none;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
+      margin-top: 14px;
       transition: all 0.2s ease;
-      box-sizing: border-box;
     }
-
-    .btn-register-link:hover {
-      background: #e2e8f0;
-      color: #0f172a;
+    .btn-inquiry-link:hover {
+      background: #dbeafe;
+      border-color: #93c5fd;
     }
 
     .back-to-home {
       display: block;
       text-align: center;
-      margin-top: 18px;
+      margin-top: 16px;
       color: #64748b;
       font-size: 13px;
       text-decoration: none;
-      font-weight: 600;
+      font-weight: 700;
       transition: color 0.2s;
     }
-
     .back-to-home:hover {
       color: #2563eb;
+    }
+
+    @media (max-width: 480px) {
+      .login-container-card {
+        padding: 26px 18px;
+        border-radius: 20px;
+      }
+      .unified-tab-btn {
+        font-size: 11px;
+        padding: 8px 4px;
+      }
+      .unified-tab-btn i {
+        font-size: 14px;
+      }
     }
   </style>
 </head>
@@ -279,109 +312,349 @@
       <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" 
            alt="شعار مديرية التربية لولاية توقرت" 
            class="login-logo-circle">
-      <h2>تسجيل الدخول للمنظومة</h2>
-      <p>مصلحة نفقات المستخدمين - مديرية التربية لولاية توقرت</p>
+      <h2>بوابة الدخول الموحدة</h2>
+      <p>مديرية التربية لولاية توقرت - مصلحة تسيير نفقات المستخدمين</p>
     </div>
 
-    <form id="loginForm" onsubmit="event.preventDefault(); handleSystemLogin();">
-      
-      <!-- اسم المستخدم -->
+    <!-- ألسنة اختيار نوع الحساب والمسؤولية -->
+    <div class="unified-login-tabs">
+      <button class="unified-tab-btn active" id="tabBtn_director" onclick="switchLoginTab('director')">
+        <i class="fas fa-school"></i>
+        <span>مدير المؤسسة</span>
+      </button>
+      <button class="unified-tab-btn" id="tabBtn_offices" onclick="switchLoginTab('offices')">
+        <i class="fas fa-building-columns"></i>
+        <span>المكاتب والرواتب</span>
+      </button>
+      <button class="unified-tab-btn" id="tabBtn_employee" onclick="switchLoginTab('employee')">
+        <i class="fas fa-user-check"></i>
+        <span>استعلام الموظف</span>
+      </button>
+    </div>
+
+    <!-- ==================== 1. تبويب مدير المؤسسة ==================== -->
+    <div class="tab-login-panel active" id="panel_director">
+      <form onsubmit="event.preventDefault(); handleDirectorUnifiedLogin();">
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; font-size: 12.5px; color: #166534; font-weight: 600; line-height: 1.6;">
+          <i class="fas fa-info-circle"></i> يتاح للسادة مدراء المؤسسات التعليمية الدخول المباشر بالتحقق الفوري من رقم الحساب البريدي الجاري (CCP).
+        </div>
+
+        <div class="form-group-custom">
+          <label for="directorCcpUnified">رقم الحساب البريدي الجاري لمدير المؤسسة (CCP):</label>
+          <div class="input-wrapper-icon">
+            <i class="fas fa-id-card field-icon"></i>
+            <input type="text" id="directorCcpUnified" class="custom-input" 
+                   placeholder="أدخل من 10 إلى 12 رقماً بدون المفتاح" 
+                   maxlength="12" style="text-align: center; font-size: 17px; letter-spacing: 2px; font-weight: bold;"
+                   oninput="this.value = this.value.replace(/\D/g, '')" required autofocus>
+          </div>
+          <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">
+            * يتم الفحص الفوري في قاعدة الموظفين الدائمين والمدراء المعتمدين
+          </small>
+        </div>
+
+        <button type="submit" class="btn-submit-login btn-director-submit" id="btnDirectorLogin">
+          <i class="fas fa-check-circle"></i>
+          <span>التحقق والدخول إلى لوحة المؤسسة</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- ==================== 2. تبويب رؤساء المكاتب ومصلحة الرواتب والمشرف العام ==================== -->
+    <div class="tab-login-panel" id="panel_offices">
+      <form onsubmit="event.preventDefault(); handleOfficeUnifiedLogin();">
+        
+        <div class="form-group-custom">
+          <label for="officeRolePreset">تحديد المكتب / المصلحة:</label>
+          <div class="input-wrapper-icon">
+            <i class="fas fa-sitemap field-icon"></i>
+            <select id="officeRolePreset" class="custom-input" onchange="syncOfficeSelection(this.value)" style="font-weight: 700;">
+              <option value="acc_pr">رئيس مكتب التعليم الابتدائي (acc_pr)</option>
+              <option value="acc_cm">رئيس مكتب التعليم المتوسط (acc_cm)</option>
+              <option value="acc_ly">رئيس مكتب التعليم الثانوي (acc_ly)</option>
+              <option value="admin">رئيس مصلحة نفقات المستخدمين - الرواتب (admin)</option>
+              <option value="custom">اسم مستخدم مخصص / المشرف العام</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group-custom">
+          <label for="officeUsernameUnified">اسم المستخدم أو الرمز الإداري:</label>
+          <div class="input-wrapper-icon">
+            <i class="fas fa-user-shield field-icon"></i>
+            <input type="text" id="officeUsernameUnified" class="custom-input" 
+                   value="acc_pr" placeholder="اسم المستخدم" required>
+          </div>
+        </div>
+
+        <div class="form-group-custom">
+          <label for="officePasswordUnified">كلمة المرور السرية:</label>
+          <div class="input-wrapper-icon">
+            <i class="fas fa-lock field-icon"></i>
+            <input type="password" id="officePasswordUnified" class="custom-input" 
+                   placeholder="••••••••" required>
+            <button type="button" class="toggle-password-btn" onclick="togglePassVisibility('officePasswordUnified', 'passIcon_off')" title="إظهار / إخفاء">
+              <i class="fas fa-eye" id="passIcon_off"></i>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit-login" id="btnOfficeLogin">
+          <i class="fas fa-right-to-bracket"></i>
+          <span>تسجيل الدخول للمكتب / المصلحة</span>
+        </button>
+      </form>
+    </div>
+
+    <!-- ==================== 3. تبويب استعلام الموظفين ==================== -->
+    <div class="tab-login-panel" id="panel_employee">
+      <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 12px; margin-bottom: 16px; font-size: 13px; color: #1e40af; line-height: 1.6;">
+        <i class="fas fa-user-clock"></i> <b>فضاء المستخلفين والمتعاقدين:</b><br>
+        يتيح لك متابعة مسار دراسة ملفك، الاطلاع على كشف الأجرة والمخلفات المعتمدة، واستخراج مقرر الاستخلاف مباشرة برقم حسابك.
+      </div>
+
       <div class="form-group-custom">
-        <label for="usernameInput">اسم المستخدم أو رقم الحساب الجاري:</label>
+        <label for="inquiryCcpInput">رقم الحساب البريدي الجاري (CCP):</label>
         <div class="input-wrapper-icon">
-          <i class="fas fa-user field-icon"></i>
-          <input type="text" id="usernameInput" class="custom-input" 
-                 placeholder="أدخل اسم المستخدم أو CCP" required autofocus>
+          <i class="fas fa-money-check field-icon"></i>
+          <input type="text" id="inquiryCcpInput" class="custom-input" 
+                 placeholder="أدخل رقم الحساب الجاري" 
+                 maxlength="12" style="text-align: center; font-size: 16px; font-weight: bold;"
+                 oninput="this.value = this.value.replace(/\D/g, '')">
         </div>
       </div>
 
-      <!-- كلمة المرور -->
-      <div class="form-group-custom">
-        <label for="passwordInput">كلمة المرور:</label>
-        <div class="input-wrapper-icon">
-          <i class="fas fa-lock field-icon"></i>
-          <input type="password" id="passwordInput" class="custom-input" 
-                 placeholder="••••••••" required>
-          <button type="button" class="toggle-password-btn" onclick="togglePasswordVisibility()" title="إظهار / إخفاء">
-            <i class="fas fa-eye" id="passwordToggleIcon"></i>
-          </button>
-        </div>
-      </div>
-
-      <div class="login-options">
-        <span class="forgot-link" onclick="handleForgotPassword()">نسيت كلمة السر؟</span>
-      </div>
-
-      <button type="submit" class="btn-submit-login" id="btnLoginSubmit">
-        <i class="fas fa-arrow-left"></i>
-        <span>تسجيل الدخول</span>
+      <button type="button" class="btn-submit-login" style="background: linear-gradient(135deg, #0284c7, #0369a1);" onclick="goToEmployeeInquiry()">
+        <i class="fas fa-magnifying-glass"></i>
+        <span>استعلام ومتابعة الملف الآن</span>
       </button>
 
-      <div class="divider-text">
-        <span>ليس لديك حساب؟</span>
-      </div>
-
-      <a href="register.html" class="btn-register-link">
-        <i class="fas fa-user-plus"></i>
-        <span>إنشاء حساب جديد</span>
+      <a href="contract-portal/employee-status.html" class="btn-inquiry-link">
+        <i class="fas fa-arrow-up-right-from-square"></i>
+        <span>الانتقال للبوابة المخصصة للاستعلام</span>
       </a>
+    </div>
 
+    <!-- تذييل وروابط الرجوع -->
+    <div style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
       <a href="index.html" class="back-to-home">
-        <i class="fas fa-home"></i> العودة للواجهة التعريفية
+        <i class="fas fa-house"></i> العودة للواجهة التعريفية الرئيسية
       </a>
-
-    </form>
+    </div>
 
   </div>
 
   <script>
-    // إظهار وإخفاء كلمة المرور
-    function togglePasswordVisibility() {
-      const passInp = document.getElementById("passwordInput");
-      const icon = document.getElementById("passwordToggleIcon");
-      if (passInp.type === "password") {
-        passInp.type = "text";
-        icon.classList.remove("fa-eye");
-        icon.classList.add("fa-eye-slash");
-      } else {
-        passInp.type = "password";
-        icon.classList.remove("fa-eye-slash");
-        icon.classList.add("fa-eye");
+    // التبديل بين التبويبات الثلاثة
+    function switchLoginTab(tab) {
+      document.querySelectorAll('.unified-tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-login-panel').forEach(p => p.classList.remove('active'));
+
+      if (tab === 'director') {
+        document.getElementById('tabBtn_director').classList.add('active');
+        document.getElementById('panel_director').classList.add('active');
+        document.getElementById('directorCcpUnified').focus();
+      } else if (tab === 'offices') {
+        document.getElementById('tabBtn_offices').classList.add('active');
+        document.getElementById('panel_offices').classList.add('active');
+        document.getElementById('officePasswordUnified').focus();
+      } else if (tab === 'employee') {
+        document.getElementById('tabBtn_employee').classList.add('active');
+        document.getElementById('panel_employee').classList.add('active');
+        document.getElementById('inquiryCcpInput').focus();
       }
     }
 
-    // معالجة تسجيل الدخول الآمن
-    async function handleSystemLogin() {
-      const username = document.getElementById("usernameInput").value.trim();
-      const password = document.getElementById("passwordInput").value.trim();
+    // مزامنة اختيار المكتب
+    function syncOfficeSelection(val) {
+      const uInp = document.getElementById('officeUsernameUnified');
+      if (val === 'custom') {
+        uInp.value = '';
+        uInp.focus();
+      } else {
+        uInp.value = val;
+      }
+    }
 
-      if (!username || !password) {
-        Swal.fire({
+    // إظهار وإخفاء كلمة المرور
+    function togglePassVisibility(inputId, iconId) {
+      const input = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    }
+
+    // معالجة دخول مدير المؤسسة
+    async function handleDirectorUnifiedLogin() {
+      const rawCcp = document.getElementById('directorCcpUnified').value.trim();
+      const cleanCcp = rawCcp.replace(/\D/g, '');
+
+      if (cleanCcp.length < 10 || cleanCcp.length > 12) {
+        return Swal.fire({
           icon: 'warning',
-          title: 'تنبيه',
-          text: 'يرجى إدخال اسم المستخدم وكلمة المرور.',
+          title: 'رقم الحساب CCP',
+          text: `رقم الحساب البريدي الجاري لمدير المؤسسة يجب أن يتكون من 10 إلى 12 رقماً (أدخلت ${cleanCcp.length} رقماً).`,
           confirmButtonColor: '#2563eb'
         });
-        return;
       }
 
       Swal.fire({
-        title: 'جاري التحقق من الحساب...',
-        text: 'يتم فحص الصلاحيات وكلمات المرور',
+        title: 'جاري التحقق من هوية المدير...',
+        text: 'يتم فحص تسجيلك في قاعدة بيانات الموظفين والمدراء',
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading()
       });
 
       try {
-        // ------------------------------------------------------------
-        // 1. الفحص أولاً في حسابات الإدارة والمكاتب من config/pass
-        // ------------------------------------------------------------
+        // فحص في حسابات المدراء أو الموظفين الدائمين
+        let dirAccount = await DirectorLogic.findDirectorAccount(cleanCcp);
+        let permEmployee = null;
+
+        if (!dirAccount.exists) {
+          permEmployee = await DirectorLogic.findInPermanentEmployees(cleanCcp);
+        }
+
+        Swal.close();
+
+        if (dirAccount.exists) {
+          const dData = dirAccount.data;
+          AuthGuard.setDirectorSession({
+            ccp: dirAccount.ccp,
+            directorName: dData.directorName || dData.fmn || "السيد المدير",
+            schoolName: dData.schoolName || "",
+            level: dData.level || "",
+            daaira: dData.daaira || "",
+            baladiya: dData.baladiya || "",
+            phone: dData.phone || ""
+          });
+
+          Swal.fire({
+            icon: 'success',
+            title: 'مرحباً بك يا سيدي المدير',
+            html: `<b>${dData.directorName || 'مدير المؤسسة'}</b><br><span style="color:#64748b;">${dData.schoolName || ''}</span>`,
+            timer: 1400,
+            showConfirmButton: false
+          }).then(() => {
+            window.location.href = 'contract-portal/director-dashboard.html';
+          });
+          return;
+        }
+
+        if (permEmployee && permEmployee.exists) {
+          const emp = permEmployee.data;
+          const fullName = `${emp.fmn || ''} ${emp.frn || ''}`.trim();
+
+          // نافذة تأكيد المؤسسة للمرة الأولى
+          const { value: formValues } = await Swal.fire({
+            title: `تأكيد مؤسسة التسيير`,
+            html: `
+              <div style="direction: rtl; text-align: right; font-size: 13.5px; line-height: 1.8;">
+                <p style="color: #059669; font-weight: bold; margin-bottom: 8px;">
+                  أهلاً بك السيد(ة): <b>${fullName}</b>
+                </p>
+                <p style="color: #64748b; font-size: 12px; margin-bottom: 12px;">
+                  يرجى تأكيد الطور واسم المؤسسة التعليمية التي تشرفون على إدارتها لمتابعة الدخول:
+                </p>
+                <div style="margin-bottom: 10px;">
+                  <label style="font-weight: 700;">الطور التعليمي:</label>
+                  <select id="swal_dir_level" class="swal2-select" style="width: 100%; margin: 4px 0 10px 0; font-weight: bold;">
+                    <option value="ابتدائي">التعليم الابتدائي</option>
+                    <option value="متوسط">التعليم المتوسط</option>
+                    <option value="ثانوي">التعليم الثانوي</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-weight: 700;">اسم المؤسسة التعليمية:</label>
+                  <input type="text" id="swal_dir_school" class="swal2-input" placeholder="اسم المدرسة / المتوسطة / الثانوية" style="width: 100%; margin: 4px 0;" value="${emp.school || ''}">
+                </div>
+              </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'تأكيد ودخول',
+            cancelButtonText: 'إلغاء',
+            confirmButtonColor: '#059669',
+            preConfirm: () => {
+              const sc = document.getElementById('swal_dir_school').value.trim();
+              const lv = document.getElementById('swal_dir_level').value;
+              if (!sc) {
+                Swal.showValidationMessage('يرجى إدخال اسم المؤسسة التعليمية');
+                return false;
+              }
+              return { school: sc, level: lv };
+            }
+          });
+
+          if (formValues) {
+            const directorInfo = {
+              ccp: permEmployee.ccp,
+              directorName: fullName,
+              schoolName: formValues.school,
+              level: formValues.level,
+              daaira: emp.daaira || "",
+              baladiya: emp.baladiya || "",
+              phone: emp.phone || ""
+            };
+
+            await DirectorLogic.registerDirectorAccount(directorInfo);
+            AuthGuard.setDirectorSession(directorInfo);
+
+            Swal.fire({
+              icon: 'success',
+              title: 'تم تأكيد الحساب بنجاح',
+              timer: 1400,
+              showConfirmButton: false
+            }).then(() => {
+              window.location.href = 'contract-portal/director-dashboard.html';
+            });
+          }
+          return;
+        }
+
+        // إن لم يكن مسجلاً في الموظفين الدائمين
+        Swal.fire({
+          icon: 'error',
+          title: 'رقم الحساب غير معتمد',
+          text: 'رقم الحساب المدخل غير مسجل ضمن الموظفين الدائمين أو المدراء المعتمدين بولاية توقرت. يرجى مراجعة مصلحة نفقات المستخدمين.',
+          confirmButtonColor: '#2563eb'
+        });
+
+      } catch (err) {
+        Swal.close();
+        console.error('Director login error:', err);
+        Swal.fire('خطأ في الاتصال', 'تعذر الاتصال بقاعدة البيانات، يرجى المحاولة لاحقاً.', 'error');
+      }
+    }
+
+    // معالجة دخول المكاتب ومصلحة الرواتب والمشرف العام
+    async function handleOfficeUnifiedLogin() {
+      const username = document.getElementById('officeUsernameUnified').value.trim();
+      const password = document.getElementById('officePasswordUnified').value.trim();
+
+      if (!username || !password) {
+        return Swal.fire('تنبيه', 'يرجى إدخال اسم المستخدم وكلمة المرور.', 'warning');
+      }
+
+      Swal.fire({
+        title: 'جاري تسجيل الدخول...',
+        text: 'يتم فحص الصلاحيات وكلمة المرور',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+      });
+
+      try {
         const adminCheck = await AppCore.ConfigAuth.verifyAdminLogin(username, password);
 
         if (adminCheck.success) {
           Swal.close();
 
-          // توجيه بحسب الرتبة الإدارية
           if (adminCheck.role === "office_primary" || adminCheck.role === "office_middle" || adminCheck.role === "office_secondary") {
             AuthGuard.setAdminSession(false);
             AuthGuard.setOfficeSession({
@@ -394,7 +667,7 @@
               icon: 'success',
               title: 'مرحباً بك',
               text: adminCheck.title,
-              timer: 1400,
+              timer: 1300,
               showConfirmButton: false
             }).then(() => {
               window.location.href = "office-portal/office-dashboard.html";
@@ -411,27 +684,11 @@
             Swal.fire({
               icon: 'success',
               title: 'مرحباً بك',
-              text: 'لوحة مصلحة الرواتب - متابعة واعتماد الملفات',
-              timer: 1400,
+              text: 'لوحة مصلحة نفقات المستخدمين والرواتب',
+              timer: 1300,
               showConfirmButton: false
             }).then(() => {
               window.location.href = "office-portal/office-dashboard.html";
-            });
-            return;
-          } else if (adminCheck.role === "director") {
-            AuthGuard.setAdminSession(false);
-            AuthGuard.setDirectorSession({
-              directorName: adminCheck.username,
-              ccp: adminCheck.username
-            });
-            Swal.fire({
-              icon: 'success',
-              title: 'مرحباً بك',
-              text: adminCheck.title,
-              timer: 1400,
-              showConfirmButton: false
-            }).then(() => {
-              window.location.href = "contract-portal/director-dashboard.html";
             });
             return;
           } else if (adminCheck.isSuperAdmin || adminCheck.role === "admin") {
@@ -440,7 +697,7 @@
               icon: 'success',
               title: 'مرحباً بك',
               text: 'لوحة التحكم المركزية - المشرف العام',
-              timer: 1400,
+              timer: 1300,
               showConfirmButton: false
             }).then(() => {
               window.location.href = "admin/dashboard.html";
@@ -449,11 +706,8 @@
           }
         }
 
-        // ------------------------------------------------------------
-        // 2. الفحص في حسابات المستخدمين المنشأة (users_accounts)
-        // ------------------------------------------------------------
+        // فحص في حسابات المستخدمين إن وجد
         const userCheck = await AppCore.Users.verifyUserLogin(username, password);
-
         if (userCheck.success) {
           Swal.close();
           const user = userCheck.user;
@@ -462,8 +716,8 @@
           Swal.fire({
             icon: 'success',
             title: `مرحباً بك`,
-            html: `<b style="color: #2563eb; font-size: 17px;">${user.first_name || ''} ${user.last_name || ''}</b><br><span style="color:#64748b; font-size:13px;">${user.school_name || ''} (${user.grade_title || 'موظف'})</span>`,
-            timer: 1500,
+            text: `${user.first_name || ''} ${user.last_name || ''}`,
+            timer: 1300,
             showConfirmButton: false
           }).then(() => {
             if (user.role === "director") {
@@ -475,50 +729,34 @@
           return;
         }
 
-        // 3. فشل التحقق في كلا المسارين
         Swal.close();
-        Swal.fire({
-          icon: 'error',
-          title: 'فشل تسجيل الدخول',
-          text: userCheck.message || 'اسم المستخدم أو كلمة المرور غير صحيحة.',
-          confirmButtonColor: '#2563eb'
-        });
+        Swal.fire('خطأ في الدخول', 'اسم المستخدم أو كلمة المرور غير صحيحة.', 'error');
 
       } catch (err) {
         Swal.close();
-        console.error("خطأ تسجيل الدخول:", err);
-        Swal.fire({
-          icon: 'error',
-          title: 'خطأ في الاتصال',
-          text: 'تعذر الاتصال بقاعدة البيانات، يرجى التحقق من اتصالك بالإنترنت.',
-          confirmButtonColor: '#2563eb'
-        });
+        console.error('Office login error:', err);
+        Swal.fire('خطأ في الاتصال', 'تعذر الاتصال بقاعدة البيانات.', 'error');
       }
     }
 
-    // نافذة نسيت كلمة السر
-    function handleForgotPassword() {
-      Swal.fire({
-        title: 'استرجاع كلمة المرور',
-        html: `
-          <div style="direction: rtl; text-align: right; font-size: 13.5px; line-height: 1.8;">
-            <p style="color: #475569; margin-bottom: 12px;">
-              نظراً لخصوصية وأمان الحسابات الإدارية والمالية:
-            </p>
-            <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px; border-radius: 10px; margin-bottom: 12px;">
-              <strong style="color: #1e40af;">للموظفين والمدراء:</strong><br>
-              يرجى التقدم بطلب إعادة تعيين كلمة المرور لدى <b>مصلحة تسيير نفقات المستخدمين</b> بمديرية التربية لولاية توقرت مرفوقاً ببطاقة الهوية أو رقم الحساب CCP.
-            </div>
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px; border-radius: 10px;">
-              <strong style="color: #334155;">لحسابات مسؤولي المكاتب:</strong><br>
-              يتم إعادة تعيين الرمز السري مباشرة من طرف <b>المشرف العام</b> عبر لوحة التحكم المركزية.
-            </div>
-          </div>
-        `,
-        confirmButtonText: 'حسناً، فهمت',
-        confirmButtonColor: '#2563eb'
-      });
+    // الانتقال لاستعلام الموظف
+    function goToEmployeeInquiry() {
+      const ccp = document.getElementById('inquiryCcpInput').value.trim();
+      if (ccp) {
+        window.location.href = `contract-portal/employee-status.html?ccp=${encodeURIComponent(ccp)}`;
+      } else {
+        window.location.href = `contract-portal/employee-status.html`;
+      }
     }
+
+    // قراءة المعاملات في الرابط لفتح التبويب المناسب تلقائياً
+    document.addEventListener('DOMContentLoaded', () => {
+      const p = new URLSearchParams(window.location.search);
+      const tab = p.get('tab') || p.get('role');
+      if (tab === 'director' || tab === 'dir') switchLoginTab('director');
+      else if (tab === 'office' || tab === 'payroll' || tab === 'admin') switchLoginTab('offices');
+      else if (tab === 'employee') switchLoginTab('employee');
+    });
   </script>
 
 </body>

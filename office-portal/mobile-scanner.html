@@ -38,66 +38,72 @@
       max-width: 480px;
       background: #1e293b;
       border: 1px solid #334155;
-      border-radius: 18px;
+      border-radius: 20px;
       padding: 18px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
       text-align: center;
     }
     .reader-box {
       width: 100%;
       border-radius: 14px;
       overflow: hidden;
-      margin: 15px 0;
+      margin: 12px 0;
       border: 2px dashed #3b82f6;
       background: #000;
-      min-height: 250px;
+      min-height: 260px;
+      position: relative;
     }
-    .scan-count-badge {
+    .device-status-badge {
       display: inline-flex;
       align-items: center;
       gap: 6px;
       padding: 6px 14px;
-      background: #0ea5e9;
+      background: #0369a1;
       color: white;
       border-radius: 50px;
       font-weight: 800;
-      font-size: 13px;
-      margin-bottom: 10px;
+      font-size: 12.5px;
+      margin-bottom: 8px;
     }
     .result-box {
       background: #0f172a;
-      border: 1px solid #3b82f6;
-      border-radius: 12px;
+      border: 1.5px solid #22c55e;
+      border-radius: 14px;
       padding: 14px;
       margin-top: 15px;
       text-align: right;
       display: none;
+      animation: fadeIn 0.25s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
 <body>
 
   <div class="mobile-card">
-    <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 12px;">
-      <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" style="width: 42px; height: 42px; border-radius: 50%;">
+    <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px;">
+      <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" style="width: 42px; height: 42px; border-radius: 50%; border: 2px solid #3b82f6;">
       <div style="text-align: right;">
-        <h2 style="font-size: 16px; margin: 0; font-weight: 800; color: #60a5fa;">الماسح الضوئي الذكي</h2>
+        <h2 style="font-size: 16.5px; margin: 0; font-weight: 800; color: #60a5fa;">الماسح الضوئي الذكي</h2>
         <span style="font-size: 11px; color: #94a3b8;" id="scannerSubtitle">مديرية التربية لولاية توقرت</span>
       </div>
     </div>
 
-    <!-- مؤشرات الجلسة -->
+    <!-- مؤشر حالة الجهاز المتصل المسموح به فقط -->
     <div id="sessionStatusContainer">
-      <div class="scan-count-badge" id="quotaDisplay">
-        <i class="fas fa-barcode"></i> المتبقي: <span id="remainingScans">...</span> مسحة
+      <div class="device-status-badge" id="deviceStatusBadge">
+        <i class="fas fa-mobile-screen"></i> <span id="deviceInfoLabel">جهاز معتمد متصل</span>
       </div>
     </div>
 
     <!-- نافذة الكاميرا -->
     <div id="cameraPreview" class="reader-box"></div>
 
-    <div style="display: flex; gap: 8px; justify-content: center; margin-top: 10px;">
-      <button class="btn btn-main btn-sm" id="btnRestartCamera" onclick="startScanner()">
+    <div style="display: flex; gap: 8px; justify-content: center; margin-top: 8px;">
+      <button class="btn btn-main btn-sm" id="btnRestartCamera" onclick="restartCameraManual()">
         <i class="fas fa-camera"></i> إعادة تشغيل الكاميرا
       </button>
       <button class="btn btn-secondary btn-sm" onclick="toggleTorch()">
@@ -106,12 +112,12 @@
     </div>
 
     <!-- إدخال يدوي احتياطي بالهاتف -->
-    <div style="margin-top: 15px;">
+    <div style="margin-top: 14px; border-top: 1px solid #334155; padding-top: 12px;">
       <input type="text" id="manualCcpInput" placeholder="أو أدخل رقم الحساب CCP يدوياً..." 
-             style="width: 100%; height: 42px; text-align: center; font-size: 16px; font-weight: bold; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white;"
+             style="width: 100%; height: 40px; text-align: center; font-size: 15px; font-weight: bold; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: white;"
              maxlength="12" oninput="this.value = this.value.replace(/\D/g, '')">
-      <button class="btn btn-success btn-sm" style="width: 100%; margin-top: 6px;" onclick="submitManualScan()">
-        <i class="fas fa-check"></i> تأكيد الاستلام يدوياً
+      <button class="btn btn-success btn-sm" style="width: 100%; margin-top: 6px; font-weight: 800;" onclick="submitManualScan()">
+        <i class="fas fa-check"></i> تأكيد استلام الملف يدوياً
       </button>
     </div>
 
@@ -133,38 +139,43 @@
     const myDeviceId = localStorage.getItem("mobile_scanner_dev_id") || ("dev_" + Math.random().toString(36).substring(2, 10));
     localStorage.setItem("mobile_scanner_dev_id", myDeviceId);
 
-    let sessionData = null;
+    let html5QrCode = null;
+    let isCameraRunning = false;
+    let isSystemBlocked = false;
+    let isProcessingScan = false;
     let audioChime = new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg");
+    let torchEnabled = false;
 
     document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("scannerSubtitle").textContent = `جلسة: ${scannerUser} (${officeType})`;
 
-      // 1. مراقبة حالة الجلسة وصلاحيتها
+      // 1. مراقبة حالة الجلسة وصلاحيتها الحية
       if (window.db) {
-        window.db.collection("remote_scanner_sessions").doc(sessionId).onSnapshot((doc) => {
+        window.db.collection("remote_scanner_sessions").doc(sessionId).onSnapshot(async (doc) => {
           if (!doc.exists) {
-            blockScanner("هذه الجلسة غير موجودة أو تم إبطالها من لوحة التحكم.");
+            await blockScanner("هذه الجلسة غير موجودة أو تم إبطالها من لوحة التحكم.");
             return;
           }
-          sessionData = doc.data();
 
-          // التحقق من فتح/غلق المسح
+          const sessionData = doc.data();
+
+          // التحقق من فتح/غلق المسح (نظام الغلق والفتح الفوري)
           if (sessionData.is_enabled === false) {
-            blockScanner("تم إيقاف نظام المسح بالهاتف مؤقتاً من لوحة التحكم.");
+            await blockScanner("نظام المسح بالهاتف مقفل حالياً من لوحة التحكم.");
             return;
           }
 
-          // التحقق من عدد الأجهزة المتصلة المسموح بها
+          // التحقق من عدد الأجهزة المتصلة المسموح بها فقط
           const maxAllowedDevices = sessionData.max_devices || 1;
           const connected = sessionData.connected_devices || {};
           const isKnownDevice = Boolean(connected[myDeviceId]);
 
           if (!isKnownDevice && Object.keys(connected).length >= maxAllowedDevices) {
-            blockScanner(`عذراً، تم الوصول إلى الحد الأقصى لعدد الأجهزة المتصلة المسموح بها (${maxAllowedDevices} جهاز فقط). يرجى مراجعة المسؤول للسماح بجهاز إضافي.`);
+            await blockScanner(`تم الوصول للحد الأقصى للأجهزة المتصلة المسموح بها (${maxAllowedDevices} جهاز). يرجى مراجعة المسؤول للسماح بجهاز إضافي.`);
             return;
           }
 
-          // تسجيل الجهاز في الجلسة إذا لم يكن مسجلاً
+          // تسجيل الجهاز في الجلسة إن لم يكن مسجلاً
           if (!isKnownDevice) {
             window.db.collection("remote_scanner_sessions").doc(sessionId).update({
               [`connected_devices.${myDeviceId}`]: {
@@ -174,64 +185,101 @@
             }).catch(console.warn);
           }
 
-          // التحقق من كوتا المسحات المتبقية
-          const limit = sessionData.quota || 100;
-          const current = sessionData.scan_count || 0;
-          const remaining = Math.max(0, limit - current);
-          document.getElementById("remainingScans").textContent = remaining;
+          document.getElementById("deviceInfoLabel").textContent = `جهاز معتمد (${Object.keys(connected).length || 1} من ${maxAllowedDevices})`;
 
-          if (remaining <= 0) {
-            blockScanner("تم استنفاد عدد المسحات المسموح بها لهذه الجلسة.");
-            return;
-          }
-
-          unblockScanner();
+          // إعادة فتح الكاميرا فورياً إن كانت مغلقة
+          await unblockScanner();
         });
       }
 
-      startScanner();
+      startCamera();
     });
 
-    function blockScanner(msg) {
-      isScanningActive = false;
-      if (html5QrCode) {
-        try { html5QrCode.stop(); } catch(e) {}
+    async function blockScanner(msg) {
+      isSystemBlocked = true;
+      if (html5QrCode && isCameraRunning) {
+        try {
+          await html5QrCode.stop();
+          html5QrCode.clear();
+        } catch (e) {
+          console.warn("Stop error:", e);
+        }
+        isCameraRunning = false;
       }
+
       document.getElementById("cameraPreview").innerHTML = `
-        <div style="padding: 40px 15px; color: #f87171; font-weight: 700;">
-          <i class="fas fa-lock fa-3x" style="margin-bottom: 12px; display:block;"></i>
+        <div style="padding: 50px 15px; color: #f87171; font-weight: 800; font-size: 14px;">
+          <i class="fas fa-lock fa-3x" style="margin-bottom: 12px; display:block; color:#ef4444;"></i>
           ${msg}
         </div>
       `;
     }
 
-    function unblockScanner() {
-      if (!isScanningActive) {
-        isScanningActive = true;
-        startScanner();
+    async function unblockScanner() {
+      if (isSystemBlocked) {
+        isSystemBlocked = false;
+        await startCamera();
       }
     }
 
-    function startScanner() {
-      if (!isScanningActive) return;
+    async function startCamera() {
+      if (isSystemBlocked) return;
+      if (isCameraRunning) return;
+
       document.getElementById("cameraPreview").innerHTML = "";
 
-      html5QrCode = new Html5Qrcode("cameraPreview");
-      const config = { fps: 15, qrbox: { width: 250, height: 200 } };
+      try {
+        if (!html5QrCode) {
+          html5QrCode = new Html5Qrcode("cameraPreview");
+        }
 
-      html5QrCode.start(
-        { facingMode: "environment" },
-        config,
-        (decodedText) => onScanSuccess(decodedText),
-        (error) => {}
-      ).catch((err) => {
+        const config = { fps: 15, qrbox: { width: 250, height: 200 } };
+
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          config,
+          (decodedText) => onScanSuccess(decodedText),
+          (error) => {}
+        );
+
+        isCameraRunning = true;
+
+      } catch (err) {
         console.warn("خطأ تشغيل الكاميرا:", err);
-      });
+        isCameraRunning = false;
+      }
+    }
+
+    async function restartCameraManual() {
+      if (isSystemBlocked) {
+        return Swal.fire("تنبيه", "نظام المسح مقفل حالياً من لوحة التحكم.", "warning");
+      }
+      if (html5QrCode && isCameraRunning) {
+        try {
+          await html5QrCode.stop();
+          html5QrCode.clear();
+        } catch(e) {}
+        isCameraRunning = false;
+      }
+      html5QrCode = null;
+      await startCamera();
+    }
+
+    async function toggleTorch() {
+      if (!isCameraRunning || !html5QrCode) return;
+      try {
+        torchEnabled = !torchEnabled;
+        await html5QrCode.applyVideoConstraints({
+          advanced: [{ torch: torchEnabled }]
+        });
+      } catch (e) {
+        Swal.fire({ toast: true, position: 'bottom', title: 'الفلاش غير مدعوم على هذا الجهاز', timer: 1500, showConfirmButton: false });
+      }
     }
 
     async function onScanSuccess(decodedText) {
-      if (!isScanningActive) return;
-      isScanningActive = false; // إيقاف مؤقت حتى معالجة السجل
+      if (isSystemBlocked || isProcessingScan) return;
+      isProcessingScan = true;
 
       try {
         if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
@@ -240,37 +288,25 @@
 
       await processScannedRecord(decodedText);
 
-      // إعادة تفعيل الكاميرا بعد ثانية ونصف
       setTimeout(() => {
-        isScanningActive = true;
+        isProcessingScan = false;
       }, 1800);
     }
 
     async function processScannedRecord(code) {
-      // التحقق اللحظي المسبق من قاعدة البيانات قبل تنفيذ المسح
+      // التحقق اللحظي من فتح المسح قبل المعالجة
       if (window.db) {
         try {
           const freshSnap = await window.db.collection("remote_scanner_sessions").doc(sessionId).get();
-          if (!freshSnap.exists) {
-            return Swal.fire("خطأ", "تم إبطال هذه الجلسة من قبل المسؤول.", "error");
-          }
-          const freshData = freshSnap.data();
-          if (freshData.is_enabled === false) {
+          if (!freshSnap.exists || freshSnap.data().is_enabled === false) {
             return Swal.fire("ممنوع", "تم قفل نظام المسح بالهاتف من لوحة التحكم.", "warning");
           }
-          const freshLimit = freshData.quota || 100;
-          const freshCurrent = freshData.scan_count || 0;
-          if (freshCurrent >= freshLimit) {
-            return Swal.fire("استنفاد المسحات", "تم استنفاد كامل عدد المسحات المسموح بها لهذه الجلسة.", "warning");
-          }
-        } catch(e) {
-          console.warn(e);
-        }
+        } catch(e) {}
       }
 
       Swal.fire({
         title: 'جاري استلام الملف...',
-        text: 'يتم فحص وتحديث حالة الملف في قاعدة البيانات',
+        text: 'يتم فحص وتحديث حالة الملف بقاعدة البيانات',
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading()
       });
@@ -280,10 +316,9 @@
         Swal.close();
 
         if (res.success) {
-          // تحديث عداد الجلسة في Firestore لتزامن شاشة الحاسوب
+          // تحديث عداد الجلسة لتزامن الحاسوب
           if (window.db) {
             await window.db.collection("remote_scanner_sessions").doc(sessionId).update({
-              scan_count: firebase.firestore.FieldValue.increment(1),
               last_scanned_doc: res.docId,
               last_scanned_data: res.data,
               last_scanned_at: new Date().toISOString()
@@ -297,50 +332,40 @@
             <b>الاسم:</b> ${emp.fmn_ar || ''} ${emp.frn_ar || ''}<br>
             <b>رقم CCP:</b> ${emp.ccp}<br>
             <b>المؤسسة:</b> ${emp.school_name}<br>
-            <b>الحالة الجديدة:</b> <span style="color:#38bdf8;">${getStatusInfo(emp.workflow_status).label}</span>
+            <b>الحالة الجديدة:</b> <span style="color:#4ade80; font-weight:800;">${getStatusInfo(emp.workflow_status).label}</span>
           `;
+
+          box.scrollIntoView({ behavior: 'smooth' });
 
           Swal.fire({
             icon: 'success',
             title: 'تم استلام الملف بنجاح!',
-            html: `الموظف: <b>${emp.fmn_ar || ''} ${emp.frn_ar || ''}</b><br>تم تجميد التعديل والحذف بالمؤسسة ونقل الملف إلى الحاسوب.`,
-            timer: 2000,
+            html: `الموظف: <b>${emp.fmn_ar || ''} ${emp.frn_ar || ''}</b><br>المؤسسة: <b>${emp.school_name}</b>`,
+            timer: 1600,
             showConfirmButton: false
           });
 
         } else {
           Swal.fire({
-            icon: 'error',
+            icon: 'warning',
             title: 'تنبيه الاستلام',
-            text: res.message
+            text: res.message || 'تعذر معالجة هذا الرمز.',
+            confirmButtonColor: '#3b82f6'
           });
         }
-      } catch(err) {
-        Swal.fire({
-          icon: 'error',
-          title: 'خطأ',
-          text: err.message
-        });
+
+      } catch (err) {
+        Swal.close();
+        console.error("خطأ معالجة المسح:", err);
+        Swal.fire('خطأ', 'حدث خطأ أثناء الاتصال بقاعدة البيانات.', 'error');
       }
     }
 
     async function submitManualScan() {
       const ccp = document.getElementById("manualCcpInput").value.trim();
-      if (!ccp) return Swal.fire("تنبيه", "يرجى كتابة رقم الحساب CCP أولاً", "warning");
+      if (!ccp) return;
       await processScannedRecord(ccp);
       document.getElementById("manualCcpInput").value = "";
-    }
-
-    function toggleTorch() {
-      if (html5QrCode) {
-        try {
-          // محاولة تبديل الفلاش إن وجد
-          const track = html5QrCode.getRunningTrackCapabilities();
-          if (track && track.torch) {
-            html5QrCode.applyVideoConstraints({ advanced: [{ torch: true }] });
-          }
-        } catch(e) {}
-      }
     }
   </script>
 </body>

@@ -447,6 +447,18 @@
         const data = docSnap.data();
         Swal.close();
 
+        // فحص صلاحية التعديل للمدير
+        if (typeof canDirectorEdit === "function" && !canDirectorEdit(data)) {
+          return Swal.fire({
+            icon: 'error',
+            title: 'التعديل غير مسموح ومجمد',
+            text: 'تم استلام هذا الملف رسمياً لدى مصالح المديرية وقفل التعديل عنه.',
+            confirmButtonColor: '#2575fc'
+          }).then(() => {
+            window.location.replace("director-dashboard.html");
+          });
+        }
+
         document.getElementById("field_ccp").value = data.ccp || '';
         document.getElementById("field_nss").value = data.nss || '';
         document.getElementById("field_nin").value = data.nin || '';

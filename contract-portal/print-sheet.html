@@ -2,12 +2,12 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <title>طباعة استمارة ومقرر الاستخلاف - مديرية التربية لولاية توقرت</title>
+  <title>طباعة وثائق الموظف الرسمية - مديرية التربية لولاية توقرت</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- الخطوط والأيقونات -->
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
 
   <!-- مكتبات الباركود والـ QR -->
   <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="../css/main.css">
   <link rel="stylesheet" href="../css/print.css">
   <script src="../js/firebase-init.js"></script>
+  <script src="../js/workflow.js"></script>
 
   <style>
     .fa, .fas, .far, .fab, .fa-solid, .fa-regular {
@@ -36,16 +37,105 @@
       align-items: center;
       background: white;
       padding: 12px 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+      border-radius: 14px;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .doc-nav-btns {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .doc-nav-btn {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1.5px solid #cbd5e1;
+      background: #f8fafc;
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .doc-nav-btn:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+    .doc-nav-btn.active {
+      background: #2563eb;
+      color: white;
+      border-color: #1d4ed8;
+      box-shadow: 0 3px 10px rgba(37,99,235,0.25);
     }
     .official-logo-img {
-      width: 70px !important;
-      height: 70px !important;
-      max-width: 70px !important;
-      max-height: 70px !important;
+      width: 68px !important;
+      height: 68px !important;
+      max-width: 68px !important;
+      max-height: 68px !important;
       object-fit: contain !important;
       flex-shrink: 0 !important;
+    }
+
+    /* تنسيقات شهادة العمل المطابقة للصورة المرفقة */
+    .work-cert-container {
+      font-family: 'Amiri', 'Cairo', serif;
+      padding: 5mm 5mm;
+      color: #000;
+    }
+    .work-cert-header-republic {
+      text-align: center;
+      font-weight: 700;
+      font-size: 17px;
+      line-height: 1.4;
+      margin-bottom: 22px;
+    }
+    .work-cert-sub-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+    .work-cert-school-info {
+      text-align: right;
+      font-weight: 700;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+    .work-cert-title-box {
+      text-align: center;
+      margin: 25px 0 35px 0;
+    }
+    .work-cert-title-tag {
+      background: linear-gradient(to bottom, #d1d5db 0%, #e5e7eb 50%, #9ca3af 100%);
+      border: 1px solid #6b7280;
+      padding: 6px 45px;
+      display: inline-block;
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      color: #000;
+    }
+    .work-cert-body {
+      font-size: 16px;
+      line-height: 2.3;
+      font-weight: 700;
+      text-align: justify;
+      margin-bottom: 25px;
+    }
+    .work-cert-body-item {
+      margin-bottom: 8px;
+    }
+    .work-cert-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 40px;
+      padding: 0 15px;
     }
   </style>
 </head>
@@ -53,13 +143,22 @@
 
   <!-- شريط التحكم العلوي (يختفي أثناء الطباعة) -->
   <div class="print-control-bar no-print">
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <button class="btn btn-main" onclick="window.print()">
-        <i class="fas fa-print"></i> طباعة الوثيقة (A4)
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <button class="btn btn-main" onclick="window.print()" style="padding: 9px 20px; font-weight: 800;">
+        <i class="fas fa-print"></i> طباعة الوثيقة الحالية (A4)
       </button>
-      <button class="btn btn-outline-primary" id="btnToggleDocType" onclick="toggleDocType()">
-        <i class="fas fa-file-invoice"></i> التبديل إلى مقرر الاستخلاف
-      </button>
+      
+      <div class="doc-nav-btns">
+        <button class="doc-nav-btn active" id="btnNavSheet" onclick="switchDocType('sheet')">
+          <i class="fas fa-file-lines"></i> استمارة المعلومات A4
+        </button>
+        <button class="doc-nav-btn" id="btnNavDecision" onclick="switchDocType('decision')">
+          <i class="fas fa-certificate"></i> مقرر الاستخلاف
+        </button>
+        <button class="doc-nav-btn" id="btnNavWorkCert" onclick="switchDocType('work_cert')">
+          <i class="fas fa-stamp"></i> شهادة عمل
+        </button>
+      </div>
     </div>
 
     <div>
@@ -72,110 +171,121 @@
   <!-- حاوية الورقة الرسمية A4 -->
   <div class="print-preview-container print-page-wrapper" id="printableArea">
     
-    <!-- 1. الرأس الرسمي للجمهورية والمديرية -->
-    <div class="official-header">
-      <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" class="official-logo-img">
-      <div class="official-titles">
-        <h3>الجمهورية الجزائرية الديمقراطية الشعبية</h3>
-        <h3>وزارة التربية الوطنية</h3>
-        <h3>مديرية التربية لولاية توقرت</h3>
-        <h3 id="p_header_service">مصلحة تسيير نفقات المستخدمين</h3>
-      </div>
-      <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" class="official-logo-img">
-    </div>
-
-    <!-- قسم باركود التحقق الآلي السريع والـ QR -->
-    <div class="barcode-section">
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <svg id="barcodeCanvas" class="barcode-svg"></svg>
-      </div>
-      <div style="text-align: center;">
-        <span style="font-size: 11px; font-weight: 800; display: block;">التحقق الآلي السريع</span>
-        <span id="barcode_num_label" style="font-size: 13px; font-weight: 900; letter-spacing: 2px;">---</span>
-      </div>
-      <div>
-        <canvas id="qrCanvas" class="qr-code-img"></canvas>
-      </div>
-    </div>
-
-    <!-- ==================== النموذج الأول: استمارة المعلومات الرسمية ==================== -->
+    <!-- ==================== النموذج الأول: استمارة المعلومات الرسمية المنسقة والمنظمة ==================== -->
     <div id="view_sheet">
-      <div class="document-title-box">
-        <h2>استمارة معلومات مستخلف / متعاقد</h2>
-        <div class="document-meta-info">
-          <span>السنة الدراسية: <b id="p_academic_year">---</b></span>
-          <span>تاريخ الاستخراج: <b id="p_print_date">---</b></span>
-          <span>رمز الملف: <b id="p_doc_code">---</b></span>
+      
+      <!-- الرأس الرسمي للجمهورية والمديرية -->
+      <div class="official-header">
+        <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" class="official-logo-img">
+        <div class="official-titles">
+          <h3>الجمهورية الجزائرية الديمقراطية الشعبية</h3>
+          <h3>وزارة التربية الوطنية</h3>
+          <h3>مديرية التربية لولاية توقرت</h3>
+          <h3 id="p_header_service">مصلحة تسيير نفقات المستخدمين</h3>
+        </div>
+        <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" class="official-logo-img">
+      </div>
+
+      <!-- قسم باركود التحقق الآلي السريع والـ QR -->
+      <div class="barcode-section">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <svg id="barcodeCanvas" class="barcode-svg"></svg>
+        </div>
+        <div style="text-align: center;">
+          <span style="font-size: 11px; font-weight: 800; display: block; color: #333;">التحقق الآلي ومطابقة الملف</span>
+          <span id="barcode_num_label" style="font-size: 13.5px; font-weight: 900; letter-spacing: 2px;">---</span>
+        </div>
+        <div>
+          <canvas id="qrCanvas" class="qr-code-img"></canvas>
         </div>
       </div>
 
-      <!-- جدول 1: الهوية والحالة المدنية -->
+      <!-- صندوق عنوان الوثيقة -->
+      <div class="document-title-box">
+        <h2>اسـتـمـارة مـعـلـومـات مـسـتـخـلـف / مـتـعـاقـد</h2>
+        <div class="document-meta-info">
+          <span>السنة الدراسية: <b id="p_academic_year">---</b></span>
+          <span>تاريخ الاستخراج: <b id="p_print_date">---</b></span>
+          <span>رقم/رمز الملف: <b id="p_doc_code">---</b></span>
+        </div>
+      </div>
+
+      <!-- جدول 1: بيانات الهوية والحساب البريدي والحالة المدنية -->
       <table class="print-table">
         <tr>
           <th colspan="4" class="print-section-header">أولاً: بيانات الهوية والحساب البريدي والحالة المدنية</th>
         </tr>
         <tr>
-          <th>رقم الحساب الجاري (CCP):</th>
-          <td><b id="p_ccp" style="font-size: 14px;">---</b></td>
-          <th>رقم الضمان الاجتماعي (NSS):</th>
-          <td><b id="p_nss">---</b></td>
+          <th style="width: 22%;">رقم الحساب الجاري (CCP):</th>
+          <td style="width: 28%;"><b id="p_ccp" style="font-size: 14px; color: #000;">---</b></td>
+          <th style="width: 22%;">رقم الضمان الاجتماعي (NSS):</th>
+          <td style="width: 28%;"><b id="p_nss">---</b></td>
         </tr>
         <tr>
           <th>رقم التعريف الوطني (NIN):</th>
-          <td colspan="3"><b id="p_nin" style="letter-spacing: 1px;">---</b></td>
+          <td><b id="p_nin" style="letter-spacing: 1px;">---</b></td>
+          <th>رقم الهاتف الشخصي:</th>
+          <td><b id="p_phone" dir="ltr">---</b></td>
         </tr>
         <tr>
           <th>اللقب والاسم بالعربية:</th>
-          <td><b id="p_name_ar" style="font-size: 13px;">---</b></td>
+          <td><b id="p_name_ar" style="font-size: 13.5px;">---</b></td>
           <th>اللقب والاسم بالإنجليزية:</th>
           <td><b id="p_name_en" dir="ltr">---</b></td>
         </tr>
         <tr>
           <th>تاريخ ومكان الميلاد:</th>
           <td><span id="p_dob">---</span> بـ: <span id="p_pob">---</span></td>
-          <th>رقم الهاتف الشخصي:</th>
-          <td><b id="p_phone" dir="ltr">---</b></td>
+          <th>الحالة العائلية:</th>
+          <td><span id="p_marital">---</span> (الأولاد: <b id="p_children">0</b>)</td>
         </tr>
         <tr>
-          <th>الحالة العائلية:</th>
-          <td><span id="p_marital">---</span> (عدد الأولاد: <span id="p_children">0</span>)</td>
           <th>بيانات الزوج(ة):</th>
-          <td><span id="p_spouse">---</span></td>
+          <td colspan="3"><span id="p_spouse">---</span></td>
         </tr>
       </table>
 
-      <!-- جدول 2: بيانات التعيين والتعاقد والمؤسسة -->
+      <!-- جدول 2: بيانات المؤسسة والتعيين التربوي -->
       <table class="print-table">
         <tr>
-          <th colspan="4" class="print-section-header">ثانياً: بيانات التعيين والاستخلاف بالمؤسسة التربوية</th>
+          <th colspan="4" class="print-section-header">ثانياً: بيانات التعيين والاستخلاف والمؤسسة التربوية</th>
         </tr>
         <tr>
-          <th>الطور التعليمي:</th>
-          <td><b id="p_level">---</b></td>
-          <th>الصفة والشهادة:</th>
-          <td><span id="p_status_diploma">---</span></td>
+          <th style="width: 22%;">المؤسسة التعليمية:</th>
+          <td style="width: 28%;"><b id="p_school" style="font-size: 13px;">---</b></td>
+          <th style="width: 22%;">الطور التعليمي:</th>
+          <td style="width: 28%;"><b id="p_level">---</b></td>
+        </tr>
+        <tr>
+          <th>الدائرة والبلدية:</th>
+          <td>دائرة: <span id="p_daaira">---</span> | بلدية: <span id="p_baladiya">---</span></td>
+          <th>الصفة والمؤهل:</th>
+          <td><b id="p_status">---</b> (<span id="p_diploma">---</span>)</td>
         </tr>
         <tr>
           <th>الرتبة المعتمدة:</th>
-          <td><b id="p_rank" style="font-size: 13px; color: #000;">---</b></td>
-          <th>رمز الرتبة / الإدارة:</th>
+          <td><b id="p_rank" style="font-size: 13px;">---</b></td>
+          <th>رمز الرتبة / كود الإدارة:</th>
           <td>رتبة: <b id="p_rank_code">---</b> | إدارة: <b id="p_admin_code">---</b></td>
         </tr>
+      </table>
+
+      <!-- جدول 3: تفاصيل فترة الاستخلاف ووضعية الملف -->
+      <table class="print-table">
         <tr>
-          <th>المؤسسة التربوية:</th>
-          <td><b id="p_school" style="font-size: 13px;">---</b></td>
-          <th>الدائرة والبلدية:</th>
-          <td>دائرة: <span id="p_daaira">---</span> - بلدية: <span id="p_baladiya">---</span></td>
+          <th colspan="4" class="print-section-header">ثالثاً: تفاصيل فترة العمل والوضعية الإدارية</th>
         </tr>
         <tr>
-          <th>فترة الاستخلاف المحددة:</th>
-          <td>من: <b id="p_start_date">---</b> إلى: <b id="p_end_date">---</b></td>
-          <th>المدة الإجمالية للعمل:</th>
-          <td><b id="p_duration">---</b></td>
+          <th style="width: 22%;">فترة الاستخلاف المحددة:</th>
+          <td style="width: 28%;">من: <b id="p_start_date">---</b> إلى: <b id="p_end_date">---</b></td>
+          <th style="width: 22%;">مدة العمل المنجزة:</th>
+          <td style="width: 28%;"><b id="p_duration" style="font-size: 13px;">---</b></td>
         </tr>
         <tr>
-          <th>حالة الملف بالمنظومة:</th>
-          <td colspan="3"><b id="p_workflow_status">---</b></td>
+          <th>وضعية ومكان الملف بالمنظومة:</th>
+          <td><b id="p_workflow_status">---</b></td>
+          <th>رقم وتاريخ المقرر الرسمي:</th>
+          <td>رقم: <b id="p_dec_num">---</b> (بتاريخ: <span id="p_dec_date">---</span>)</td>
         </tr>
       </table>
 
@@ -196,7 +306,7 @@
         <div class="signature-card">
           <div class="sig-title">تأشيرة رئيس مكتب الطور بالمديرية</div>
           <div class="sig-space"></div>
-          <div class="sig-sub">مكتب التعليم الابتدائي / المتوسط / الثانوي</div>
+          <div class="sig-sub">مكتب التعليم المختص</div>
         </div>
 
         <div class="signature-card">
@@ -209,16 +319,29 @@
 
     <!-- ==================== النموذج الثاني: مقرر الاستخلاف والتعاقد الرسمي ==================== -->
     <div id="view_decision" style="display: none;">
+      
+      <!-- الرأس الرسمي -->
+      <div class="official-header">
+        <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" class="official-logo-img">
+        <div class="official-titles">
+          <h3>الجمهورية الجزائرية الديمقراطية الشعبية</h3>
+          <h3>وزارة التربية الوطنية</h3>
+          <h3>مديرية التربية لولاية توقرت</h3>
+          <h3>مصلحة تسيير نفقات المستخدمين</h3>
+        </div>
+        <img src="https://lh3.googleusercontent.com/d/1BqWoqh1T1lArUcwAGNF7cGnnN83niKVl" alt="شعار" class="official-logo-img">
+      </div>
+
       <div class="document-title-box">
         <h2>مـقـرر اسـتـخـلاف وتـعـاقـد مـؤقـت</h2>
         <div class="document-meta-info">
           <span>السنة الدراسية: <b id="dec_academic_year">---</b></span>
-          <span>رقم المقرر: <b id="dec_num">--- / م.ت / م.ن.م</b></span>
+          <span>رقم المقرر: <b id="dec_num" style="color: #000; font-size: 13.5px;">--- / م.ت / م.ن.م</b></span>
           <span>التاريخ: <b id="dec_date">---</b></span>
         </div>
       </div>
 
-      <div style="font-size: 13px; line-height: 2; text-align: justify; padding: 10px 0;">
+      <div style="font-size: 13.5px; line-height: 2.1; text-align: justify; padding: 10px 5px;">
         <p>إن مدير التربية لولاية توقرت،</p>
         <p>- بمقتضى الأمر رقم 06-03 المؤرخ في 15 يوليو 2006 المتضمن القانون الأساسي العام للوظيفة العمومية،</p>
         <p>- وبمقتضى المرسوم التنفيذي رقم 08-315 المؤرخ في 11 أكتوبر 2008 والمتضمن القانون الأساسي الخاص بالموظفين المنتمين للأسلاك الخاصة بالتربية الوطنية، المعدل والمتمم،</p>
@@ -226,36 +349,129 @@
         <p>- ونظراً لضرورة المصلحة وشغور المنصب أو عطلة الموظف الأصلي،</p>
         
         <div style="text-align: center; margin: 15px 0;">
-          <h3 style="font-size: 16px; font-weight: 900; text-decoration: underline;">يـــقـــرر مـــا يـــلـــي:</h3>
+          <h3 style="font-size: 16.5px; font-weight: 900; text-decoration: underline;">يـــقـــرر مـــا يـــلـــي:</h3>
         </div>
 
-        <p><b>المادة الأولى:</b> يُعين السيد(ة): <b id="dec_name_ar" style="font-size: 14px;">---</b>، المولود(ة) بتاريخ: <span id="dec_dob">---</span> بـ: <span id="dec_pob">---</span>، الحامل(ة) لرقم التعريف الوطني: <b id="dec_nin">---</b>، بصفة: <b id="dec_status_type">---</b>، في رتبة: <b id="dec_rank">---</b> (رمز: <span id="dec_grade_code">---</span>).</p>
+        <p><b>المادة الأولى:</b> يُعين السيد(ة): <b id="dec_name_ar" style="font-size: 14px;">---</b>، المولود(ة) بتاريخ: <span id="dec_dob">---</span> بـ: <span id="dec_pob">---</span>، الحامل(ة) لرقم التعريف الوطني: <b id="dec_nin">---</b>، بصفة: <b id="dec_status_type">---</b>، في رتبة: <b id="dec_rank">---</b> (رمز الرتبة: <span id="dec_grade_code">---</span>).</p>
 
-        <p><b>المادة الثانية:</b> يُكلف المعني(ة) بمهام التدريس بمؤسسة: <b id="dec_school2">---</b>، لدائرة: <span id="dec_daaira">---</span>، ابتداءً من: <b id="dec_start_date">---</b> إلى غاية: <b id="dec_end_date">---</b> (المدة: <span id="dec_duration">---</span>).</p>
+        <p><b>المادة الثانية:</b> يُكلف المعني(ة) بمهام التدريس بمؤسسة: <b id="dec_school2">---</b>، لدائرة: <span id="dec_daaira">---</span>، ابتداءً من: <b id="dec_start_date">---</b> إلى غاية: <b id="dec_end_date">---</b> (المدة الإجمالية: <span id="dec_duration">---</span>).</p>
 
-        <p><b>المادة الثالثة:</b> يتقاضى المعني بالأمر المستحقات المالية والراتب المقابل لمدة العمل المنجزة فعلياً وفقاً للتنظيم والتشريع المعمول بهما عبر حسابه البريدي الجاري رقم: <b id="dec_ccp">---</b>.</p>
+        <p><b>المادة الثالثة:</b> يتقاضى المعني بالأمر المستحقات المالية والراتب المقابل لمدة العمل المنجزة فعلياً وفقاً للتشريع والتنظيم المعمول بهما عبر حسابه البريدي الجاري رقم: <b id="dec_ccp">---</b>.</p>
 
         <p><b>المادة الرابعة:</b> يكلف كل من مدير المؤسسة ورئيس مصلحة تسيير نفقات المستخدمين بتنفيذ هذا المقرر كل فيما يخصه.</p>
       </div>
 
       <div style="display: flex; justify-content: space-between; margin-top: 35px; padding: 0 30px;">
-        <div style="text-align: center; width: 220px; border: 1px solid #000; padding: 10px; border-radius: 6px;">
-          <strong>تأشيرة مدير المؤسسة</strong>
-          <div style="height: 60px;"></div>
+        <div style="text-align: center; width: 220px; border: 1.5px solid #000; padding: 12px 10px; border-radius: 6px;">
+          <strong style="font-size: 13px;">تأشيرة مدير المؤسسة</strong>
+          <div style="height: 65px;"></div>
         </div>
 
-        <div style="text-align: center; width: 240px; border: 1.5px solid #000; padding: 10px; border-radius: 6px;">
-          <strong>عن مدير التربية<br>رئيس مصلحة نفقات المستخدمين</strong>
-          <div style="height: 60px;"></div>
+        <div style="text-align: center; width: 250px; border: 1.5px solid #000; padding: 12px 10px; border-radius: 6px;">
+          <strong style="font-size: 13px;">عن مدير التربية<br>رئيس مصلحة نفقات المستخدمين</strong>
+          <div style="height: 65px;"></div>
         </div>
       </div>
+    </div>
+
+    <!-- ==================== النموذج الثالث: شهادة العمل الرسمية (مطابقة لنموذج الصورة) ==================== -->
+    <div id="view_work_cert" style="display: none;" class="work-cert-container">
+      
+      <!-- رأس الجمهورية والوزارة في الأعلى -->
+      <div class="work-cert-header-republic">
+        <div>الجمهورية الجزائرية الديمقراطية الشعبية</div>
+        <div>وزارة التربية الوطنية</div>
+      </div>
+
+      <!-- الرأس الفرعي: اليمين بيانات المديرية والمؤسسة والرقم، اليسار باركود الرمز الوظيفي -->
+      <div class="work-cert-sub-header">
+        
+        <!-- باركود الرمز الوظيفي باليسار -->
+        <div style="text-align: center; width: 180px;">
+          <div style="font-size: 11px; font-weight: 800; margin-bottom: 2px;">الرمز الوظيفي للموظف</div>
+          <svg id="wcBarcodeCanvas" style="height: 38px; width: 160px;"></svg>
+          <div id="wc_barcode_label" style="font-size: 11px; font-weight: 900; letter-spacing: 1px;">---</div>
+        </div>
+
+        <!-- بيانات المديرية والمدرسة والرقم باليمين -->
+        <div class="work-cert-school-info">
+          <div>مديرية التربية لولاية توقرت</div>
+          <div id="wc_school_title" style="font-weight: 800;">المدرسة الابتدائية ...</div>
+          <div>الرقم : <span id="wc_num">............</span> / <span id="wc_year">2026</span></div>
+        </div>
+
+      </div>
+
+      <!-- عنوان شهادة عمل المظلل الأنيق -->
+      <div class="work-cert-title-box">
+        <div class="work-cert-title-tag">
+          شهادة عمل
+        </div>
+      </div>
+
+      <!-- نص الشهادة المطابق تماماً للصيغة الوزارية الرسمية -->
+      <div class="work-cert-body">
+        <p class="work-cert-body-item">
+          <b>(ت) يشهد السيد(ة) مدير <span id="wc_school_type">المدرسة الابتدائية</span> <span id="wc_school_name" style="font-weight: 900;">...</span> بأن</b>
+        </p>
+
+        <p class="work-cert-body-item">
+          <b>السـيـــــد(ة) : <span id="wc_employee_name" style="font-size: 17px; font-weight: 900;">...</span></b>
+        </p>
+
+        <p class="work-cert-body-item">
+          <b>المولود بتاريخ : <span id="wc_dob">...</span> بـ : <span id="wc_pob">...</span></b>
+        </p>
+
+        <p class="work-cert-body-item">
+          <b>الرتبة : <span id="wc_rank">...</span> الصفة : <span id="wc_status">...</span></b>
+        </p>
+
+        <p class="work-cert-body-item">
+          <b>الوظيفة: <span id="wc_job">...</span></b>
+        </p>
+
+        <p class="work-cert-body-item">
+          <b>مكان العمل : <span id="wc_workplace">...</span></b>
+        </p>
+
+        <p class="work-cert-body-item">
+          <b>(ت) يعد من موظفي قطاع التربية منذ : <span id="wc_start_date">...</span> <span id="wc_end_period">إلى يومنا هذا</span></b>
+        </p>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0 25px 0; font-size: 16px; font-weight: 900;">
+        سلمت هذه الشهادة لإستعمالها في حدود ما يسمح به القانون
+      </div>
+
+      <!-- التذييل والتوقيع والـ QR كود في الأسفل -->
+      <div class="work-cert-footer">
+        
+        <!-- باركود QR كود في الأسفل باليمين -->
+        <div style="text-align: center;">
+          <canvas id="wcQrCanvas" style="width: 75px; height: 75px; border: 1px solid #ddd; padding: 3px;"></canvas>
+        </div>
+
+        <!-- مكان وتاريخ التحرير وإمضاء المدير في الأسفل باليسار -->
+        <div style="text-align: right; min-width: 220px;">
+          <div style="font-size: 15px; font-weight: 900;">
+            حرربـ : <span id="wc_city">تقرت</span> في : <span id="wc_issue_date">...</span>
+          </div>
+          <div style="text-align: center; margin-top: 15px; font-weight: 900; font-size: 14.5px;">
+            مدير المؤسسة
+            <div style="height: 70px;"></div>
+          </div>
+        </div>
+
+      </div>
+
     </div>
 
   </div>
 
   <script>
     let currentDocData = null;
-    let currentDocType = "sheet"; // "sheet" or "decision"
+    let currentDocType = "sheet"; // "sheet", "decision", "work_cert"
 
     document.addEventListener("DOMContentLoaded", async () => {
       const urlParams = new URLSearchParams(window.location.search);
@@ -263,15 +479,20 @@
       const typeParam = urlParams.get("type");
 
       if (typeParam === "decision") currentDocType = "decision";
+      else if (typeParam === "work_cert" || typeParam === "workcert" || typeParam === "cert") currentDocType = "work_cert";
+      else currentDocType = "sheet";
 
       // ضبط تاريخ اليوم
       const today = new Date();
       const dateStr = `${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
+      
       document.getElementById("p_print_date").textContent = dateStr;
       document.getElementById("dec_date").textContent = dateStr;
+      document.getElementById("wc_issue_date").textContent = dateStr;
+      document.getElementById("wc_year").textContent = today.getFullYear();
 
       if (!docId) {
-        alert("لم يتم تحديد معرّف الوثيقة المطلوب طباعتها");
+        alert("لم يتم تحديد معرّف الوثيقة المطلوب عرضها أو طباعتها.");
         return;
       }
 
@@ -282,133 +503,176 @@
       try {
         const snap = await window.db.collection("contract_registrations").doc(docId).get();
         if (!snap.exists) {
-          alert("الوثيقة غير موجودة في قاعدة البيانات");
+          alert("الوثيقة غير موجودة في قاعدة البيانات.");
           return;
         }
 
         currentDocData = snap.data();
         populateFields(currentDocData, docId);
 
-        // توليد الباركود والـ QR
+        // توليد الباركود والـ QR لكافة النماذج
         generateBarcodeAndQR(currentDocData.ccp, currentDocData.nin, docId);
 
         // تبديل العرض للنموذج المطلوب
-        updateView();
+        switchDocType(currentDocType);
 
       } catch (err) {
         console.error("خطأ قراءة بيانات الوثيقة:", err);
       }
     }
 
+    function switchDocType(type) {
+      currentDocType = type;
+
+      // ضبط الأزرار
+      document.querySelectorAll(".doc-nav-btn").forEach(b => b.classList.remove("active"));
+      if (type === "sheet") document.getElementById("btnNavSheet").classList.add("active");
+      else if (type === "decision") document.getElementById("btnNavDecision").classList.add("active");
+      else if (type === "work_cert") document.getElementById("btnNavWorkCert").classList.add("active");
+
+      // إخفاء الكل وإظهار النموذج المحدد
+      document.getElementById("view_sheet").style.display = (type === "sheet") ? "block" : "none";
+      document.getElementById("view_decision").style.display = (type === "decision") ? "block" : "none";
+      document.getElementById("view_work_cert").style.display = (type === "work_cert") ? "block" : "none";
+    }
+
     function populateFields(d, docId) {
-      document.getElementById("p_doc_code").textContent = docId;
-      document.getElementById("p_academic_year").textContent = d.academic_year || "---";
-      document.getElementById("p_ccp").textContent = d.ccp || "---";
-      document.getElementById("p_nss").textContent = d.nss || "---";
-      document.getElementById("p_nin").textContent = d.nin || "---";
-      document.getElementById("p_name_ar").textContent = `${d.fmn_ar || ''} ${d.frn_ar || ''}`.trim();
-      document.getElementById("p_name_en").textContent = `${d.fmn_en || ''} ${d.frn_en || ''}`.trim();
-      document.getElementById("p_dob").textContent = d.birth_date || "---";
-      document.getElementById("p_pob").textContent = d.birth_place || "---";
-      document.getElementById("p_phone").textContent = d.phone || "---";
-      document.getElementById("p_marital").textContent = d.marital_status || "---";
-      document.getElementById("p_children").textContent = d.children_count || "0";
+      const nameAr = `${d.fmn_ar || ''} ${d.frn_ar || ''}`.trim() || '---';
+      const nameEn = `${d.fmn_en || ''} ${d.frn_en || ''}`.trim() || '---';
+      const duration = d.duration_text || (d.duration_days ? `${d.duration_days} يوم` : '---');
+      const schoolTitle = d.school_name || '---';
+      const levelTitle = d.level || 'ابتدائي';
+      const decisionNum = d.decision_number || d.doc_number || '---';
+
+      // 1. تعبئة استمارة المعلومات
+      document.getElementById("p_academic_year").textContent = d.academic_year || '2026-2027';
+      document.getElementById("p_doc_code").textContent = docId.substring(0, 8).toUpperCase();
+      document.getElementById("p_ccp").textContent = d.ccp || '---';
+      document.getElementById("p_nss").textContent = d.nss || '---';
+      document.getElementById("p_nin").textContent = d.nin || '---';
+      document.getElementById("p_phone").textContent = d.phone || '---';
+      document.getElementById("p_name_ar").textContent = nameAr;
+      document.getElementById("p_name_en").textContent = nameEn;
+      document.getElementById("p_dob").textContent = d.dob || '---';
+      document.getElementById("p_pob").textContent = d.pob || '---';
+      document.getElementById("p_marital").textContent = d.marital_status || '---';
+      document.getElementById("p_children").textContent = d.children_count || '0';
+      document.getElementById("p_spouse").textContent = d.spouse_info || '---';
+
+      document.getElementById("p_school").textContent = schoolTitle;
+      document.getElementById("p_level").textContent = levelTitle;
+      document.getElementById("p_daaira").textContent = d.daaira || '---';
+      document.getElementById("p_baladiya").textContent = d.baladiya || '---';
+      document.getElementById("p_status").textContent = d.status_type || 'مستخلف';
+      document.getElementById("p_diploma").textContent = d.diploma || '---';
+      document.getElementById("p_rank").textContent = d.rank || '---';
+      document.getElementById("p_rank_code").textContent = d.rank_code || '---';
+      document.getElementById("p_admin_code").textContent = d.admin_code || '---';
+
+      document.getElementById("p_start_date").textContent = d.start_date || '---';
+      document.getElementById("p_end_date").textContent = d.end_date || '---';
+      document.getElementById("p_duration").textContent = duration;
       
-      let spouseInfo = "لا يوجد";
-      if (d.marital_status === "متزوج(ة)") {
-        spouseInfo = `${d.spouse_name || ''} (${d.spouse_job || 'مهنة غير محددة'})`;
+      const stInfo = typeof getStatusInfo === "function" ? getStatusInfo(d.workflow_status) : { label: d.workflow_status || 'قيد الدراسة' };
+      document.getElementById("p_workflow_status").textContent = stInfo.label;
+      document.getElementById("p_dec_num").textContent = decisionNum;
+      document.getElementById("p_dec_date").textContent = d.decision_date || d.created_at?.slice(0, 10) || '---';
+
+      // 2. تعبئة مقرر الاستخلاف
+      document.getElementById("dec_academic_year").textContent = d.academic_year || '2026-2027';
+      document.getElementById("dec_num").textContent = decisionNum !== '---' ? `${decisionNum} / م.ت / م.ن.م` : `............... / م.ت / م.ن.م`;
+      document.getElementById("dec_school").textContent = schoolTitle;
+      document.getElementById("dec_school2").textContent = schoolTitle;
+      document.getElementById("dec_name_ar").textContent = nameAr;
+      document.getElementById("dec_dob").textContent = d.dob || '---';
+      document.getElementById("dec_pob").textContent = d.pob || '---';
+      document.getElementById("dec_nin").textContent = d.nin || '---';
+      document.getElementById("dec_status_type").textContent = d.status_type || 'مستخلف';
+      document.getElementById("dec_rank").textContent = d.rank || '---';
+      document.getElementById("dec_grade_code").textContent = d.rank_code || '---';
+      document.getElementById("dec_daaira").textContent = d.daaira || '---';
+      document.getElementById("dec_start_date").textContent = d.start_date || '---';
+      document.getElementById("dec_end_date").textContent = d.end_date || '---';
+      document.getElementById("dec_duration").textContent = duration;
+      document.getElementById("dec_ccp").textContent = d.ccp || '---';
+
+      // 3. تعبئة شهادة العمل (النموذج الرسمي المطابق للصورة)
+      let schoolType = "المدرسة الابتدائية";
+      if (levelTitle.includes("متوسط")) schoolType = "متوسطة";
+      else if (levelTitle.includes("ثانوي")) schoolType = "ثانوية";
+
+      document.getElementById("wc_school_type").textContent = schoolType;
+      document.getElementById("wc_school_title").textContent = `${schoolType} ${schoolTitle} -تقرت-`;
+      document.getElementById("wc_school_name").textContent = `${schoolTitle} -تقرت-`;
+      document.getElementById("wc_employee_name").textContent = nameAr;
+      document.getElementById("wc_dob").textContent = d.dob || '---';
+      document.getElementById("wc_pob").textContent = d.pob || '---';
+      document.getElementById("wc_rank").textContent = d.rank || 'أستاذ التعليم الابتدائي';
+      document.getElementById("wc_status").textContent = d.status_type || 'مستخلف (ة)';
+      document.getElementById("wc_job").textContent = d.rank || 'أستاذ التعليم الابتدائي';
+      document.getElementById("wc_workplace").textContent = `${schoolType} ${schoolTitle} -تقرت-`;
+      document.getElementById("wc_start_date").textContent = d.start_date || '---';
+
+      if (d.end_date) {
+        document.getElementById("wc_end_period").textContent = `إلى غاية : ${d.end_date}`;
+      } else {
+        document.getElementById("wc_end_period").textContent = `إلى يومنا هذا`;
       }
-      document.getElementById("p_spouse").textContent = spouseInfo;
-
-      document.getElementById("p_level").textContent = d.level || "---";
-      document.getElementById("p_status_diploma").textContent = `${d.status_type || '---'} (شهادة: ${d.diploma || '---'})`;
-      document.getElementById("p_rank").textContent = d.rank || "---";
-      document.getElementById("p_rank_code").textContent = d.rank_code || "---";
-      document.getElementById("p_admin_code").textContent = d.admin_code || "---";
-      document.getElementById("p_school").textContent = d.school_name || "---";
-      document.getElementById("p_daaira").textContent = d.daaira || "---";
-      document.getElementById("p_baladiya").textContent = d.baladiya || "---";
-      document.getElementById("p_start_date").textContent = d.start_date || "---";
-      document.getElementById("p_end_date").textContent = d.end_date || "---";
-      document.getElementById("p_duration").textContent = d.duration_text || `${d.duration_days || 0} يوم`;
-
-      // حالة الملف
-      const statusLabel = d.workflow_status === "payroll_approved" ? "معتمد نهائياً للصرف والرواتب ✅" :
-                         (d.workflow_status === "office_approved" ? "مطابق من طرف مكتب الطور ✅" :
-                         (d.workflow_status === "submitted_to_office" ? "محال لمكتب الطور بالمديرية ⏳" : "قيد الدراسة والتحضير بالمؤسسة"));
-      document.getElementById("p_workflow_status").textContent = statusLabel;
-
-      // حقول المقرر الرسمي
-      document.getElementById("dec_academic_year").textContent = d.academic_year || "---";
-      document.getElementById("dec_num").textContent = `${(d.ccp || '').substring(0, 5)} / ${d.academic_year || ''}`;
-      document.getElementById("dec_school").textContent = d.school_name || "---";
-      document.getElementById("dec_school2").textContent = d.school_name || "---";
-      document.getElementById("dec_name_ar").textContent = `${d.fmn_ar || ''} ${d.frn_ar || ''}`.trim();
-      document.getElementById("dec_dob").textContent = d.birth_date || "---";
-      document.getElementById("dec_pob").textContent = d.birth_place || "---";
-      document.getElementById("dec_nin").textContent = d.nin || "---";
-      document.getElementById("dec_status_type").textContent = d.status_type || "مستخلف(ة)";
-      document.getElementById("dec_rank").textContent = d.rank || "أستاذ";
-      document.getElementById("dec_grade_code").textContent = d.rank_code || "---";
-      document.getElementById("dec_daaira").textContent = d.daaira || "---";
-      document.getElementById("dec_start_date").textContent = d.start_date || "---";
-      document.getElementById("dec_end_date").textContent = d.end_date || "---";
-      document.getElementById("dec_duration").textContent = d.duration_text || `${d.duration_days || 0} يوم`;
-      document.getElementById("dec_ccp").textContent = d.ccp || "---";
+      
+      document.getElementById("wc_num").textContent = d.cert_number || d.decision_number || '............';
     }
 
     function generateBarcodeAndQR(ccp, nin, docId) {
-      if (!ccp) return;
-      document.getElementById("barcode_num_label").textContent = `CCP: ${ccp}`;
+      const barcodeValue = String(nin || ccp || docId).slice(0, 16);
 
-      // 1. توليد الباركود Code128
+      // باركود الاستمارة
       try {
-        JsBarcode("#barcodeCanvas", ccp, {
+        JsBarcode("#barcodeCanvas", barcodeValue, {
           format: "CODE128",
-          lineColor: "#000",
-          width: 1.6,
+          width: 1.5,
           height: 38,
-          displayValue: false,
-          margin: 0
+          displayValue: false
         });
+        document.getElementById("barcode_num_label").textContent = barcodeValue;
       } catch (e) {
-        console.warn("خطأ توليد الباركود:", e);
+        console.warn("Barcode error:", e);
       }
 
-      // 2. توليد رمز QR السريع
+      // باركود شهادة العمل
       try {
-        const qrData = `DED-TOUGGOURT|CCP:${ccp}|NIN:${nin || ''}|ID:${docId}`;
+        JsBarcode("#wcBarcodeCanvas", barcodeValue, {
+          format: "CODE128",
+          width: 1.4,
+          height: 36,
+          displayValue: false
+        });
+        document.getElementById("wc_barcode_label").textContent = barcodeValue;
+      } catch (e) {
+        console.warn("WC Barcode error:", e);
+      }
+
+      // رمز QR للاستمارة
+      try {
+        const qrUrl = `${window.location.origin}${window.location.pathname}?id=${docId}`;
         new QRious({
           element: document.getElementById("qrCanvas"),
-          value: qrData,
-          size: 55,
-          level: 'M'
+          value: qrUrl,
+          size: 60
         });
       } catch (e) {
-        console.warn("خطأ توليد QR:", e);
+        console.warn("QR error:", e);
       }
-    }
 
-    function toggleDocType() {
-      currentDocType = currentDocType === "sheet" ? "decision" : "sheet";
-      updateView();
-    }
-
-    function updateView() {
-      const viewSheet = document.getElementById("view_sheet");
-      const viewDecision = document.getElementById("view_decision");
-      const btnToggle = document.getElementById("btnToggleDocType");
-
-      if (currentDocType === "decision") {
-        viewSheet.style.display = "none";
-        viewDecision.style.display = "block";
-        btnToggle.innerHTML = '<i class="fas fa-file-lines"></i> التبديل إلى استمارة المعلومات';
-        document.title = `مقرر استخلاف - ${currentDocData?.fmn_ar || ''} ${currentDocData?.frn_ar || ''}`;
-      } else {
-        viewSheet.style.display = "block";
-        viewDecision.style.display = "none";
-        btnToggle.innerHTML = '<i class="fas fa-certificate"></i> التبديل إلى مقرر الاستخلاف';
-        document.title = `استمارة مستخلف - ${currentDocData?.fmn_ar || ''} ${currentDocData?.frn_ar || ''}`;
+      // رمز QR لشهادة العمل
+      try {
+        const wcQrPayload = `شهادة عمل رسمية\nالموظف: ${currentDocData?.fmn_ar || ''} ${currentDocData?.frn_ar || ''}\nالحساب CCP: ${ccp}\nالمؤسسة: ${currentDocData?.school_name || ''}\nالرتبة: ${currentDocData?.rank || ''}\nمديرية التربية لولاية توقرت`;
+        new QRious({
+          element: document.getElementById("wcQrCanvas"),
+          value: wcQrPayload,
+          size: 75
+        });
+      } catch (e) {
+        console.warn("WC QR error:", e);
       }
     }
   </script>

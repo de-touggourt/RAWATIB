@@ -93,19 +93,24 @@ function getStatusBadge(statusKey) {
 // هل يحق للمدير التعديل؟
 function canDirectorEdit(record) {
   if (!record) return false;
-  // 1. إذا سمح رئيس المكتب أو مصلحة الرواتب صراحة بالتعديل
+  // 1. إذا تم قفل الصلاحية صراحة من المكتب أو المصلحة
+  if (record.allow_director_edit === false) return false;
+  // 2. إذا سمح رئيس المكتب أو مصلحة الرواتب صراحة بالتعديل
   if (record.allow_director_edit === true) return true;
-  // 2. إذا كان الملف معاداً للمؤسسة بسبب عدم المطابقة
+  // 3. إذا كان الملف معاداً للمؤسسة بسبب عدم المطابقة
   if (record.workflow_status === "returned_to_director") return true;
-  // 3. إذا كان لا يزال في مرحلة التحضير بالمؤسسة ولم يستلم في مكتب الطور بعد
+  // 4. إذا كان لا يزال في مرحلة التحضير بالمؤسسة ولم يستلم في مكتب الطور بعد
   if (!record.workflow_status || record.workflow_status === "pending_director") return true;
-  // في كافة الحالات الأخرى (تم استلامه بالمكتب، محال للرواتب، معتمد) -> مجمد
+  // في كافة الحالات الأخرى (تم استلامه بالمكتب، محال للرواتب، معتمد) -> مقفل
   return false;
 }
 
 // هل يحق للمدير الحذف؟
 function canDirectorDelete(record) {
   if (!record) return false;
+  // 1. إذا تم قفل الحذف صراحة من المكتب أو المصلحة
+  if (record.allow_director_delete === false) return false;
+  // 2. إذا سمح صراحة بالحذف
   if (record.allow_director_delete === true) return true;
   if (record.allow_director_edit === true && record.workflow_status === "returned_to_director") return true;
   if (!record.workflow_status || record.workflow_status === "pending_director") return true;
