@@ -405,6 +405,11 @@
         <input type="text" id="flt_search" placeholder="بحث بالاسم، اللقب، CCP، الهاتف..." 
                class="filter-input-styled" oninput="applyOfficeFilters()">
 
+        <!-- فلتر السنة الدراسية وقائمة الأرشيف -->
+        <select id="flt_academic_year" onchange="onOfficeAcademicYearChange(this.value)" class="filter-input-styled" style="font-weight: bold; border-color: #2563eb;">
+          <option value="">السنة الدراسية...</option>
+        </select>
+
         <!-- فلتر الطور (لمصلحة الرواتب) -->
         <select id="flt_level" onchange="applyOfficeFilters(); populateSchoolFilter();" class="filter-input-styled" style="font-weight: bold; display: none;">
           <option value="">-- كل الأطوار التعليمية --</option>
@@ -701,6 +706,7 @@
     let filteredRecords = [];
     let selectedRecordIds = new Set();
     let activeYear = "2026-2027";
+    let selectedAcademicYear = "2026-2027";
     let activeRemoteSessionId = "";
     let remoteSessionUnsubscribe = null;
     let isHubViewActive = true;
@@ -713,6 +719,12 @@
       document.getElementById("navRoleTitle").textContent = currentOffice.roleTitle;
       const isPayroll = currentOffice.officeType === "payroll";
       document.getElementById("navOfficeType").textContent = isPayroll ? "مصلحة نفقات المستخدمين (الرواتب)" : `طور: ${currentOffice.filterLevel}`;
+
+      // إخفاء بطاقة رفع الأجور والمخلفات عن مكاتب التعليم (خاص بمصلحة الرواتب والمشرف فقط)
+      const hubCardSalaries = document.getElementById("hubCardSalaries");
+      if (hubCardSalaries) {
+        hubCardSalaries.style.display = (isPayroll || currentOffice.is_admin) ? "flex" : "none";
+      }
 
       const subTitleElem = document.getElementById("navSubTitle");
       if (subTitleElem) {
@@ -740,8 +752,10 @@
       const sys = await getSystemSettings();
       if (sys && sys.active_academic_year) {
         activeYear = sys.active_academic_year;
+        selectedAcademicYear = activeYear;
         document.getElementById("navYear").textContent = `السنة: ${activeYear}`;
       }
+      initOfficeAcademicYears(sys);
 
       // تحميل السجلات
       await loadOfficeEmployees();
@@ -749,9 +763,43 @@
       // تهيئة جلسة المسح عن بعد
       initRemoteScannerSession();
 
-      // تحميل دفعات الأجور
-      loadPayrollBatches();
+      // تحميل دفعات الأجور لمصلحة الرواتب والمشرف فقط
+      if (isPayroll || currentOffice.is_admin) {
+        loadPayrollBatches();
+      }
     });
+
+    // ============================================================
+    // إعداد قائمة السنوات الدراسية وإدارة الأرشيف
+    // ============================================================
+    function initOfficeAcademicYears(sys) {
+      const sel = document.getElementById("flt_academic_year");
+      if (!sel) return;
+
+      const years = (sys && Array.isArray(sys.academic_years) && sys.academic_years.length > 0)
+        ? sys.academic_years
+        : ["2024-2025", "2025-2026", "2026-2027"];
+
+      let html = "";
+      years.forEach(y => {
+        const isCurrent = (y === activeYear);
+        html += `<option value="${y}" ${isCurrent ? 'selected' : ''}>السنة: ${y} ${isCurrent ? '(الحالية)' : '(أرشيف)'}</option>`;
+      });
+      sel.innerHTML = html;
+
+      // فحص صلاحية عرض السنوات المؤرشفة لمسؤولي المكاتب
+      if (sys && sys.allow_archive_view_office === false && !currentOffice.is_admin) {
+        sel.value = activeYear;
+        sel.disabled = true;
+        sel.title = "تم قفل عرض السنوات السابقة من لوحة الإدارة العامة";
+      }
+    }
+
+    async function onOfficeAcademicYearChange(val) {
+      if (!val) return;
+      selectedAcademicYear = val;
+      await loadOfficeEmployees();
+    }
 
     // ============================================================
     // إدارة أنماط العرض والتنقل بين البطاقات والأقسام الموسعة
@@ -767,6 +815,10 @@
     }
 
     function openModuleView(mod) {
+      if (mod === "salaries" && currentOffice.officeType !== "payroll" && !currentOffice.is_admin) {
+        return Swal.fire("غير مصرح", "نظام رفع ونشر الأجور والمخلفات مخصص حصرياً لمصلحة نفقات المستخدمين (الرواتب).", "warning");
+      }
+
       const hubContainer = document.getElementById("section_hub_container");
       if (hubContainer) hubContainer.style.display = "none";
 
@@ -856,7 +908,8 @@
       tbody.innerHTML = `<tr><td colspan="13" style="text-align:center; padding:35px;"><i class="fas fa-spinner fa-spin fa-2x"></i><br>جاري تحميل السجلات...</td></tr>`;
 
       try {
-        let q = window.db.collection("contract_registrations").where("academic_year", "==", activeYear);
+        const queryYear = selectedAcademicYear || activeYear;
+        let q = window.db.collection("contract_registrations").where("academic_year", "==", queryYear);
 
         if (currentOffice.filterLevel && currentOffice.filterLevel !== "all") {
           q = q.where("level", "==", currentOffice.filterLevel);
@@ -940,7 +993,6 @@
         const statusBadge = getStatusBadge(emp.workflow_status);
         const nameAr = `${emp.fmn_ar || ''} ${emp.frn_ar || ''}`.trim();
         const duration = `${emp.duration_days || 0} يوم (${emp.start_date || ''} إلى ${emp.end_date || ''})`;
-        const isDirectorUnlocked = emp.allow_director_edit === true;
         const isSelected = selectedRecordIds.has(emp.id);
 
         tr.innerHTML = `
@@ -966,52 +1018,177 @@
             ${emp.decision_number ? `<b style="color:#059669; font-size:12px;">${emp.decision_number}</b>` : '<span style="color:#94a3b8; font-size:11px;">---</span>'}
           </td>
           <td style="text-align: center;">
-            <div class="action-btns" style="justify-content:center; gap: 4px; flex-wrap: wrap;">
-              
-              <!-- 1. زر دراسة ومطابقة الملف -->
-              <button class="btn-table-action" style="background:#2563eb; color:white;" onclick="openReviewModal('${emp.id}')" title="دراسة ومطابقة الملف قانونياً ومالياً">
-                <i class="fas fa-clipboard-check"></i> دراسة
-              </button>
-
-              <!-- 2. زر إدراج / تعديل رقم وتاريخ المقرر الرسمي (صلاحية رئيس المكتب) -->
-              <button class="btn-table-action" style="background:#059669; color:white;" onclick="openOfficeDecisionModal('${emp.id}', '${nameAr}', '${emp.decision_number || ''}')" title="إدراج أو تعديل رقم وتاريخ المقرر الرسمي لتمكين المدير من طباعته">
-                <i class="fas fa-certificate"></i> ${emp.decision_number ? 'تعديل المقرر' : 'إدراج المقرر'}
-              </button>
-
-              <!-- 3. زر تعديل بيانات ملف الموظف للمكتب -->
-              <a href="../contract-portal/contract-form.html?id=${emp.id}&mode=edit" target="_blank" class="btn-table-action" style="background:#4f46e5; color:white;" title="تعديل بيانات ملف الموظف">
-                <i class="fas fa-pen"></i> تعديل
-              </a>
-
-              <!-- 4. طباعة الاستمارة الرسمية A4 -->
-              <a href="../contract-portal/print-sheet.html?id=${emp.id}&type=sheet" target="_blank" class="btn-table-action" style="background:#7c3aed; color:white;" title="طباعة استمارة المعلومات الرسمية A4">
-                <i class="fas fa-print"></i> استمارة
-              </a>
-
-              <!-- 5. طباعة شهادة العمل الرسمية (مطابقة لنموذج المديرية) -->
-              <a href="../contract-portal/print-sheet.html?id=${emp.id}&type=work_cert" target="_blank" class="btn-table-action" style="background:#0284c7; color:white;" title="استخراج وطباعة شهادة العمل الرسمية">
-                <i class="fas fa-stamp"></i> شهادة عمل
-              </a>
-
-              <!-- 6. طباعة المقرر في حال اعتماده وتوفر رقمه -->
-              ${emp.decision_number ? `
-                <a href="../contract-portal/print-sheet.html?id=${emp.id}&type=decision" target="_blank" class="btn-table-action" style="background:#16a34a; color:white;" title="طباعة مقرر الاستخلاف المعتمد">
-                  <i class="fas fa-file-contract"></i> المقرر
-                </a>
-              ` : ''}
-
-              <!-- 7. مفتاح إذن تعديل المدير الفوري -->
-              <button class="btn-table-action" style="background:${isDirectorUnlocked ? '#f59e0b' : '#64748b'}; color:white;" 
-                      onclick="quickToggleDirectorPermission('${emp.id}', ${!isDirectorUnlocked})" 
-                      title="${isDirectorUnlocked ? 'التعديل مفتوح للمدير - انقر لقفله' : 'التعديل مقفل عن المدير - انقر للسماح له'}">
-                <i class="fas ${isDirectorUnlocked ? 'fa-lock-open' : 'fa-lock'}"></i> ${isDirectorUnlocked ? 'مفتوح للمدير' : 'مقفل عن المدير'}
-              </button>
-
-            </div>
+            <button class="btn btn-main btn-sm" onclick="openRowOperationsMenu('${emp.id}')" 
+                    style="font-weight: 800; padding: 6px 14px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #1e3a8a, #2563eb); box-shadow: 0 2px 6px rgba(37,99,235,0.25);">
+              <i class="fas fa-ellipsis-vertical"></i> عمليات
+            </button>
           </td>
         `;
         tbody.appendChild(tr);
       });
+    }
+
+    // ============================================================
+    // قائمة العمليات الموحدة للملف (Unified Operations Popover)
+    // ============================================================
+    function openRowOperationsMenu(empId) {
+      const emp = allOfficeRecords.find(e => e.id === empId);
+      if (!emp) return;
+
+      const nameAr = `${emp.fmn_ar || ''} ${emp.frn_ar || ''}`.trim();
+      const isDirectorUnlocked = emp.allow_director_edit === true;
+      const isArchivedYear = (selectedAcademicYear || activeYear) !== activeYear;
+      const hasDecision = Boolean(emp.decision_number && String(emp.decision_number).trim() !== "");
+
+      Swal.fire({
+        title: `<div style="font-size:16px; font-weight:800; color:#1e3a8a;"><i class="fas fa-bars-staggered"></i> عمليات الملف: ${nameAr}</div>`,
+        html: `
+          <div style="direction: rtl; text-align: right; display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+            
+            <button class="btn btn-main" onclick="Swal.close(); openReviewModal('${emp.id}')" 
+                    style="justify-content: flex-start; padding: 10px 14px; font-weight: bold; background: #2563eb;">
+              <i class="fas fa-clipboard-check" style="width: 22px;"></i> دراسة ومطابقة الملف والاعتماد
+            </button>
+
+            <button class="btn btn-success" onclick="Swal.close(); openOfficeDecisionModal('${emp.id}', '${nameAr}', '${emp.decision_number || ''}')" 
+                    style="justify-content: flex-start; padding: 10px 14px; font-weight: bold; background: #059669;">
+              <i class="fas fa-certificate" style="width: 22px;"></i> المقرر الرسمي (إدراج الرقم / طباعة)
+            </button>
+
+            <a href="../contract-portal/contract-form.html?id=${emp.id}&mode=edit" target="_blank" class="btn btn-primary" 
+               style="justify-content: flex-start; padding: 10px 14px; font-weight: bold; background: #4f46e5; text-decoration: none;" onclick="Swal.close()">
+              <i class="fas fa-pen" style="width: 22px;"></i> تعديل بيانات ملف الموظف
+            </a>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <a href="../contract-portal/print-sheet.html?id=${emp.id}&type=sheet" target="_blank" class="btn" 
+                 style="justify-content: center; padding: 9px; font-weight: bold; background: #7c3aed; color: white; text-decoration: none;" onclick="Swal.close()">
+                <i class="fas fa-print"></i> استمارة A4
+              </a>
+
+              <a href="../contract-portal/print-sheet.html?id=${emp.id}&type=work_cert" target="_blank" class="btn" 
+                 style="justify-content: center; padding: 9px; font-weight: bold; background: #0284c7; color: white; text-decoration: none;" onclick="Swal.close()">
+                <i class="fas fa-stamp"></i> شهادة عمل
+              </a>
+            </div>
+
+            ${hasDecision ? `
+              <a href="../contract-portal/print-sheet.html?id=${emp.id}&type=decision" target="_blank" class="btn" 
+                 style="justify-content: flex-start; padding: 10px 14px; font-weight: bold; background: #16a34a; color: white; text-decoration: none;" onclick="Swal.close()">
+                <i class="fas fa-file-contract" style="width: 22px;"></i> طباعة المقرر الرسمي (رقم: ${emp.decision_number})
+              </a>
+            ` : ''}
+
+            <button class="btn" onclick="Swal.close(); quickToggleDirectorPermission('${emp.id}', ${!isDirectorUnlocked})" 
+                    style="justify-content: flex-start; padding: 10px 14px; font-weight: bold; background: ${isDirectorUnlocked ? '#f59e0b' : '#64748b'}; color: white;">
+              <i class="fas ${isDirectorUnlocked ? 'fa-lock-open' : 'fa-lock'}" style="width: 22px;"></i>
+              ${isDirectorUnlocked ? 'قفل التعديل والحذف عن المدير' : 'السماح لمدير المؤسسة بالتعديل والحذف'}
+            </button>
+
+            ${isArchivedYear ? `
+              <button class="btn" onclick="Swal.close(); renewEmployeeToActiveYear('${emp.id}')" 
+                      style="justify-content: flex-start; padding: 10px 14px; font-weight: bold; background: linear-gradient(135deg, #10b981, #047857); color: white;">
+                <i class="fas fa-arrows-rotate" style="width: 22px;"></i> اعتماد وتجديد التعاقد في السنة الحالية (${activeYear})
+              </button>
+            ` : ''}
+
+          </div>
+        `,
+        showConfirmButton: false,
+        showCloseButton: true,
+        width: '450px'
+      });
+    }
+
+    // اعتماد وتجديد التعاقد في السنة الحالية للمكتب
+    async function renewEmployeeToActiveYear(empId) {
+      const emp = allOfficeRecords.find(e => e.id === empId);
+      if (!emp) return;
+
+      if ((selectedAcademicYear || activeYear) === activeYear) {
+        return Swal.fire("تنبيه", "هذا الموظف مسجل بالفعل في السنة الدراسية الحالية.", "info");
+      }
+
+      const nameAr = `${emp.fmn_ar || ''} ${emp.frn_ar || ''}`.trim();
+      const confirmRes = await Swal.fire({
+        title: 'اعتماد وتجديد التعاقد في السنة الحالية',
+        html: `
+          <div style="direction: rtl; text-align: right; font-size: 13.5px; line-height: 1.8;">
+            هل تؤكد تجديد تسجيل الموظف: <b style="color:#2563eb;">${nameAr}</b><br>
+            ونقل اعتماده من سنة (<b>${selectedAcademicYear}</b>) إلى السنة الدراسية المفعلة (<b>${activeYear}</b>)؟<br>
+            <span style="color:#059669; font-size:12px; font-weight:700;">* سيتم نسخ بياناته الأساسية وتعيين حالته المبدئية بالمؤسسة: قيد التحضير.</span>
+          </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، تجديد ونقل للسنة الحالية',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#059669'
+      });
+
+      if (!confirmRes.isConfirmed) return;
+
+      Swal.fire({ title: 'جاري فحص وتجديد التسجيل...', didOpen: () => Swal.showLoading() });
+
+      try {
+        const checkSnap = await window.db.collection("contract_registrations")
+          .where("ccp", "==", emp.ccp)
+          .where("academic_year", "==", activeYear)
+          .get();
+
+        if (!checkSnap.empty) {
+          Swal.close();
+          return Swal.fire("مسجل مسبقاً", `الموظف (${nameAr}) مسجل بالفعل في السنة الدراسية الحالية (${activeYear}).`, "warning");
+        }
+
+        const newDocId = `${emp.ccp}_${activeYear.replace('-', '_')}`;
+        const newRecord = {
+          ...emp,
+          id: newDocId,
+          academic_year: activeYear,
+          workflow_status: "pending_director",
+          rejection_reason: "",
+          decision_number: "",
+          decision_date: "",
+          is_decision_published: false,
+          allow_director_edit: true,
+          allow_director_delete: true,
+          created_at: new Date().toISOString(),
+          last_updated: new Date().toISOString(),
+          renewed_from_year: selectedAcademicYear,
+          renewed_from_id: empId,
+          workflow_history: [{
+            timestamp: new Date().toISOString(),
+            actorName: currentOffice.username,
+            actorRole: currentOffice.roleTitle,
+            status: "pending_director",
+            note: `تم تجديد التعاقد ونقل السجل من سنة ${selectedAcademicYear} إلى السنة الدراسية ${activeYear}.`
+          }]
+        };
+
+        delete newRecord.received_by_office;
+        delete newRecord.received_by_payroll;
+
+        await window.db.collection("contract_registrations").doc(newDocId).set(newRecord);
+
+        Swal.fire({
+          icon: 'success',
+          title: 'تم تجديد التعاقد بنجاح!',
+          text: `تم نقل واعتماد تسجيل الموظف في السنة الدراسية (${activeYear}) بنجاح.`,
+          showCancelButton: true,
+          confirmButtonText: 'الانتقال للسنة الحالية',
+          cancelButtonText: 'البقاء هنا'
+        }).then((res) => {
+          if (res.isConfirmed) {
+            document.getElementById("flt_academic_year").value = activeYear;
+            onOfficeAcademicYearChange(activeYear);
+          }
+        });
+
+      } catch(err) {
+        console.error("خطأ تجديد التعاقد:", err);
+        Swal.fire("خطأ", "فشل تجديد التعاقد: " + err.message, "error");
+      }
     }
 
     // ============================================================
@@ -1190,7 +1367,19 @@
               </div>
             </div>
 
-            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px 16px; margin: 15px 0;">
+            <!-- تحديد الإجراء والوضعية المباشرة -->
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 10px 14px; margin: 10px 0;">
+              <label style="font-weight: 800; color: #1e3a8a; display: block; margin-bottom: 5px;">
+                <i class="fas fa-tasks"></i> تحديد مسار ووضعية الملف:
+              </label>
+              <select id="modal_review_action_choice" class="filter-input-styled" style="font-weight: bold;">
+                <option value="approved" selected>${isPayroll ? '✅ اعتماد نهائي للصرف والرواتب' : '✅ مطابق قانونياً - إحالة لمصلحة الرواتب'}</option>
+                <option value="under_study">📥 مستلم بالمكتب (قيد الدراسة)</option>
+                <option value="returned">⚠️ غير مطابق - إرجاع للمؤسسة للتعديل</option>
+              </select>
+            </div>
+
+            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px 16px; margin: 12px 0;">
               <label style="margin: 0; cursor: pointer; display: flex; align-items: center; gap: 8px;">
                 <input type="checkbox" id="chk_allow_director_edit" ${isDirectorUnlocked ? 'checked' : ''} style="width: 18px; height: 18px;">
                 <span style="font-weight: 700; color: ${isDirectorUnlocked ? '#d97706' : '#475569'};">
@@ -1199,22 +1388,21 @@
               </label>
             </div>
 
-            <div class="form-group" style="margin-top: 12px;">
-              <label><b>ملاحظات إبداء الرأي أو أسباب عدم المطابقة (إجبارية في حال الرفض):</b></label>
+            <div class="form-group" style="margin-top: 10px;">
+              <label><b>ملاحظات إبداء الرأي أو أسباب عدم المطابقة (إجبارية في حال الإرجاع):</b></label>
               <textarea id="modal_review_note" class="form-control" placeholder="اكتب الملاحظة هنا بدقة لتظهر للمدير والموظف..." style="width:100%; height:75px;">${emp.rejection_reason || ''}</textarea>
             </div>
           </div>
         `,
         width: '740px',
-        showDenyButton: true,
         showCancelButton: true,
-        confirmButtonText: isPayroll ? '<i class="fas fa-check-double"></i> اعتماد نهائي للصرف والرواتب' : '<i class="fas fa-paper-plane"></i> مطابق - إحالة لمصلحة الرواتب',
-        denyButtonText: '<i class="fas fa-undo"></i> غير مطابق - إرجاع للمؤسسة للتعديل',
+        confirmButtonText: '<i class="fas fa-check"></i> حفظ وتأكيد القرار',
         cancelButtonText: 'إلغاء',
         confirmButtonColor: '#28a745',
-        denyButtonColor: '#dc3545',
+        cancelButtonColor: '#64748b',
         preConfirm: () => {
           return {
+            actionChoice: document.getElementById("modal_review_action_choice").value,
             note: document.getElementById("modal_review_note").value.trim(),
             allowDir: document.getElementById("chk_allow_director_edit").checked,
             decNum: document.getElementById("modal_review_dec_num")?.value.trim() || "",
@@ -1222,62 +1410,55 @@
           };
         }
       }).then(async (result) => {
-        if (!result.isConfirmed && !result.isDenied) return;
+        if (!result.isConfirmed) return;
 
-        const note = result.value?.note || document.getElementById("modal_review_note")?.value.trim() || "";
-        const allowDir = result.value ? result.value.allowDir : false;
-        const decNum = result.value ? result.value.decNum : "";
-        const decDate = result.value ? result.value.decDate : "";
+        const actionChoice = result.value.actionChoice;
+        const note = result.value.note;
+        const allowDir = result.value.allowDir;
+        const decNum = result.value.decNum;
+        const decDate = result.value.decDate;
 
-        if (result.isConfirmed) {
-          const targetStatus = isPayroll ? "payroll_approved" : "office_approved";
-          const defaultNote = isPayroll ? "تم التدقيق والاعتماد النهائي للصرف والرواتب" : "مطابق قانونياً وتنظيمياً ومحال لمصلحة الرواتب";
+        if (actionChoice === "returned" && !note) {
+          return Swal.fire("تنبيه إلزامي", "يجب كتابة سبب عدم المطابقة أو طلب التعديل ليتمكن المدير من معالجة الخلل.", "warning");
+        }
 
-          Swal.fire({ title: 'جاري الحفظ والتأشير...', didOpen: () => Swal.showLoading() });
-          try {
-            const extraData = { allow_director_edit: allowDir };
-            if (decNum) {
-              extraData.decision_number = decNum;
-              extraData.decision_date = decDate;
-              extraData.is_decision_published = true;
-            }
+        let targetStatus = "submitted_to_office";
+        let defaultNote = "تم تحديث وضعية الملف";
 
-            await updateFileStatus(
-              emp.id, 
-              targetStatus, 
-              currentOffice.username, 
-              currentOffice.roleTitle, 
-              note || defaultNote,
-              extraData
-            );
-            Swal.fire('تم الاعتماد بنجاح', 'تم تسجيل القرار وإحالة الملف بنجاح.', 'success');
-            await loadOfficeEmployees();
-          } catch(e) {
-            Swal.fire('خطأ', 'فشل تحديث حالة الملف: ' + e.message, 'error');
+        if (actionChoice === "approved") {
+          targetStatus = isPayroll ? "payroll_approved" : "office_approved";
+          defaultNote = isPayroll ? "تم التدقيق والاعتماد النهائي للصرف والرواتب" : "مطابق قانونياً وتنظيمياً ومحال لمصلحة الرواتب";
+        } else if (actionChoice === "under_study") {
+          targetStatus = isPayroll ? "submitted_to_payroll" : "submitted_to_office";
+          defaultNote = isPayroll ? "مستلم بمصلحة الرواتب - قيد الفحص والتدقيق" : "مستلم بمكتب التعليم - قيد الدراسة والتحقق";
+        } else if (actionChoice === "returned") {
+          targetStatus = isPayroll ? "payroll_rejected" : "returned_to_director";
+          defaultNote = note;
+        }
+
+        Swal.fire({ title: 'جاري الحفظ والتأشير...', didOpen: () => Swal.showLoading() });
+        try {
+          const extraData = { 
+            allow_director_edit: (actionChoice === "returned") ? true : allowDir 
+          };
+          if (decNum) {
+            extraData.decision_number = decNum;
+            extraData.decision_date = decDate;
+            extraData.is_decision_published = true;
           }
 
-        } else if (result.isDenied) {
-          if (!note) {
-            return Swal.fire("تنبيه إلزامي", "يجب كتابة سبب عدم المطابقة أو طلب التعديل ليتمكن المدير من معالجة الخلل.", "warning");
-          }
-
-          const targetStatus = isPayroll ? "payroll_rejected" : "returned_to_director";
-
-          Swal.fire({ title: 'جاري إرجاع الملف...', didOpen: () => Swal.showLoading() });
-          try {
-            await updateFileStatus(
-              emp.id, 
-              targetStatus, 
-              currentOffice.username, 
-              currentOffice.roleTitle, 
-              note,
-              { allow_director_edit: true } // فتح التعديل للمدير تلقائياً عند الإرجاع لتصحيح الخطأ
-            );
-            Swal.fire('تم الإرجاع', 'تم إرجاع الملف بنجاح مع إرفاق الملاحظة والتوضيح للمدير.', 'info');
-            await loadOfficeEmployees();
-          } catch(e) {
-            Swal.fire('خطأ', 'فشل تحديث حالة الملف: ' + e.message, 'error');
-          }
+          await updateFileStatus(
+            emp.id, 
+            targetStatus, 
+            currentOffice.username, 
+            currentOffice.roleTitle, 
+            note || defaultNote,
+            extraData
+          );
+          Swal.fire('تم بنجاح', 'تم تسجيل وتحديث حالة الملف بنجاح.', 'success');
+          await loadOfficeEmployees();
+        } catch(e) {
+          Swal.fire('خطأ', 'فشل تحديث حالة الملف: ' + e.message, 'error');
         }
       });
     }
@@ -1291,6 +1472,7 @@
 
       const isPublished = emp.is_decision_published !== false;
       const decDate = emp.decision_date || new Date().toISOString().slice(0, 10);
+      const hasNumber = Boolean(currentDecNum || emp.decision_number);
 
       const { value: formValues } = await Swal.fire({
         title: `تسجيل رقم وتاريخ المقرر الرسمي`,
@@ -1322,6 +1504,16 @@
                 </span>
               </label>
             </div>
+
+            ${hasNumber ? `
+              <div style="margin-top: 16px; border-top: 1px dashed #cbd5e1; padding-top: 12px; text-align: center;">
+                <a href="../contract-portal/print-sheet.html?id=${empId}&type=decision" target="_blank" 
+                   class="btn btn-main" style="display: block; font-weight: 800; background: #16a34a; text-decoration: none; padding: 10px; border-radius: 8px; box-shadow: 0 4px 12px rgba(22,163,74,0.3);">
+                  <i class="fas fa-print"></i> معاينة وطباعة المقرر الرسمي A4 الآن
+                </a>
+              </div>
+            ` : ''}
+
           </div>
         `,
         focusConfirm: false,

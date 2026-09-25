@@ -63,5 +63,19 @@ service cloud.firestore {
       allow read: if true; // للتحقق من الدخول
       allow write: if true; // لتحديث كلمات المرور من لوحة التحكم
     }
+
+    // 9. جلسات المسح الذكي عن بعد بالهاتف (remote_scanner_sessions)
+    match /remote_scanner_sessions/{sessionId} {
+      allow read, write: if true;
+    }
+
+    // 10. كشوف ودفعات الأجور والمخلفات الشهرية (salary_batches & employee_salaries)
+    match /salary_batches/{batchId} {
+      allow read, write: if true;
+    }
+
+    match /employee_salaries/{salaryId} {
+      allow read, write: if true;
+    }
   }
 }

@@ -433,8 +433,8 @@
         schSelect.innerHTML += `<option value="${s}">${s}</option>`;
       });
 
-      // إذا كانت مؤسسة المدير موجودة في القائمة يتم اختيارها افتراضياً
-      if (currentDirector && currentDirector.schoolName) {
+      // إذا كانت مؤسسة المدير موجودة في القائمة يتم اختيارها افتراضياً (للمدير فقط وليس للمكتب أو المشرف)
+      if (currentDirector && !currentDirector.is_office && currentDirector.schoolName) {
         schSelect.value = currentDirector.schoolName;
       }
     }

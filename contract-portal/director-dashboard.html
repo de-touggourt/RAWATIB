@@ -284,9 +284,14 @@
       </div>
 
       <!-- صف شريط البحث والتصفية -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; align-items: center;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; align-items: center;">
         <input type="text" id="directorSearchInput" placeholder="بحث بالاسم، اللقب، أو رقم CCP..." 
                class="filter-ctrl" oninput="filterDirectorTable()">
+        
+        <!-- فلتر السنة الدراسية وقائمة الأرشيف -->
+        <select id="flt_director_academic_year" onchange="onDirectorAcademicYearChange(this.value)" class="filter-ctrl" style="font-weight: bold; border-color: #2563eb;">
+          <option value="">السنة الدراسية...</option>
+        </select>
         
         <select id="directorTypeFilter" onchange="filterDirectorTable()" class="filter-ctrl">
           <option value="">-- كل الصفات (مستخلف / متعاقد) --</option>
@@ -347,6 +352,7 @@
     let currentDirector = null;
     let institutionEmployees = [];
     let activeAcademicYear = "2026-2027";
+    let selectedDirectorAcademicYear = "2026-2027";
     let employeesListenerUnsubscribe = null;
 
     document.addEventListener("DOMContentLoaded", async () => {
@@ -362,12 +368,44 @@
       const sys = await getSystemSettings();
       if (sys && sys.active_academic_year) {
         activeAcademicYear = sys.active_academic_year;
+        selectedDirectorAcademicYear = activeAcademicYear;
         document.getElementById("activeYearBadge").textContent = `السنة: ${activeAcademicYear}`;
       }
+      initDirectorAcademicYears(sys);
 
-      // 3. ربط الاستماع اللحظي (Real-time Listener) لقاعدة البيانات لضمان التغيير اللحظي للصلاحيات
+      // 3. ربط الاستماع اللحظي (Real-time Listener) لقاعدة البيانات
       setupRealtimeEmployeesListener();
     });
+
+    // إعداد قائمة السنوات الدراسية وإدارة الأرشيف للمدير
+    function initDirectorAcademicYears(sys) {
+      const sel = document.getElementById("flt_director_academic_year");
+      if (!sel) return;
+
+      const years = (sys && Array.isArray(sys.academic_years) && sys.academic_years.length > 0)
+        ? sys.academic_years
+        : ["2024-2025", "2025-2026", "2026-2027"];
+
+      let html = "";
+      years.forEach(y => {
+        const isCurrent = (y === activeAcademicYear);
+        html += `<option value="${y}" ${isCurrent ? 'selected' : ''}>السنة: ${y} ${isCurrent ? '(الحالية)' : '(أرشيف)'}</option>`;
+      });
+      sel.innerHTML = html;
+
+      // فحص صلاحية إظهار الأرشيف للمدير
+      if (sys && sys.allow_archive_view_director === false && !currentDirector.is_admin) {
+        sel.value = activeAcademicYear;
+        sel.disabled = true;
+        sel.title = "تم قفل عرض السنوات السابقة من قبل الإدارة";
+      }
+    }
+
+    function onDirectorAcademicYearChange(val) {
+      if (!val) return;
+      selectedDirectorAcademicYear = val;
+      setupRealtimeEmployeesListener();
+    }
 
     // إعداد الاستماع اللحظي لسجلات المؤسسة
     function setupRealtimeEmployeesListener() {
@@ -385,7 +423,8 @@
         if (!currentDirector.is_admin && currentDirector.schoolName && currentDirector.schoolName !== "كافة المؤسسات") {
           q = q.where("school_name", "==", currentDirector.schoolName);
         }
-        q = q.where("academic_year", "==", activeAcademicYear);
+        const targetYear = selectedDirectorAcademicYear || activeAcademicYear;
+        q = q.where("academic_year", "==", targetYear);
 
         employeesListenerUnsubscribe = q.onSnapshot((snap) => {
           institutionEmployees = [];
@@ -437,7 +476,7 @@
       renderEmployeesTable(filtered);
     }
 
-    // رسم صفوف الجدول مع إخفاء أزرار التعديل والحذف اللحظي (لا تجميدها)
+    // رسم صفوف الجدول مع زر عمليات موحد
     function renderEmployeesTable(list) {
       const tbody = document.getElementById("employeesTableBody");
       tbody.innerHTML = "";
@@ -463,12 +502,6 @@
         const nameAr = `${emp.fmn_ar || ''} ${emp.frn_ar || ''}`.trim() || '---';
         const dates = `${emp.start_date || '---'} ⬅️ ${emp.end_date || '---'}`;
         const duration = emp.duration_text || (emp.duration_days ? `${emp.duration_days} يوم` : '---');
-
-        // الصلاحيات: إذا سمح بالتعديل/الحذف يظهران، وإذا لم يسمح يختفيان تماماً (إخفاء الزرين لا تجميدهم)
-        const allowEdit = typeof canDirectorEdit === "function" ? canDirectorEdit(emp) : true;
-        const allowDelete = typeof canDirectorDelete === "function" ? canDirectorDelete(emp) : true;
-        
-        // التحقق من وجود رقم المقرر
         const hasDecisionNumber = Boolean(emp.decision_number && String(emp.decision_number).trim() !== "");
 
         tr.innerHTML = `
@@ -496,53 +529,221 @@
             `}
           </td>
           <td style="text-align: center;">
-            <div style="display:flex; justify-content:center; gap:5px; flex-wrap:wrap; align-items:center;">
-              
-              <!-- 1. زر طباعة الاستمارة A4 (منفصل) -->
-              <a href="print-sheet.html?id=${emp.id}&type=sheet" target="_blank" class="btn-action-sheet" title="طباعة استمارة المعلومات الرسمية A4">
-                <i class="fas fa-file-lines"></i> الاستمارة A4
-              </a>
-
-              <!-- 2. زر طباعة المقرر الرسمي (منفصل: متاح حصرياً بعد أن يقوم رئيس مكتب الطور بوضع رقمه الرسمي) -->
-              ${hasDecisionNumber ? `
-                <a href="print-sheet.html?id=${emp.id}&type=decision" target="_blank" class="btn-action-decision" title="طباعة مقرر الاستخلاف والتعاقد الرسمي">
-                  <i class="fas fa-certificate"></i> طباعة المقرر
-                </a>
-              ` : `
-                <button class="btn-action-decision" style="background:#f1f5f9; color:#94a3b8; border:1px dashed #cbd5e1; cursor:not-allowed;" disabled title="لا يمكن للمدير طباعة المقرر إلا بعد أن يقوم رئيس مكتب التعليم بتسجيل الرقم الرسمي للمقرر">
-                  <i class="fas fa-clock"></i> في انتظار رقم المقرر
-                </button>
-              `}
-
-              <!-- 3. زر شهادة العمل الرسمية (مطابقة لنموذج الصورة) -->
-              <a href="print-sheet.html?id=${emp.id}&type=work_cert" target="_blank" class="btn-action-workcert" title="استخراج وطباعة شهادة عمل رسمية">
-                <i class="fas fa-stamp"></i> شهادة عمل
-              </a>
-
-              <!-- 4. زر التعديل: يظهر لحظياً إذا كان مسموحاً ويختفي تماماً إذا لم يكن مسموحاً -->
-              ${allowEdit ? `
-                <button class="btn-action-edit" onclick="editRegistration('${emp.id}')" title="تعديل بيانات الملف">
-                  <i class="fas fa-pen"></i> تعديل
-                </button>
-              ` : ''}
-
-              <!-- 5. زر الحذف: يظهر لحظياً إذا كان مسموحاً ويختفي تماماً إذا لم يكن مسموحاً -->
-              ${allowDelete ? `
-                <button class="btn-action-delete" onclick="deleteRegistration('${emp.id}', '${nameAr}')" title="حذف الملف">
-                  <i class="fas fa-trash-can"></i> حذف
-                </button>
-              ` : ''}
-
-              <!-- 6. زر معاينة المسار والتفاصيل -->
-              <button class="btn-table-action" style="background:#475569; color:white; padding:5px 8px; font-size:11px;" onclick="showWorkflowModal('${emp.id}')" title="معاينة تفاصيل ومسار دراسة الملف">
-                <i class="fas fa-eye"></i>
-              </button>
-
-            </div>
+            <button class="btn btn-main btn-sm" onclick="openDirectorRowMenu('${emp.id}')" 
+                    style="font-weight: 800; padding: 6px 14px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #1e3a8a, #2563eb); box-shadow: 0 2px 6px rgba(37,99,235,0.25);">
+              <i class="fas fa-ellipsis-vertical"></i> عمليات
+            </button>
           </td>
         `;
         tbody.appendChild(tr);
       });
+    }
+
+    // ============================================================
+    // قائمة العمليات الموحدة للمدير (Unified Operations Menu)
+    // ============================================================
+    function openDirectorRowMenu(empId) {
+      const emp = institutionEmployees.find(e => e.id === empId);
+      if (!emp) return;
+
+      const nameAr = `${emp.fmn_ar || ''} ${emp.frn_ar || ''}`.trim() || '---';
+      const allowEdit = typeof canDirectorEdit === "function" ? canDirectorEdit(emp) : true;
+      const allowDelete = typeof canDirectorDelete === "function" ? canDirectorDelete(emp) : true;
+      const hasDecision = Boolean(emp.decision_number && String(emp.decision_number).trim() !== "");
+      const isArchivedYear = (selectedDirectorAcademicYear || activeAcademicYear) !== activeAcademicYear;
+
+      Swal.fire({
+        title: `<div style="font-size:16px; font-weight:800; color:#1e3a8a;"><i class="fas fa-bars-staggered"></i> عمليات الملف: ${nameAr}</div>`,
+        html: `
+          <div style="direction: rtl; text-align: right; display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+            
+            <button class="btn btn-main" onclick="Swal.close(); showWorkflowModal('${emp.id}')" 
+                    style="justify-content: flex-start; padding: 10px 14px; font-weight: bold; background: #2563eb;">
+              <i class="fas fa-eye" style="width: 22px;"></i> معاينة مسار وتفاصيل الملف والاعتماد
+            </button>
+
+            <button class="btn btn-success" onclick="Swal.close(); openDirectorDecisionModal('${emp.id}')" 
+                    style="justify-content: flex-start; padding: 10px 14px; font-weight: bold; background: ${hasDecision ? '#16a34a' : '#64748b'};">
+              <i class="fas fa-certificate" style="width: 22px;"></i> ${hasDecision ? 'المقرر الرسمي (معاينة وطباعة)' : 'المقرر الرسمي (في انتظار الرقم)'}
+            </button>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <a href="print-sheet.html?id=${emp.id}&type=sheet" target="_blank" class="btn" 
+                 style="justify-content: center; padding: 9px; font-weight: bold; background: #7c3aed; color: white; text-decoration: none;" onclick="Swal.close()">
+                <i class="fas fa-file-lines"></i> استمارة A4
+              </a>
+
+              <a href="print-sheet.html?id=${emp.id}&type=work_cert" target="_blank" class="btn" 
+                 style="justify-content: center; padding: 9px; font-weight: bold; background: #0284c7; color: white; text-decoration: none;" onclick="Swal.close()">
+                <i class="fas fa-stamp"></i> شهادة عمل
+              </a>
+            </div>
+
+            <!-- أزرار التعديل والحذف: تختفي لحظياً تماماً إذا لم يكن مسموحاً للمدير (إخفاء الزرين لا تجميدهم) -->
+            ${allowEdit ? `
+              <button class="btn" onclick="Swal.close(); editRegistration('${emp.id}')" 
+                      style="justify-content: flex-start; padding: 10px 14px; font-weight: bold; background: #4f46e5; color: white;">
+                <i class="fas fa-pen" style="width: 22px;"></i> تعديل بيانات الملف
+              </button>
+            ` : ''}
+
+            ${allowDelete ? `
+              <button class="btn" onclick="Swal.close(); deleteRegistration('${emp.id}', '${nameAr}')" 
+                      style="justify-content: flex-start; padding: 10px 14px; font-weight: bold; background: #dc2626; color: white;">
+                <i class="fas fa-trash-can" style="width: 22px;"></i> حذف ملف الموظف
+              </button>
+            ` : ''}
+
+            ${isArchivedYear ? `
+              <button class="btn" onclick="Swal.close(); renewDirectorEmployeeToActiveYear('${emp.id}')" 
+                      style="justify-content: flex-start; padding: 10px 14px; font-weight: bold; background: linear-gradient(135deg, #10b981, #047857); color: white;">
+                <i class="fas fa-arrows-rotate" style="width: 22px;"></i> اعتماد وتجديد التعاقد في السنة الحالية (${activeAcademicYear})
+              </button>
+            ` : ''}
+
+          </div>
+        `,
+        showConfirmButton: false,
+        showCloseButton: true,
+        width: '450px'
+      });
+    }
+
+    // نافذة المقرر الرسمي للمدير (طباعة فقط إذا توفر الرقم المسجل من المكتب)
+    function openDirectorDecisionModal(empId) {
+      const emp = institutionEmployees.find(e => e.id === empId);
+      if (!emp) return;
+
+      const hasDecision = Boolean(emp.decision_number && String(emp.decision_number).trim() !== "");
+      const nameAr = `${emp.fmn_ar || ''} ${emp.frn_ar || ''}`.trim();
+
+      if (!hasDecision) {
+        return Swal.fire({
+          icon: 'info',
+          title: 'في انتظار تسجيل رقم المقرر',
+          html: `
+            <div style="direction: rtl; text-align: right; font-size: 13.5px; line-height: 1.8;">
+              الموظف: <b>${nameAr}</b><br>
+              <span style="color:#d97706; font-weight:700;">لا يمكن طباعة المقرر إلا بعد أن يقوم رئيس مكتب التعليم بتسجيل الرقم الرسمي للمقرر بالمديرية.</span><br>
+              يرجى متابعة حالة الملف والتواصل مع مكتب الطور المختص.
+            </div>
+          `,
+          confirmButtonText: 'حسناً',
+          confirmButtonColor: '#2575fc'
+        });
+      }
+
+      Swal.fire({
+        title: `المقرر الرسمي للموظف`,
+        html: `
+          <div style="direction: rtl; text-align: right; font-size: 13.5px; line-height: 1.8;">
+            <p>الموظف(ة): <b style="color:#1e3a8a;">${nameAr}</b></p>
+            <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:10px; padding:12px 14px; margin-bottom:12px;">
+              <b>رقم المقرر المعتمد بالمديرية:</b> <span style="color:#15803d; font-size:16px; font-weight:900;">${emp.decision_number}</span><br>
+              <b>تاريخ الصدور:</b> <span>${emp.decision_date || '---'}</span>
+            </div>
+            <div style="text-align: center; margin-top: 15px;">
+              <a href="print-sheet.html?id=${emp.id}&type=decision" target="_blank" class="btn btn-success" 
+                 style="display: block; font-weight: 800; padding: 10px; border-radius: 8px; text-decoration: none; box-shadow: 0 4px 12px rgba(22,163,74,0.3);">
+                <i class="fas fa-print"></i> معاينة وطباعة المقرر الرسمي A4 الآن
+              </a>
+            </div>
+          </div>
+        `,
+        showConfirmButton: false,
+        showCloseButton: true
+      });
+    }
+
+    // اعتماد وتجديد التعاقد في السنة الحالية لمدير المؤسسة
+    async function renewDirectorEmployeeToActiveYear(empId) {
+      const emp = institutionEmployees.find(e => e.id === empId);
+      if (!emp) return;
+
+      if ((selectedDirectorAcademicYear || activeAcademicYear) === activeAcademicYear) {
+        return Swal.fire("تنبيه", "هذا الموظف مسجل بالفعل في السنة الدراسية الحالية.", "info");
+      }
+
+      const nameAr = `${emp.fmn_ar || ''} ${emp.frn_ar || ''}`.trim();
+      const confirmRes = await Swal.fire({
+        title: 'اعتماد وتجديد التعاقد في السنة الحالية',
+        html: `
+          <div style="direction: rtl; text-align: right; font-size: 13.5px; line-height: 1.8;">
+            هل تؤكد تجديد تسجيل الموظف: <b style="color:#2563eb;">${nameAr}</b> بالمؤسسة؟<br>
+            ونقل اعتماده من سنة (<b>${selectedDirectorAcademicYear}</b>) إلى السنة الدراسية المفعلة (<b>${activeAcademicYear}</b>)؟<br>
+            <span style="color:#059669; font-size:12px; font-weight:700;">* سيتم نسخ البيانات وتبدأ حالة الملف: قيد التحضير بالمؤسسة لتتمكن من مراجعتها وتعديل التواريخ.</span>
+          </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'نعم، تجديد ونقل للسنة الحالية',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#059669'
+      });
+
+      if (!confirmRes.isConfirmed) return;
+
+      Swal.fire({ title: 'جاري فحص وتجديد التسجيل...', didOpen: () => Swal.showLoading() });
+
+      try {
+        const checkSnap = await window.db.collection("contract_registrations")
+          .where("ccp", "==", emp.ccp)
+          .where("academic_year", "==", activeAcademicYear)
+          .get();
+
+        if (!checkSnap.empty) {
+          Swal.close();
+          return Swal.fire("مسجل مسبقاً", `الموظف (${nameAr}) مسجل بالفعل في السنة الدراسية الحالية (${activeAcademicYear}).`, "warning");
+        }
+
+        const newDocId = `${emp.ccp}_${activeAcademicYear.replace('-', '_')}`;
+        const newRecord = {
+          ...emp,
+          id: newDocId,
+          academic_year: activeAcademicYear,
+          workflow_status: "pending_director",
+          rejection_reason: "",
+          decision_number: "",
+          decision_date: "",
+          is_decision_published: false,
+          allow_director_edit: true,
+          allow_director_delete: true,
+          created_at: new Date().toISOString(),
+          last_updated: new Date().toISOString(),
+          renewed_from_year: selectedDirectorAcademicYear,
+          renewed_from_id: empId,
+          workflow_history: [{
+            timestamp: new Date().toISOString(),
+            actorName: currentDirector.directorName,
+            actorRole: `مدير مؤسسة (${currentDirector.schoolName})`,
+            status: "pending_director",
+            note: `تم تجديد التعاقد ونقل السجل من سنة ${selectedDirectorAcademicYear} إلى السنة الدراسية ${activeAcademicYear}.`
+          }]
+        };
+
+        delete newRecord.received_by_office;
+        delete newRecord.received_by_payroll;
+
+        await window.db.collection("contract_registrations").doc(newDocId).set(newRecord);
+
+        Swal.fire({
+          icon: 'success',
+          title: 'تم تجديد التعاقد بنجاح!',
+          text: `تم نقل واعتماد تسجيل الموظف في السنة الدراسية (${activeAcademicYear}) بنجاح.`,
+          showCancelButton: true,
+          confirmButtonText: 'الانتقال للسنة الحالية',
+          cancelButtonText: 'البقاء هنا'
+        }).then((res) => {
+          if (res.isConfirmed) {
+            document.getElementById("flt_director_academic_year").value = activeAcademicYear;
+            onDirectorAcademicYearChange(activeAcademicYear);
+          }
+        });
+
+      } catch(err) {
+        console.error("خطأ تجديد التعاقد:", err);
+        Swal.fire("خطأ", "فشل تجديد التعاقد: " + err.message, "error");
+      }
     }
 
     // فحص مرشح جديد للدخول

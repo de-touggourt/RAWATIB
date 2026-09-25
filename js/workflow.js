@@ -244,6 +244,69 @@ async function updateFileStatus(registrationId, newStatusKey, actorName, actorRo
   return event;
 }
 
+// دالة البحث الذكي عن ملف المستخلف بالمعرف أو CCP أو NIN أو باركود الاستمارة
+async function findRegistrationByCode(identifier) {
+  if (!window.db) throw new Error("قاعدة البيانات غير متصلة");
+  const raw = String(identifier || "").trim();
+  if (!raw) return { found: false, message: "الرمز فارغ" };
+
+  let searchDocId = raw;
+  let searchNum = raw.replace(/\D/g, "");
+
+  // استخراج القيم إذا كان الرمز منقولاً من QR مركب
+  if (raw.includes("CCP:")) {
+    const parts = raw.split("|");
+    for (const part of parts) {
+      if (part.startsWith("CCP:")) searchNum = part.replace("CCP:", "").trim().replace(/\D/g, "");
+      if (part.startsWith("ID:")) searchDocId = part.replace("ID:", "").trim();
+    }
+  }
+
+  // 1. بحث بالمعرف المباشر
+  if (searchDocId) {
+    try {
+      const docSnap = await window.db.collection("contract_registrations").doc(searchDocId).get();
+      if (docSnap.exists) {
+        return { found: true, docId: docSnap.id, data: docSnap.data() };
+      }
+    } catch(e) {}
+  }
+
+  // 2. إذا كان الرقم 18 رقماً (NIN)
+  if (searchNum && searchNum.length === 18) {
+    try {
+      const ninSnap = await window.db.collection("contract_registrations").where("nin", "==", searchNum).limit(1).get();
+      if (!ninSnap.empty) {
+        const d = ninSnap.docs[0];
+        return { found: true, docId: d.id, data: d.data() };
+      }
+    } catch(e) {}
+  }
+
+  // 3. بحث برقم الحساب البريدي CCP (بالصيغة الأصلية أو المجردة من الأصفار)
+  if (searchNum && searchNum.length >= 8) {
+    try {
+      let ccpSnap = await window.db.collection("contract_registrations").where("ccp", "==", searchNum).limit(1).get();
+      if (!ccpSnap.empty) {
+        const d = ccpSnap.docs[0];
+        return { found: true, docId: d.id, data: d.data() };
+      }
+
+      // تجربة إزالة الأصفار البادئة أو إضافتها
+      const trimmedCcp = searchNum.replace(/^0+/, "");
+      if (trimmedCcp !== searchNum) {
+        ccpSnap = await window.db.collection("contract_registrations").where("ccp", "==", trimmedCcp).limit(1).get();
+        if (!ccpSnap.empty) {
+          const d = ccpSnap.docs[0];
+          return { found: true, docId: d.id, data: d.data() };
+        }
+      }
+    } catch(e) {}
+  }
+
+  return { found: false, message: `لم يتم العثور على أي ملف مسجل برمز أو رقم (${raw}).` };
+}
+
 // استلام الملف الفعلي عبر مسح الباركود أو رمز QR وتجميد التعديل
 async function receiveFileByScan(identifier, scannerUser, scannerRole, officeType) {
   if (!window.db) throw new Error("قاعدة البيانات غير متصلة");
@@ -255,42 +318,13 @@ async function receiveFileByScan(identifier, scannerUser, scannerRole, officeTyp
   const defaultRole = isPayroll ? "مصلحة الرواتب" : "مكتب التعليم";
   const safeScannerRole = String(scannerRole || defaultRole).trim();
 
-  // استخراج CCP / معرف الوثيقة إذا كان من الباركود أو الـ QR
-  let searchCcp = cleanId.replace(/\D/g, "");
-  let searchDocId = cleanId;
-
-  if (cleanId.includes("CCP:")) {
-    const parts = cleanId.split("|");
-    for (const part of parts) {
-      if (part.startsWith("CCP:")) searchCcp = part.replace("CCP:", "").trim();
-      if (part.startsWith("ID:")) searchDocId = part.replace("ID:", "").trim();
-    }
+  const foundRes = await findRegistrationByCode(cleanId);
+  if (!foundRes.found) {
+    return { success: false, message: foundRes.message || `لم يتم العثور على أي ملف مسجل برقم أو رمز (${cleanId}). تأكد من تسجيله أولاً بالمؤسسة.` };
   }
 
-  let recordDoc = null;
-
-  // 1. بحث بالمعرف المباشر
-  if (searchDocId) {
-    try {
-      const docDirect = await window.db.collection("contract_registrations").doc(searchDocId).get();
-      if (docDirect.exists) recordDoc = docDirect;
-    } catch(e) {}
-  }
-
-  // 2. بحث برقم الحساب CCP
-  if (!recordDoc && searchCcp) {
-    const qSnap = await window.db.collection("contract_registrations").where("ccp", "==", searchCcp).limit(1).get();
-    if (!qSnap.empty) {
-      recordDoc = qSnap.docs[0];
-    }
-  }
-
-  if (!recordDoc) {
-    return { success: false, message: `لم يتم العثور على أي ملف مسجل برقم أو رمز (${cleanId}). تأكد من تسجيله أولاً بالمؤسسة.` };
-  }
-
-  const data = recordDoc.data();
-  const docId = recordDoc.id;
+  const data = foundRes.data;
+  const docId = foundRes.docId;
   const targetStatus = isPayroll ? "submitted_to_payroll" : "submitted_to_office";
   const officeName = isPayroll ? "مصلحة الرواتب" : "مكتب التعليم";
   const timestamp = new Date().toISOString();

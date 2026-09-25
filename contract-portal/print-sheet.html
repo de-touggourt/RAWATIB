@@ -498,20 +498,12 @@
           <b>الرتبة : <span id="wc_rank" style="font-weight: 900;">...</span></b>
         </p>
 
-        <p style="margin-bottom: 12px;">
+        <p style="margin-bottom: 14px;">
           <b>الصفة : <span id="wc_status" style="font-weight: 900;">...</span></b>
         </p>
 
-        <p style="margin-bottom: 12px;">
-          <b>الوظيفة: <span id="wc_job">...</span></b>
-        </p>
-
-        <p style="margin-bottom: 12px;">
-          <b>مكان العمل : <span id="wc_workplace">...</span></b>
-        </p>
-
         <!-- التعديل المطلوب: قد عمل(ت) بالمؤسسة في الفترة الممتدة من إلى -->
-        <p style="margin-bottom: 12px;">
+        <p style="margin-bottom: 14px;">
           <b>(ت) قد عمل(ت) بالمؤسسة في الفترة الممتدة من : <span id="wc_start_date">...</span> إلى : <span id="wc_end_date">...</span></b>
         </p>
       </div>
@@ -621,6 +613,25 @@
         }
 
         currentDocData = snap.data();
+
+        // فحص وجود رقم المقرر في حال طلب طباعة المقرر
+        if (targetDocType === "decision" && (!currentDocData.decision_number || String(currentDocData.decision_number).trim() === '')) {
+          document.getElementById("view_decision").innerHTML = `
+            <div style="text-align:center; padding: 60px 20px; font-family:'Cairo', sans-serif;">
+              <i class="fas fa-lock fa-3x" style="color:#d97706; margin-bottom:15px; display:block;"></i>
+              <h3 style="color:#b45309; font-weight:800; font-size:20px;">المقرر الرسمي غير متاح للطباعة بعد</h3>
+              <p style="color:#64748b; font-size:14px; line-height:1.8; max-width:500px; margin:10px auto;">
+                لم يتم إدراج الرقم الرسمي للمقرر وتأكيده من قبل رئيس مكتب التعليم بالمديرية.<br>
+                لا يمكن استخراج أو طباعة وثيقة المقرر إلا بعد تسجيل رقمه الرسمي بالمنظومة.
+              </p>
+              <button class="btn btn-secondary no-print" onclick="window.close(); if(history.length > 1) history.back();" style="margin-top:15px; font-weight:bold;">
+                <i class="fas fa-arrow-right"></i> رجوع
+              </button>
+            </div>
+          `;
+          return;
+        }
+
         populateFields(currentDocData, docId);
 
         // توليد الباركود والـ QR المناسب لكل وثيقة
@@ -717,15 +728,15 @@
       else if (levelTitle.includes("ثانوي")) schoolType = "ثانوية";
 
       document.getElementById("wc_school_type").textContent = schoolType;
-      document.getElementById("wc_school_title").textContent = `دائرة ${d.daaira || 'تقرت'} - ${schoolType} ${schoolTitle} -تقرت-`;
-      document.getElementById("wc_school_name").textContent = `${schoolTitle} -تقرت-`;
+      const baladiyaLoc = d.baladiya || 'تقرت';
+      document.getElementById("wc_school_title").textContent = `${schoolType} ${schoolTitle} -${baladiyaLoc}-`;
+      document.getElementById("wc_school_name").textContent = `${schoolTitle} -${baladiyaLoc}-`;
       document.getElementById("wc_employee_name").textContent = nameAr;
       document.getElementById("wc_dob").textContent = dobVal;
       document.getElementById("wc_pob").textContent = pobVal;
       document.getElementById("wc_rank").textContent = cleanedRank;
       document.getElementById("wc_status").textContent = statusTitle;
-      document.getElementById("wc_job").textContent = cleanedRank;
-      document.getElementById("wc_workplace").textContent = `${schoolType} ${schoolTitle} -تقرت-`;
+      document.getElementById("wc_city").textContent = baladiyaLoc;
       document.getElementById("wc_start_date").textContent = d.start_date || '---';
       document.getElementById("wc_end_date").textContent = d.end_date ? d.end_date : 'يومنا هذا';
       document.getElementById("wc_num").textContent = d.cert_number || decisionNum || '............';

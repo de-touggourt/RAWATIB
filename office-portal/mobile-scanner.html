@@ -277,6 +277,7 @@
       }
     }
 
+
     async function onScanSuccess(decodedText) {
       if (isSystemBlocked || isProcessingScan) return;
       isProcessingScan = true;
@@ -286,14 +287,14 @@
         audioChime.play().catch(() => {});
       } catch(e) {}
 
-      await processScannedRecord(decodedText);
+      await showScannedEmployeeModal(decodedText);
 
       setTimeout(() => {
         isProcessingScan = false;
-      }, 1800);
+      }, 1000);
     }
 
-    async function processScannedRecord(code) {
+    async function showScannedEmployeeModal(code) {
       // التحقق اللحظي من فتح المسح قبل المعالجة
       if (window.db) {
         try {
@@ -305,18 +306,84 @@
       }
 
       Swal.fire({
-        title: 'جاري استلام الملف...',
-        text: 'يتم فحص وتحديث حالة الملف بقاعدة البيانات',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
+        title: 'جاري البحث عن الملف...',
+        didOpen: () => Swal.showLoading(),
+        allowOutsideClick: false
       });
 
       try {
-        const res = await receiveFileByScan(code, scannerUser, `ماسح الهاتف (${officeType})`, officeType);
+        const foundRes = await findRegistrationByCode(code);
+        Swal.close();
+
+        if (!foundRes.found) {
+          return Swal.fire({
+            icon: 'warning',
+            title: 'لم يتم العثور على الملف',
+            text: foundRes.message || `لم يتم العثور على أي ملف مسجل برقم أو رمز (${code}).`,
+            confirmButtonText: 'حسناً',
+            confirmButtonColor: '#3b82f6'
+          });
+        }
+
+        const emp = foundRes.data;
+        const empId = foundRes.docId;
+        const stInfo = getStatusInfo(emp.workflow_status);
+        const nameAr = `${emp.fmn_ar || ''} ${emp.frn_ar || ''}`.trim();
+        const isPayroll = officeType === "payroll";
+
+        const { value: chosenAction } = await Swal.fire({
+          title: `ملف الموظف: ${nameAr}`,
+          html: `
+            <div style="direction: rtl; text-align: right; font-size: 13.5px; line-height: 1.8;">
+              <div style="background: #1e293b; color: #f8fafc; border-radius: 12px; padding: 12px; margin-bottom: 12px; border: 1px solid #334155;">
+                <div style="margin-bottom: 5px;"><b>رقم الحساب (CCP):</b> <span style="color:#60a5fa; font-weight:bold;">${emp.ccp}</span></div>
+                <div style="margin-bottom: 5px;"><b>رقم التعريف (NIN):</b> <span style="font-family:monospace;">${emp.nin || '---'}</span></div>
+                <div style="margin-bottom: 5px;"><b>المؤسسة:</b> <span>${emp.school_name || '---'}</span> (${emp.level || '---'})</div>
+                <div style="margin-bottom: 5px;"><b>الرتبة والصفة:</b> <span>${emp.rank || '---'}</span> - <b>${emp.status_type || '---'}</b></div>
+                <div style="margin-bottom: 5px;"><b>فترة العمل:</b> من ${emp.start_date || '---'} إلى ${emp.end_date || '---'} (${emp.duration_days || 0} يوم)</div>
+                <div><b>الوضعية الحالية:</b> <span style="color:${stInfo.color}; font-weight:800;"><i class="fas ${stInfo.icon}"></i> ${stInfo.label}</span></div>
+                ${emp.decision_number ? `<div style="color:#4ade80; font-weight:bold; margin-top:5px;"><i class="fas fa-certificate"></i> رقم المقرر: ${emp.decision_number}</div>` : ''}
+              </div>
+              <div style="color: #64748b; font-size: 12px; text-align: center;">
+                اختر الإجراء المطلوب تنفيذه على هذا الملف فورياً:
+              </div>
+            </div>
+          `,
+          showCancelButton: true,
+          showDenyButton: true,
+          confirmButtonText: isPayroll ? '<i class="fas fa-check"></i> مستلم بالمصلحة' : '<i class="fas fa-inbox"></i> مستلم بالمكتب',
+          denyButtonText: '<i class="fas fa-clipboard-check"></i> دراسة الملف',
+          cancelButtonText: '<i class="fas fa-times"></i> إغلاق',
+          confirmButtonColor: '#10b981',
+          denyButtonColor: '#2563eb',
+          cancelButtonColor: '#64748b',
+          allowOutsideClick: false
+        });
+
+        if (chosenAction === true) {
+          // 1. إجراء مستلم بالمكتب
+          await executeMobileReceive(empId, emp);
+        } else if (chosenAction === false && Swal.getDenyButton() && document.activeElement === Swal.getDenyButton()) {
+          // 2. إجراء دراسة الملف
+          await executeMobileStudy(empId, emp);
+        }
+        // في حالة إلغاء/إغلاق: تعود الكاميرا للعمل تلقائياً
+
+      } catch (err) {
+        Swal.close();
+        console.error("خطأ معالجة مسح الهاتف:", err);
+        Swal.fire('خطأ', 'حدث خطأ أثناء الاتصال بقاعدة البيانات: ' + err.message, 'error');
+      }
+    }
+
+    // تنفيذ إجراء الاستلام المباشر بالمكتب
+    async function executeMobileReceive(empId, emp) {
+      Swal.fire({ title: 'جاري تسجيل الاستلام...', didOpen: () => Swal.showLoading() });
+      try {
+        const res = await receiveFileByScan(empId, scannerUser, `ماسح الهاتف (${officeType})`, officeType);
         Swal.close();
 
         if (res.success) {
-          // تحديث عداد الجلسة لتزامن الحاسوب
           if (window.db) {
             await window.db.collection("remote_scanner_sessions").doc(sessionId).update({
               last_scanned_doc: res.docId,
@@ -325,46 +392,132 @@
             });
           }
 
-          const emp = res.data;
+          Swal.fire({
+            icon: 'success',
+            title: 'تم استلام الملف بنجاح!',
+            html: `تم تسجيل استلام ملف <b>${emp.fmn_ar || ''} ${emp.frn_ar || ''}</b> وتجميد تعديله للمؤسسة.`,
+            timer: 2000,
+            showConfirmButton: false
+          });
+
+          // عرض كرت النتيجة
           const box = document.getElementById("resultCard");
           box.style.display = "block";
           document.getElementById("resultDetails").innerHTML = `
             <b>الاسم:</b> ${emp.fmn_ar || ''} ${emp.frn_ar || ''}<br>
             <b>رقم CCP:</b> ${emp.ccp}<br>
             <b>المؤسسة:</b> ${emp.school_name}<br>
-            <b>الحالة الجديدة:</b> <span style="color:#4ade80; font-weight:800;">${getStatusInfo(emp.workflow_status).label}</span>
+            <b>الحالة الجديدة:</b> <span style="color:#4ade80; font-weight:800;">مستلم بالمكتب</span>
           `;
-
-          box.scrollIntoView({ behavior: 'smooth' });
-
-          Swal.fire({
-            icon: 'success',
-            title: 'تم استلام الملف بنجاح!',
-            html: `الموظف: <b>${emp.fmn_ar || ''} ${emp.frn_ar || ''}</b><br>المؤسسة: <b>${emp.school_name}</b>`,
-            timer: 1600,
-            showConfirmButton: false
-          });
-
         } else {
-          Swal.fire({
-            icon: 'warning',
-            title: 'تنبيه الاستلام',
-            text: res.message || 'تعذر معالجة هذا الرمز.',
-            confirmButtonColor: '#3b82f6'
+          Swal.fire('تنبيه', res.message, 'warning');
+        }
+      } catch(err) {
+        Swal.fire('خطأ', 'فشل الاستلام: ' + err.message, 'error');
+      }
+    }
+
+    // تنفيذ إجراء دراسة الملف بالهاتف
+    async function executeMobileStudy(empId, emp) {
+      const isPayroll = officeType === "payroll";
+      const { value: studyData } = await Swal.fire({
+        title: `دراسة ملف: ${emp.fmn_ar || ''} ${emp.frn_ar || ''}`,
+        html: `
+          <div style="direction: rtl; text-align: right; font-size: 13px;">
+            <div style="margin-bottom: 10px;">
+              <label style="font-weight: 700; display: block; margin-bottom: 3px;">رقم المقرر الصادر:</label>
+              <input type="text" id="m_dec_num" value="${emp.decision_number || ''}" placeholder="مثال: 145 أو 352/2026" 
+                     style="width: 100%; height: 38px; border: 1.5px solid #3b82f6; border-radius: 8px; text-align: center; font-weight: bold; background:#0f172a; color:white;">
+            </div>
+            <div style="margin-bottom: 10px;">
+              <label style="font-weight: 700; display: block; margin-bottom: 3px;">تاريخ صدور المقرر:</label>
+              <input type="date" id="m_dec_date" value="${emp.decision_date || new Date().toISOString().slice(0, 10)}" 
+                     style="width: 100%; height: 38px; border: 1.5px solid #3b82f6; border-radius: 8px; text-align: center; background:#0f172a; color:white;">
+            </div>
+            <div style="margin-bottom: 10px;">
+              <label style="font-weight: 700; display: block; margin-bottom: 3px;">القرار والتأشيرة:</label>
+              <select id="m_action_choice" style="width: 100%; height: 38px; border-radius: 8px; font-weight: bold; background:#0f172a; color:white; border: 1.5px solid #3b82f6;">
+                <option value="approved">${isPayroll ? 'اعتماد نهائي للصرف والرواتب' : 'مطابق - إحالة لمصلحة الرواتب'}</option>
+                <option value="received">مستلم بالمكتب (قيد الدراسة)</option>
+                <option value="returned">غير مطابق - إرجاع للمؤسسة للتعديل</option>
+              </select>
+            </div>
+            <div style="margin-bottom: 10px;">
+              <label style="font-weight: 700; display: block; margin-bottom: 3px;">ملاحظات الدراسة (إلزامية عند الإرجاع):</label>
+              <textarea id="m_note" placeholder="اكتب ملاحظة التعديل أو الاعتماد..." 
+                        style="width: 100%; height: 60px; border-radius: 8px; border: 1px solid #475569; background:#0f172a; color:white;"></textarea>
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'حفظ وتأكيد',
+        cancelButtonText: 'إلغاء',
+        confirmButtonColor: '#10b981',
+        preConfirm: () => {
+          return {
+            decNum: document.getElementById("m_dec_num").value.trim(),
+            decDate: document.getElementById("m_dec_date").value,
+            actionChoice: document.getElementById("m_action_choice").value,
+            note: document.getElementById("m_note").value.trim()
+          };
+        }
+      });
+
+      if (!studyData) return;
+
+      if (studyData.actionChoice === "returned" && !studyData.note) {
+        return Swal.fire("تنبيه", "يجب كتابة سبب الإرجاع لتوضيحه للمؤسسة.", "warning");
+      }
+
+      Swal.fire({ title: 'جاري تحديث الملف...', didOpen: () => Swal.showLoading() });
+
+      try {
+        let newStatus = "submitted_to_office";
+        let defaultNote = "تم تحديث الملف بالدراسة عبر الماسح";
+        let extra = {};
+
+        if (studyData.actionChoice === "approved") {
+          newStatus = isPayroll ? "payroll_approved" : "office_approved";
+          defaultNote = isPayroll ? "تم التدقيق والاعتماد النهائي للصرف والرواتب" : "مطابق قانونياً ومحال لمصلحة الرواتب";
+        } else if (studyData.actionChoice === "returned") {
+          newStatus = isPayroll ? "payroll_rejected" : "returned_to_director";
+          defaultNote = studyData.note;
+          extra.allow_director_edit = true; // السماح للمدير بالتعديل
+        }
+
+        if (studyData.decNum) {
+          extra.decision_number = studyData.decNum;
+          extra.decision_date = studyData.decDate;
+          extra.is_decision_published = true;
+        }
+
+        await updateFileStatus(
+          empId, 
+          newStatus, 
+          scannerUser, 
+          `ماسح الهاتف (${officeType})`, 
+          studyData.note || defaultNote,
+          extra
+        );
+
+        // تزامن مع الجلسة
+        if (window.db) {
+          await window.db.collection("remote_scanner_sessions").doc(sessionId).update({
+            last_scanned_doc: empId,
+            last_scanned_at: new Date().toISOString()
           });
         }
 
-      } catch (err) {
-        Swal.close();
-        console.error("خطأ معالجة المسح:", err);
-        Swal.fire('خطأ', 'حدث خطأ أثناء الاتصال بقاعدة البيانات.', 'error');
+        Swal.fire('تم بنجاح', 'تم تسجيل نتيجة دراسة الملف بنجاح.', 'success');
+      } catch(err) {
+        Swal.fire('خطأ', 'فشل حفظ نتيجة الدراسة: ' + err.message, 'error');
       }
     }
 
     async function submitManualScan() {
       const ccp = document.getElementById("manualCcpInput").value.trim();
       if (!ccp) return;
-      await processScannedRecord(ccp);
+      await showScannedEmployeeModal(ccp);
       document.getElementById("manualCcpInput").value = "";
     }
   </script>
